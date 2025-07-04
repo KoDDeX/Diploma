@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<!-- Отступ для фиксированной навигации -->
+<div style="height: 76px;"></div>
+
+<!-- Приветствие -->
+<section id="hero" class="page-section">
+    <div class="container">        
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold text-light mb-4">{{ title }}</h1>
+                <p class="lead mb-4 text-light">{{ description }}</p>
+                <div class="d-flex gap-3">
+                    <a href="#contacts" class="btn btn-primary btn-lg">Записаться на ремонт</a>
+                    <a href="#about" class="btn btn-outline-light btn-lg">Узнать больше</a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <img src="{% static 'images/hero-car.jpg' %}" class="img-fluid rounded shadow" alt="Автосервис" style="border: 2px solid rgba(255,255,255,0.1);">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- О нас -->
+<section id="about" class="page-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="display-5 fw-bold mb-4">О нас</h2>
+                <p class="lead mb-4">
+                    {{ title }} - это современный автосервисный центр с многолетним опытом работы. 
+                    Мы предоставляем полный спектр услуг по ремонту и обслуживанию автомобилей любых марок.
+                </p>
+            </div>
+        </div>
+        <div class="row mt-5">
+            <div class="col-md-4 mb-4">
+                <div class="text-center">
+                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                        <i class="fas fa-tools text-white fa-2x"></i>
+                    </div>
+                    <h4>Профессиональный ремонт</h4>
+                    <p>Квалифицированные мастера с опытом работы более 10 лет</p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="text-center">
+                    <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                        <i class="fas fa-clock text-white fa-2x"></i>
+                    </div>
+                    <h4>Работаем 24/7</h4>
+                    <p>Круглосуточное обслуживание для вашего удобства</p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="text-center">
+                    <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                        <i class="fas fa-shield-alt text-white fa-2x"></i>
+                    </div>
+                    <h4>Гарантия качества</h4>
+                    <p>Официальная гарантия на все виды выполненных работ</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Карта -->
+<section id="location" class="page-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center mb-5">
+                <h2 class="display-5 fw-bold mb-4">Где нас найти</h2>
+                <p class="lead">Удобное расположение в центре города с легким доступом и парковкой</p>
+            </div>
+        </div>        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                <div class="map-container rounded p-4 text-center" style="height: 400px; background: rgba(44, 48, 52, 0.4); backdrop-filter: blur(8px);">
+                    <!-- Здесь будет карта Яндекс -->
+                    <div class="d-flex align-items-center justify-content-center h-100">
+                        <div>
+                            <i class="fas fa-map-marker-alt fa-3x text-primary mb-3"></i>
+                            <h5>Яндекс карта будет размещена здесь</h5>
+                            <p class="text-muted">Интерактивная карта с точным местоположением автосервиса</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Контакты -->
+<section id="contacts" class="page-section text-white">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center mb-5">
+                <h2 class="display-5 fw-bold mb-4">Контакты</h2>
+                <p class="lead">Свяжитесь с нами любым удобным способом</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="text-center">
+                    <i class="fas fa-phone fa-2x mb-3"></i>
+                    <h5>Телефон</h5>
+                    <p class="mb-0">
+                        <a href="tel:+79991234567" class="text-white text-decoration-none">+7 (999) 123-45-67</a><br>
+                        <a href="tel:+79991234568" class="text-white text-decoration-none">+7 (999) 123-45-68</a>
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="text-center">
+                    <i class="fas fa-envelope fa-2x mb-3"></i>
+                    <h5>Email</h5>
+                    <p class="mb-0">
+                        <a href="mailto:info@24autoservice.ru" class="text-white text-decoration-none">info@24autoservice.ru</a><br>
+                        <a href="mailto:service@24autoservice.ru" class="text-white text-decoration-none">service@24autoservice.ru</a>
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="text-center">
+                    <i class="fas fa-map-marker-alt fa-2x mb-3"></i>
+                    <h5>Адрес</h5>
+                    <p class="mb-0">
+                        г. Москва,<br>
+                        ул. Автосервисная, 24<br>
+                        ТЦ "Автопарк", 1 этаж
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-5">
+            <div class="col-lg-6 mx-auto">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title text-dark">Записаться на ремонт</h5>
+                        <form>
+                            <div class="mb-3">
+                                <input type="text" class="form-control" placeholder="Ваше имя" required>
+                            </div>
+                            <div class="mb-3">
+                                <input type="tel" class="form-control" placeholder="Телефон" required>
+                            </div>
+                            <div class="mb-3">
+                                <select class="form-select">
+                                    <option>Выберите услугу</option>
+                                    <option>Диагностика</option>
+                                    <option>Ремонт двигателя</option>
+                                    <option>Замена масла</option>
+                                    <option>Шиномонтаж</option>
+                                    <option>Другое</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <textarea class="form-control" rows="3" placeholder="Описание проблемы"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Отправить заявку</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Рабочие часы -->
+<section id="hours" class="page-section text-white">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12 text-center">
+                <h6 class="mb-2">Режим работы</h6>
+                <p class="mb-0">
+                    <strong>Круглосуточно, без выходных</strong> | 
+                    Экстренный вызов: <a href="tel:+79991234567" class="text-warning">+7 (999) 123-45-67</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
