@@ -23,5 +23,34 @@
                 </li>
             </ul>
         </div>
+        <!-- Блок авторизации пользователя (справа) -->
+        <div class="navbar-nav ms-auto"> {# ms-auto для выравнивания по правому краю #}
+            {% if user.is_authenticated %}
+                {% if user.is_staff %}
+                    <a href="{% url 'admin:index' %}" class="nav-link" title="Админпанель">
+                        <i class="bi bi-person-check-fill"></i> Админ
+                    </a>
+                {% else %}
+                    <a href="{% url 'users:profile_detail' pk=user.pk %}" class="nav-link" title="Личный кабинет">
+                        <i class="bi bi-person-circle"></i> {{ user.username|capfirst }} (Профиль)
+                    </a>
+                {% endif %}
+                {% comment %} Сделать это же методом POST {% endcomment %}
+                <form action="{% url 'users:logout' %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-link btn btn-link" title="Выйти">
+                        <i class="bi bi-box-arrow-right"></i> Выйти
+                    </button>
+                </form>
+            {% else %}
+                <a href="{% url 'users:login' %}" class="nav-link" title="Войти">
+                    <i class="bi bi-box-arrow-in-right"></i> Войти
+                </a>
+                <a href="{% url 'users:register' %}" class="nav-link" title="Зарегистрироваться">
+                    <i class="bi bi-person-plus-fill"></i> Зарегистрироваться
+                </a>
+            {% endif %}
+        </div>
+        <!-- Конец блока авторизации -->
     </div>
 </nav>
