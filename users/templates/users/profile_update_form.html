@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block styles %}
+<style>
+    /* Переопределяем стили Bootstrap Card для соответствия дизайну page-section */
+    .card {
+        background-color: rgba(26, 26, 26, 0.5) !important;
+        backdrop-filter: blur(8px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .card-header,
+    .card-body,
+    .card-footer {
+        background-color: transparent !important;
+    }
+
+    .card-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .card-footer {
+        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* Стили для вложенных карточек (советы и требования) */
+    .card .card {
+        background-color: rgba(40, 40, 40, 0.6) !important;
+    }
+    .card .card.border-primary .card-header {
+        background-color: rgba(13, 110, 253, 0.15) !important;
+        border-bottom: 1px solid rgba(13, 110, 253, 0.3) !important;
+        color: #0d6efd !important;
+    }
+
+    /* Убираем лишние тени и рамки */
+    .shadow-lg {
+        box-shadow: none !important;
+    }
+    .border-0 {
+        border: none !important;
+    }
+</style>
+{% endblock %}
+
+{% block title %}{{ title }}{% endblock title %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            <!-- Карточка редактирования профиля -->
+            <div class="card shadow-lg border-0 text-light">
+                <div class="card-header text-white text-center py-4">
+                    <h2 class="mb-0">
+                        <i class="bi bi-pencil-square me-2"></i>
+                        Редактирование профиля
+                    </h2>
+                </div>
+                
+                <div class="card-body p-4">
+                    <form method="post" enctype="multipart/form-data" class="needs-validation" id="profile-form" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <!-- Левая колонка - Аватар -->
+                            <div class="col-md-4 text-center mb-4">
+                                <div class="avatar-section">
+                                    <div class="current-avatar mb-3">
+                                        {% if user.avatar %}
+                                            <img src="{{ user.avatar.url }}" 
+                                                 alt="Текущий аватар" 
+                                                 class="img-fluid rounded-circle shadow"
+                                                 style="width: 150px; height: 150px; object-fit: cover;"
+                                                 id="current-avatar">
+                                        {% else %}
+                                            <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center shadow mx-auto"
+                                                 style="width: 150px; height: 150px;"
+                                                 id="current-avatar">
+                                                <i class="bi bi-person-fill" style="font-size: 4rem;"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Поле загрузки аватара -->
+                                    <div class="mb-3">
+                                        <label for="{{ form.avatar.id_for_label }}" class="form-label fw-bold text-center d-block text-primary">
+                                            <i class="bi bi-camera me-2 text-primary"></i>
+                                            Изменить аватар:
+                                        </label>
+                                        {{ form.avatar }}
+                                        {% if form.avatar.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.avatar.errors }}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text text-light">
+                                            <small>Рекомендуемый размер: 300x300 пикселей. Максимальный размер: 5 МБ.</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Правая колонка - Основная информация -->
+                            <div class="col-md-8">
+                                <div class="user-form-section">
+                                    <h5 class="mb-4 text-primary">
+                                        <i class="bi bi-person-gear me-2 text-primary"></i>
+                                        Основная информация
+                                    </h5>
+                                    
+                                    <!-- Имя пользователя -->
+                                    <div class="mb-3">
+                                        <label for="{{ form.username.id_for_label }}" class="form-label fw-bold text-primary">
+                                            <i class="bi bi-person me-2 text-primary"></i>
+                                            {{ form.username.label }}
+                                        </label>
+                                        {{ form.username }}
+                                        {% if form.username.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.username.errors }}
+                                            </div>
+                                        {% endif %}
+                                        {% if form.username.help_text %}
+                                            <div class="form-text text-light">{{ form.username.help_text }}</div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Email -->
+                                    <div class="mb-3">
+                                        <label for="{{ form.email.id_for_label }}" class="form-label fw-bold text-primary">
+                                            <i class="bi bi-envelope me-2 text-primary"></i>
+                                            {{ form.email.label }}
+                                        </label>
+                                        {{ form.email }}
+                                        {% if form.email.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.email.errors }}
+                                            </div>
+                                        {% endif %}
+                                        {% if form.email.help_text %}
+                                            <div class="form-text text-light">{{ form.email.help_text }}</div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Дата рождения -->
+                                    <div class="mb-3">
+                                        <label for="{{ form.birth_date.id_for_label }}" class="form-label fw-bold text-primary">
+                                            <i class="bi bi-calendar me-2 text-primary"></i>
+                                            {{ form.birth_date.label }}
+                                        </label>
+                                        {{ form.birth_date }}
+                                        {% if form.birth_date.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.birth_date.errors }}
+                                            </div>
+                                        {% endif %}
+                                        {% if form.birth_date.help_text %}
+                                            <div class="form-text text-light">{{ form.birth_date.help_text }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                  <!-- Дополнительная информация -->
+                                <div class="mt-4 p-3 border border-primary rounded text-light" style="background-color: rgba(13, 110, 253, 0.1);">
+                                    <h6 class="mb-3 text-primary">
+                                        <i class="bi bi-info-circle me-2 text-primary"></i>
+                                        Информация об аккаунте
+                                    </h6>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <small class="text-light">
+                                                <strong>Дата регистрации:</strong><br>
+                                                {{ user.date_joined|date:"d.m.Y H:i" }}
+                                            </small>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <small class="text-light">
+                                                <strong>Последний вход:</strong><br>
+                                                {% if user.last_login %}
+                                                    {{ user.last_login|date:"d.m.Y H:i" }}
+                                                {% else %}
+                                                    Не входил
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Общие ошибки формы -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger mt-3">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+                    </form>
+                </div>
+                
+                <!-- Кнопки действий -->
+                <div class="card-footer text-center py-3">
+                    <div class="d-grid gap-2 d-md-block" role="group">
+                        <button type="submit" form="profile-form" class="btn btn-primary btn-lg me-2">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Сохранить изменения
+                        </button>
+                        <a href="{% url 'users:profile_detail' username=request.user.username %}" class="btn btn-outline-primary btn-lg">
+                            <i class="bi bi-x-circle me-2"></i>
+                            Отмена
+                        </a>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <a href="{% url 'landing' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-house me-1"></i>
+                            На главную
+                        </a>
+                        <a href="{% url 'users:password_change' %}" class="btn btn-outline-primary ms-2">
+                            <i class="bi bi-key me-1"></i>
+                            Сменить пароль
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Дополнительные карточки с советами -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card border-primary text-light">
+                        <div class="card-header text-dark">
+                            <h6 class="mb-0">
+                                <i class="bi bi-lightbulb me-2"></i>
+                                Советы по безопасности
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0 small text-light">
+                                <li>Используйте уникальный email для аккаунта</li>
+                                <li>Регулярно обновляйте свой пароль</li>
+                                <li>Не используйте личную информацию в username</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card border-primary text-light">
+                        <div class="card-header text-dark">
+                            <h6 class="mb-0">
+                                <i class="bi bi-camera me-2"></i>
+                                Требования к аватару
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0 small text-light">
+                                <li>Поддерживаемые форматы: JPG, PNG, GIF</li>
+                                <li>Максимальный размер: 5 МБ</li>
+                                <li>Рекомендуемое разрешение: 300x300 пх</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Добавляем ID к форме для кнопки submit
+    const form = document.querySelector('form');
+    if (form) {
+        form.id = 'profile-form';
+    }
+    
+    // Добавляем Bootstrap классы к полям формы
+    const formControls = document.querySelectorAll('input, select, textarea');
+    formControls.forEach(function(control) {
+        if (!control.classList.contains('form-check-input')) {
+            control.classList.add('form-control');
+        }
+    });
+    
+    // Предварительный просмотр загружаемого изображения
+    const avatarInput = document.getElementById('{{ form.avatar.id_for_label }}');
+    const currentAvatar = document.getElementById('current-avatar');
+    
+    if (avatarInput) {
+        avatarInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (currentAvatar.tagName === 'IMG') {
+                        currentAvatar.src = e.target.result;
+                    } else {
+                        // Заменяем div на img
+                        const newImg = document.createElement('img');
+                        newImg.src = e.target.result;
+                        newImg.alt = 'Предварительный просмотр';
+                        newImg.className = 'img-fluid rounded-circle shadow';
+                        newImg.style.width = '150px';
+                        newImg.style.height = '150px';
+                        newImg.style.objectFit = 'cover';
+                        newImg.id = 'current-avatar';
+                        currentAvatar.parentNode.replaceChild(newImg, currentAvatar);
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Анимация при загрузке
+    const card = document.querySelector('.card');
+    if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 100);
+    }
+    
+    // Валидация формы
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        });
+    });
+});
+</script>
+
+<style>
+/* Применяем стиль секции к основной карточке */
+.card.shadow-lg {
+    background: rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Убираем фоны у дочерних элементов, чтобы не перекрывать эффект */
+.card-header,
+.card-body,
+.card-footer,
+.card-body.bg-dark {
+    background-color: transparent !important;
+}
+
+/* Стили для вложенных карточек с советами */
+.card.border-primary.bg-dark {
+    background: rgba(33, 37, 41, 0.6); /* Слегка другой фон для вложенности */
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(13, 110, 253, 0.2);
+}
+
+.card.border-primary .card-header {
+    background: rgba(13, 110, 253, 0.2) !important; /* Полупрозрачный хедер */
+    border-bottom: 1px solid rgba(13, 110, 253, 0.3);
+}
+
+/* Кастомные стили для формы */
+.avatar-section {
+    position: sticky;
+    top: 20px;
+}
+
+.form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.btn-group .btn {
+    border-radius: 0;
+}
+
+.btn-group .btn:first-child {
+    border-top-left-radius: 0.375rem;
+    border-bottom-left-radius: 0.375rem;
+}
+
+.btn-group .btn:last-child {
+    border-top-right-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+}
+</style>
+{% endblock extra_scripts %}

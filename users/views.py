@@ -1,11 +1,21 @@
 from django.shortcuts import render
-from django.contrib.auth.views import LoginView
-from django.contrib.auth import login
+from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView
+from django.contrib.auth import login, get_user_model
 from django.views.generic import CreateView
 from django.urls import reverse_lazy
 from django.contrib import messages
-from .forms import UserLoginForm, UserRegisterForm
+from .forms import (
+    UserLoginForm,
+    UserRegisterForm,
+    UserProfileUpdateForm,
+    UserPasswordChangeForm,
+)
 from django.shortcuts import redirect
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import DetailView, UpdateView
+
+
+User = get_user_model()
 
 
 class UserRegisterView(CreateView):
@@ -61,9 +71,7 @@ class UserLoginView(LoginView):
 
     def form_invalid(self, form):
         """Обрабатывает невалидную форму: выводит сообщение об ошибке."""
-        messages.error(
-            self.request, "Неверное имя пользователя или пароль. Попробуйте снова."
-        )
+        messages.error(self.request, "Неверный email или пароль. Попробуйте снова.")
         return super().form_invalid(form)
 
     def get_context_data(self, **kwargs):
@@ -71,3 +79,94 @@ class UserLoginView(LoginView):
         context = super().get_context_data(**kwargs)
         context["title"] = "Вход"
         return context
+
+
+class UserProfileDetailView(LoginRequiredMixin, DetailView):
+    """
+    Представление для отображения профиля пользователя с проверкой принадлежности пользователя
+    """
+
+    model = User
+    template_name = "users/profile_detail.html"
+    context_object_name = "user"
+    slug_field = "username"  # Добавить эту строку
+    slug_url_kwarg = "username"  # Добавить эту строку
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = f"Профиль {self.object.username}"
+        context["is_own_profile"] = self.request.user == self.object
+        return context
+
+
+class UserLogoutView(LogoutView):
+    """
+    Представление для выхода пользователей
+    """
+
+    next_page = reverse_lazy("landing")  # Перенаправление после выхода
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            # Если пользователь авторизован, выводим сообщение об успешном выходе
+            messages.info(request, "Вы успешно вышли из системы.")
+        return super().dispatch(request, *args, **kwargs)
+
+
+class UserProfileUpdateView(LoginRequiredMixin, UpdateView):
+    """
+    Представление для обновления профиля пользователя
+    """
+
+    model = User
+    template_name = "users/profile_update_form.html"
+    form_class = UserProfileUpdateForm
+
+    def get_object(self):
+        return (
+            self.request.user
+        )  # Возвращаем текущего пользователя    def get_success_url(self):
+        messages.success(self.request, "Ваш профиль успешно обновлен.")
+        return reverse_lazy(
+            "users:profile_detail", kwargs={"username": self.object.username}
+        )
+
+    def form_invalid(self, form):
+        """Обрабатывает невалидную форму: выводит сообщение об ошибке."""
+        messages.error(self.request, "Пожалуйста, исправьте ошибки в форме.")
+        return super().form_invalid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Редактирование профиля"
+        return context
+
+
+class UserPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
+    """
+    Представление для изменения пароля пользователя
+    """
+
+    form_class = UserPasswordChangeForm
+    template_name = "users/password_change_form.html"
+
+    def get_success_url(self):
+        """Определяет URL для перенаправления после успешной смены пароля."""
+        messages.success(self.request, "Ваш пароль был успешно изменен.")
+        return reverse_lazy(
+            "users:profile_detail", kwargs={"username": self.request.user.username}
+        )
+
+    def form_invalid(self, form):
+        """Обрабатывает невалидную форму: выводит сообщение об ошибке."""
+        messages.error(self.request, "Пожалуйста, исправьте ошибки при смене пароля.")
+        return super().form_invalid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Изменение пароля"
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, "Ваш пароль успешно изменен.")
+        return super().form_valid(form)

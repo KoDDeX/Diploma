@@ -137,3 +137,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Custom user model
 AUTH_USER_MODEL = "users.User"
+
+# Custom authentication backends
+# Используем кастомный бэкенд для аутентификации только по email
+AUTHENTICATION_BACKENDS = [
+    "users.backends.EmailModelBackend",  # Ваш кастомный бэкенд для email
+    "django.contrib.auth.backends.ModelBackend",  # Стандартный бэкенд
+]

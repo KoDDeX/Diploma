@@ -21,8 +21,11 @@
 <body>
     {% block header %}
         {% include 'nav_menu_include.html' %}
+    {% endblock %}
+
+    <main class="content-wrapper pt-5">
         {% if messages %}
-            <div class="container mt-3">
+            <div class="container">
                 {% for message in messages %}
                     <div class="alert 
                     {% if message.tags == 'error' %}alert-danger{% endif %}
@@ -35,9 +38,6 @@
                 {% endfor %}
             </div>
         {% endif %}
-    {% endblock %}
-
-    <main class="content-wrapper">
         {% block content %}
         {% endblock %}
     </main>
