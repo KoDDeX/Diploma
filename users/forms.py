@@ -152,3 +152,38 @@ class UserPasswordChangeForm(PasswordChangeForm):
             if self.fields.get(field_name):
                 # Сбрасываем подсказки (help_text)
                 self.fields[field_name].help_text = ""
+
+
+class CustomPasswordResetForm(PasswordResetForm):
+    """Кастомная форма для сброса пароля."""
+    def __init__(self, *args, **kwargs):
+        """Инициализация формы сброса пароля: настройка полей."""
+        super().__init__(*args, **kwargs)
+        # Кастомизация поля email
+        self.fields['email'].widget.attrs.update({
+            'class': 'form-control mb-2',
+            'placeholder': 'Email'
+        })
+
+
+class CustomSetPasswordForm(SetPasswordForm):
+    """Кастомная форма для сброса пароля."""
+    def __init__(self, *args, **kwargs):
+        """Инициализация формы сброса пароля: настройка полей."""
+        super().__init__(*args, **kwargs)
+        # Кастомизация поля new_password1
+        self.fields['new_password1'].widget.attrs.update({
+            'class': 'form-control mb-2',
+            'placeholder': 'Новый пароль'
+        })
+        # Кастомизация поля new_password2
+        self.fields['new_password2'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Подтвердите новый пароль'
+        })
+            
+        # Сброс help_text для полей пароля
+        for field_name in ('new_password1', 'new_password2'):
+            if self.fields.get(field_name):
+                # Сбрасываем подсказки (help_text)
+                self.fields[field_name].help_text = ''

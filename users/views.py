@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView
+from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView, PasswordResetView, PasswordResetDoneView, PasswordResetConfirmView, PasswordResetCompleteView
 from django.contrib.auth import login, get_user_model
 from django.views.generic import CreateView
 from django.urls import reverse_lazy
@@ -9,6 +9,8 @@ from .forms import (
     UserRegisterForm,
     UserProfileUpdateForm,
     UserPasswordChangeForm,
+    CustomSetPasswordForm,
+    CustomPasswordResetForm,
 )
 from django.shortcuts import redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -16,6 +18,30 @@ from django.views.generic import DetailView, UpdateView
 
 
 User = get_user_model()
+
+
+class CustomPasswordResetView(PasswordResetView):
+    """Кастомная реализация сброса пароля."""
+    template_name = 'users/password_reset_form.html'
+    email_template_name = 'users/password_reset_email.html'
+    success_url = reverse_lazy('users:password_reset_done')
+
+
+class CustomPasswordResetDoneView(PasswordResetDoneView):
+    """Кастомная реализация подтверждения сброса пароля."""
+    template_name = 'users/password_reset_done.html'
+
+
+class CustomPasswordResetConfirmView(PasswordResetConfirmView):
+    """Кастомная реализация подтверждения сброса пароля."""
+    template_name = 'users/password_reset_confirm.html'
+    form_class = CustomSetPasswordForm
+    success_url = reverse_lazy('users:password_reset_complete')
+
+
+class CustomPasswordResetCompleteView(PasswordResetCompleteView):
+    """Кастомная реализация страницы успешного сброса пароля."""
+    template_name = 'users/password_reset_complete.html'
 
 
 class UserRegisterView(CreateView):
