@@ -1,28 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block styles %}
-<style>
-    /* Стили для вложенных карточек (советы и требования) */
-    .card .card {
-        background-color: rgba(40, 40, 40, 0.6) !important;
-    }
-    .card .card.border-primary .card-header {
-        background-color: rgba(13, 110, 253, 0.15) !important;
-        border-bottom: 1px solid rgba(13, 110, 253, 0.3) !important;
-        color: #0d6efd !important;
-    }
-
-    /* Убираем лишние тени и рамки */
-    .shadow-lg {
-        box-shadow: none !important;
-    }
-    .border-0 {
-        border: none !important;
-    }
-</style>
-{% endblock %}
-
 {% block title %}{{ title }}{% endblock title %}
 
 {% block content %}
@@ -51,13 +29,13 @@
                                             <img src="{{ user.avatar.url }}" 
                                                  alt="Текущий аватар" 
                                                  class="img-fluid rounded-circle shadow"
-                                                 style="width: 150px; height: 150px; object-fit: cover;"
+                                                 class="rounded-circle avatar-medium"
                                                  id="current-avatar">
                                         {% else %}
                                             <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center shadow mx-auto"
-                                                 style="width: 150px; height: 150px;"
+                                                 class="rounded-circle d-flex align-items-center justify-content-center bg-secondary avatar-placeholder-medium">
                                                  id="current-avatar">
-                                                <i class="bi bi-person-fill" style="font-size: 4rem;"></i>
+                                                <i class="bi bi-person-fill"></i>
                                             </div>
                                         {% endif %}
                                     </div>
@@ -141,7 +119,7 @@
                                     </div>
                                 </div>
                                   <!-- Дополнительная информация -->
-                                <div class="mt-4 p-3 border border-primary rounded text-light" style="background-color: rgba(13, 110, 253, 0.1);">
+                                <div class="mt-4 p-3 border border-primary rounded text-light info-block-primary">
                                     <h6 class="mb-3 text-primary">
                                         <i class="bi bi-info-circle me-2 text-primary"></i>
                                         Информация об аккаунте

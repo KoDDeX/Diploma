@@ -1,20 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block styles %}
-<style>
-    /* Стили для вложенных карточек (статистика и настройки) */
-    .card .card {
-        background-color: rgba(40, 40, 40, 0.6) !important;
-    }
-    .card .card.border-primary .card-header {
-        background-color: rgba(13, 110, 253, 0.15) !important;
-        border-bottom: 1px solid rgba(13, 110, 253, 0.3) !important;
-        color: #0d6efd !important;
-    }
-</style>
-{% endblock %}
-
 {% block title %}{{ title }}{% endblock title %}
 
 {% block content %}
@@ -38,11 +24,11 @@
                                     <img src="{{ user.avatar.url }}" 
                                          alt="Аватар {{ user.username }}" 
                                          class="img-fluid rounded-circle shadow"
-                                         style="width: 200px; height: 200px; object-fit: cover; border: 3px solid rgba(255,255,255,0.2);">
+                                         class="rounded-circle avatar-large">
                                 {% else %}
                                     <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center shadow mx-auto"
-                                         style="width: 200px; height: 200px;">
-                                        <i class="bi bi-person-fill" style="font-size: 5rem;"></i>
+                                         class="rounded-circle d-flex align-items-center justify-content-center bg-secondary avatar-placeholder-large">
+                                        <i class="bi bi-person-fill"></i>
                                     </div>
                                 {% endif %}
                             </div>
@@ -130,13 +116,12 @@
                 </div>
             </div>              <!-- Дополнительные блоки со статистикой и настройками -->
             {% if is_own_profile %}
-            <div class="row mt-4">
-                <div class="col-md-6">
-                    <div class="mt-4 p-3 border border-primary rounded text-light" style="background-color: rgba(13, 110, 253, 0.1);">
+            <div class="row mt-4">                <div class="col-md-6">
+                    <div class="mt-4 p-3 border border-primary rounded text-light info-block-primary">
                         <h6 class="mb-3 text-primary">
                             <i class="bi bi-info-circle me-2 text-primary"></i>
                             Статистика
-                        </h6>                        
+                        </h6>
                         <div>
                             <small class="text-light">
                                 <strong>ID пользователя:</strong> {{ user.id }}
@@ -159,9 +144,8 @@
                         </div>
                     </div>
                 </div>
-                
-                <div class="col-md-6">
-                    <div class="mt-4 p-3 border border-primary rounded text-light" style="background-color: rgba(13, 110, 253, 0.1);">
+                  <div class="col-md-6">
+                    <div class="mt-4 p-3 border border-primary rounded text-light info-block-primary">
                         <h6 class="mb-3 text-primary">
                             <i class="bi bi-gear me-2 text-primary"></i>
                             Настройки аккаунта

@@ -159,6 +159,12 @@ body {
     color: #f8d7da !important;
 }
 
+/* Стили для alert.border-danger */
+.alert.border-danger {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    border-color: #dc3545 !important;
+}
+
 .alert-success {
     background-color: rgba(25, 135, 84, 0.2) !important;
     border-color: rgba(25, 135, 84, 0.5) !important;
@@ -285,20 +291,44 @@ a:hover {
 }
 
 /* Стили для аватара пользователя */
-.avatar-large {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 3px solid rgba(13, 110, 253, 0.5);
-}
-
 .avatar-small {
     width: 40px;
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid rgba(13, 110, 253, 0.5);
+}
+
+/* Стили для аватаров */
+.avatar-large {
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+}
+
+.avatar-placeholder-large {
+    width: 200px;
+    height: 200px;
+}
+
+.avatar-placeholder-large i {
+    font-size: 5rem;
+}
+
+.avatar-medium {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+}
+
+.avatar-placeholder-medium {
+    width: 150px;
+    height: 150px;
+}
+
+.avatar-placeholder-medium i {
+    font-size: 4rem;
 }
 
 /* Специальные стили для профиля */
@@ -370,6 +400,19 @@ textarea.form-control {
     color: #e0e0e0;
 }
 
+/* Стили для информационных блоков */
+.info-block-primary {
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+.alert-info-custom {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.alert-danger-custom {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
 /* Адаптивность */
 @media (max-width: 768px) {
     .hero-section {
@@ -404,4 +447,24 @@ textarea.form-control {
         padding-left: 1rem;
         padding-right: 1rem;
     }
+}
+
+/* Стили для вложенных карточек (статистика и настройки) */
+.card .card {
+    background-color: rgba(40, 40, 40, 0.6) !important;
+}
+
+.card .card.border-primary .card-header {
+    background-color: rgba(13, 110, 253, 0.15) !important;
+    border-bottom: 1px solid rgba(13, 110, 253, 0.3) !important;
+    color: #0d6efd !important;
+}
+
+/* Убираем лишние тени и рамки */
+.shadow-lg {
+    box-shadow: none !important;
+}
+
+.border-0 {
+    border: none !important;
 }
