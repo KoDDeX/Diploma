@@ -1,33 +1,5 @@
 {% extends "base.html" %}
 
-{% block styles %}
-<style>
-    .card {
-        background-color: rgba(26, 26, 26, 0.5) !important;
-        backdrop-filter: blur(8px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        box-shadow: none !important;
-    }
-    .card-header, .card-body, .card-footer {
-        background-color: transparent !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-    }
-    .form-control {
-        background-color: rgba(255, 255, 255, 0.05);
-        color: #fff;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    .form-control:focus {
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-        background-color: rgba(255, 255, 255, 0.1);
-    }    .form-control::placeholder {
-        color: #6c757d !important;
-        opacity: 1;
-    }
-</style>
-{% endblock %}
-
 {% block title %}Регистрация - {{ block.super }}{% endblock %}
 
 {% block content %}

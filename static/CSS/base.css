@@ -89,72 +89,285 @@ body {
 
 /* Стили для карточек */
 .card {
-    background-color: rgba(44, 48, 52, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(26, 26, 26, 0.5) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: none !important;
+    border-radius: 0.5rem;
+    transition: box-shadow 0.15s ease-in-out;
     color: #e0e0e0;
-    backdrop-filter: blur(8px);
 }
 
-.card-body {
-    background-color: rgba(44, 48, 52, 0.4);
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
 
-.card-title {
-    color: #fff !important;
+.card-header,
+.card-body,
+.card-footer {
+    background-color: transparent !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Стили для форм */
+/* Обновленные стили для форм - для users страниц */
 .form-control {
-    background-color: rgba(44, 48, 52, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #e0e0e0;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
     backdrop-filter: blur(5px);
 }
 
 .form-control:focus {
-    background-color: rgba(44, 48, 52, 0.4);
-    border-color: #007bff;
-    color: #e0e0e0;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    border-color: #0d6efd !important;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.form-control::placeholder {
+    color: #6c757d !important;
+    opacity: 1;
 }
 
 .form-select {
-    background-color: rgba(44, 48, 52, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #e0e0e0;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
     backdrop-filter: blur(5px);
 }
 
-/* Стили для текста */
-.text-primary {
-    color: #66b3ff !important;
+.form-select:focus {
+    border-color: #0d6efd !important;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
 }
 
-.text-muted {
-    color: #adb5bd !important;
+.form-label {
+    color: #e0e0e0 !important;
+    margin-bottom: 0.5rem;
 }
 
-.text-white {
-    color: #fff !important;
+/* Стили для alert блоков */
+.alert {
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.375rem;
 }
 
-/* Стили для кнопок */
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.2) !important;
+    border-color: rgba(220, 53, 69, 0.5) !important;
+    color: #f8d7da !important;
+}
+
+.alert-success {
+    background-color: rgba(25, 135, 84, 0.2) !important;
+    border-color: rgba(25, 135, 84, 0.5) !important;
+    color: #d1e7dd !important;
+}
+
+.alert-info {
+    background-color: rgba(13, 202, 240, 0.2) !important;
+    border-color: rgba(13, 202, 240, 0.5) !important;
+    color: #b6effb !important;
+}
+
+.alert-warning {
+    background-color: rgba(255, 193, 7, 0.2) !important;
+    border-color: rgba(255, 193, 7, 0.5) !important;
+    color: #fff3cd !important;
+}
+
+/* Стили для кнопок - расширенные */
 .btn-primary {
-    background-color: #007bff;
-    border-color: #007bff;
-    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #fff !important;
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
 }
 
 .btn-primary:hover {
-    background-color: #0056b3;
-    border-color: #004085;
+    background-color: #0b5ed7 !important;
+    border-color: #0a58ca !important;
+    transform: translateY(-1px);
 }
 
-/* Футер */
-footer {
-    background-color: rgba(33, 37, 41, 0.95) !important;
-    backdrop-filter: blur(10px);
-    margin-top: auto;
+.btn-secondary {
+    background-color: rgba(108, 117, 125, 0.8) !important;
+    border-color: rgba(108, 117, 125, 0.8) !important;
+    color: #fff !important;
+}
+
+.btn-secondary:hover {
+    background-color: rgba(90, 98, 104, 0.9) !important;
+    border-color: rgba(90, 98, 104, 0.9) !important;
+}
+
+.btn-outline-primary {
+    border-color: #0d6efd !important;
+    color: #0d6efd !important;
+    background-color: transparent !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #fff !important;
+}
+
+/* Переопределяем цвета с warning на primary для унификации стиля */
+.text-warning {
+    color: #0d6efd !important;
+}
+
+.btn-warning {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #fff !important;
+}
+
+.btn-warning:hover {
+    background-color: #0b5ed7 !important;
+    border-color: #0a58ca !important;
+}
+
+.btn-outline-warning {
+    color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    background-color: transparent !important;
+}
+
+.btn-outline-warning:hover {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #fff !important;
+}
+
+.border-warning {
+    border-color: #0d6efd !important;
+}
+
+.bg-warning {
+    background-color: rgba(13, 110, 253, 0.2) !important;
+    color: #b6effb !important;
+}
+
+/* Стили для card-footer */
+.card-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.card-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Стили для текстовых ссылок */
+a {
+    color: #66b3ff !important;
+    text-decoration: none;
+}
+
+a:hover {
+    color: #4da3ff !important;
+    text-decoration: underline;
+}
+
+/* Стили для сообщений Django */
+.messages {
+    margin-top: 56px;
+    /* Отступ от навбара */
+    position: relative;
+    z-index: 1000;
+}
+
+.messages .alert {
+    margin-bottom: 0;
+    border-radius: 0;
+}
+
+/* Стили для аватара пользователя */
+.avatar-large {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(13, 110, 253, 0.5);
+}
+
+.avatar-small {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(13, 110, 253, 0.5);
+}
+
+/* Специальные стили для профиля */
+.profile-card {
+    background-color: rgba(26, 26, 26, 0.5) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 1rem;
+}
+
+.profile-info {
+    color: #e0e0e0;
+}
+
+.profile-info strong {
+    color: #fff;
+}
+
+/* Стили для списков */
+.list-unstyled li {
+    margin-bottom: 0.5rem;
+    color: #e0e0e0;
+}
+
+/* Стили для help text */
+.form-text {
+    color: #6c757d !important;
+    font-size: 0.875em;
+}
+
+/* Специальные стили для форм загрузки файлов */
+.form-control[type="file"] {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.form-control[type="file"]::-webkit-file-upload-button {
+    background-color: #0d6efd;
+    border: none;
+    color: white;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.25rem;
+    margin-right: 0.75rem;
+}
+
+.form-control[type="file"]::-webkit-file-upload-button:hover {
+    background-color: #0b5ed7;
+}
+
+/* Стили для текстовых областей */
+textarea.form-control {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* Стили для чекбоксов и радиокнопок */
+.form-check-input {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.form-check-label {
+    color: #e0e0e0;
 }
 
 /* Адаптивность */
@@ -176,24 +389,19 @@ footer {
     }
 }
 
-/* Стили для кнопок */
-.btn {
-    border-radius: 0.375rem;
-    transition: all 0.15s ease-in-out;
-}
+/* Адаптивность для мобильных устройств */
+@media (max-width: 576px) {
+    .card {
+        margin: 1rem 0.5rem;
+    }
 
-.btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
-}
+    .avatar-large {
+        width: 100px;
+        height: 100px;
+    }
 
-/* Стили для карточек */
-.card {
-    border-radius: 0.5rem;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    transition: box-shadow 0.15s ease-in-out;
-}
-
-.card:hover {
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
 }

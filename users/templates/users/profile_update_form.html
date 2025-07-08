@@ -3,27 +3,6 @@
 
 {% block styles %}
 <style>
-    /* Переопределяем стили Bootstrap Card для соответствия дизайну page-section */
-    .card {
-        background-color: rgba(26, 26, 26, 0.5) !important;
-        backdrop-filter: blur(8px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    }
-
-    .card-header,
-    .card-body,
-    .card-footer {
-        background-color: transparent !important;
-    }
-
-    .card-header {
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-    }
-
-    .card-footer {
-        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-    }
-
     /* Стили для вложенных карточек (советы и требования) */
     .card .card {
         background-color: rgba(40, 40, 40, 0.6) !important;
