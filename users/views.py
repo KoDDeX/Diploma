@@ -1,9 +1,18 @@
-from django.shortcuts import render
-from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView, PasswordResetView, PasswordResetDoneView, PasswordResetConfirmView, PasswordResetCompleteView
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.views import (
+    LoginView,
+    LogoutView,
+    PasswordChangeView,
+    PasswordResetView,
+    PasswordResetDoneView,
+    PasswordResetConfirmView,
+    PasswordResetCompleteView,
+)
 from django.contrib.auth import login, get_user_model
 from django.views.generic import CreateView
 from django.urls import reverse_lazy
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from .forms import (
     UserLoginForm,
     UserRegisterForm,
@@ -22,26 +31,30 @@ User = get_user_model()
 
 class CustomPasswordResetView(PasswordResetView):
     """Кастомная реализация сброса пароля."""
-    template_name = 'users/password_reset_form.html'
-    email_template_name = 'users/password_reset_email.html'
-    success_url = reverse_lazy('users:password_reset_done')
+
+    template_name = "users/password_reset_form.html"
+    email_template_name = "users/password_reset_email.html"
+    success_url = reverse_lazy("users:password_reset_done")
 
 
 class CustomPasswordResetDoneView(PasswordResetDoneView):
     """Кастомная реализация подтверждения сброса пароля."""
-    template_name = 'users/password_reset_done.html'
+
+    template_name = "users/password_reset_done.html"
 
 
 class CustomPasswordResetConfirmView(PasswordResetConfirmView):
     """Кастомная реализация подтверждения сброса пароля."""
-    template_name = 'users/password_reset_confirm.html'
+
+    template_name = "users/password_reset_confirm.html"
     form_class = CustomSetPasswordForm
-    success_url = reverse_lazy('users:password_reset_complete')
+    success_url = reverse_lazy("users:password_reset_complete")
 
 
 class CustomPasswordResetCompleteView(PasswordResetCompleteView):
     """Кастомная реализация страницы успешного сброса пароля."""
-    template_name = 'users/password_reset_complete.html'
+
+    template_name = "users/password_reset_complete.html"
 
 
 class UserRegisterView(CreateView):
@@ -147,11 +160,21 @@ class UserProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = User
     template_name = "users/profile_update_form.html"
     form_class = UserProfileUpdateForm
+    slug_field = "username"
+    slug_url_kwarg = "username"
 
-    def get_object(self):
-        return (
-            self.request.user
-        )  # Возвращаем текущего пользователя    def get_success_url(self):
+    def get_object(self, queryset=None):
+        """Получаем объект пользователя по username из URL"""
+        username = self.kwargs.get("username")
+        user = get_object_or_404(User, username=username)
+
+        # Проверяем, что пользователь может редактировать этот профиль
+        if user != self.request.user:
+            raise PermissionDenied("Вы можете редактировать только свой профиль")
+
+        return user
+
+    def get_success_url(self):
         messages.success(self.request, "Ваш профиль успешно обновлен.")
         return reverse_lazy(
             "users:profile_detail", kwargs={"username": self.object.username}
@@ -178,7 +201,7 @@ class UserPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
 
     def get_success_url(self):
         """Определяет URL для перенаправления после успешной смены пароля."""
-        messages.success(self.request, "Ваш пароль был успешно изменен.")
+        messages.success(self.request, "Ваш пароль успешно изменен.")
         return reverse_lazy(
             "users:profile_detail", kwargs={"username": self.request.user.username}
         )
@@ -192,7 +215,3 @@ class UserPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
         context = super().get_context_data(**kwargs)
         context["title"] = "Изменение пароля"
         return context
-
-    def form_valid(self, form):
-        messages.success(self.request, "Ваш пароль успешно изменен.")
-        return super().form_valid(form)

@@ -40,11 +40,29 @@ class UserRegisterForm(UserCreationForm):
         ),
         required=True,
     )
+    
+    # Добавляем поля имени и фамилии
+    first_name = forms.CharField(
+        label="Имя",
+        max_length=150,
+        widget=forms.TextInput(
+            attrs={"class": "form-control mb-2", "placeholder": "Введите ваше имя"}
+        ),
+        required=False,    )
+    
+    last_name = forms.CharField(
+        label="Фамилия", 
+        max_length=150,
+        widget=forms.TextInput(
+            attrs={"class": "form-control mb-2", "placeholder": "Введите вашу фамилию"}
+        ),
+        required=False,
+    )
 
     class Meta:
         model = get_user_model()
-        # Включаем username и email в форму регистрации
-        fields = ("username", "email")
+        # Включаем все основные поля в форму регистрации
+        fields = ("username", "email", "first_name", "last_name")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -59,7 +77,7 @@ class UserRegisterForm(UserCreationForm):
         )
 
         # Убираем helptext для полей формы
-        for field_name in ("username", "password1", "password2", "email"):
+        for field_name in ("username", "password1", "password2", "email", "first_name", "last_name"):
             if self.fields.get(field_name):
                 self.fields[field_name].help_text = None
 
@@ -113,18 +131,32 @@ class UserProfileUpdateForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ["username", "email", "avatar", "birth_date"]
+        fields = ["username", "email", "first_name", "last_name", "avatar", "birth_date"]
         widgets = {
             "username": forms.TextInput(attrs={"class": "form-control"}),
             "email": forms.EmailInput(attrs={"class": "form-control"}),
+            "first_name": forms.TextInput(attrs={"class": "form-control"}),
+            "last_name": forms.TextInput(attrs={"class": "form-control"}),
             "avatar": forms.FileInput(
                 attrs={
                     "class": "form-control",
-                    "accept": "images/*",
+                    "accept": "image/*",
                 }
             ),
             "birth_date": HTML5DateInput(attrs={"class": "form-control"}),
         }
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Добавляем плейсхолдеры для полей
+        self.fields["username"].widget.attrs.update({"placeholder": "Имя пользователя"})
+        self.fields["email"].widget.attrs.update({"placeholder": "Email"})
+        self.fields["first_name"].widget.attrs.update({"placeholder": "Имя"})
+        self.fields["last_name"].widget.attrs.update({"placeholder": "Фамилия"})
+        
+        # Делаем некоторые поля обязательными
+        self.fields["first_name"].required = True
+        self.fields["last_name"].required = True
 
 
 class UserPasswordChangeForm(PasswordChangeForm):
@@ -187,3 +219,82 @@ class CustomSetPasswordForm(SetPasswordForm):
             if self.fields.get(field_name):
                 # Сбрасываем подсказки (help_text)
                 self.fields[field_name].help_text = ''
+
+class AutoServiceUserForm(forms.ModelForm):
+    """
+    Форма для создания/редактирования пользователей автосервиса (менеджеров)
+    Используется администраторами автосервисов
+    """
+    
+    password1 = forms.CharField(
+        label="Пароль",
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        required=False,
+        help_text="Оставьте пустым, если не хотите менять пароль"
+    )
+    
+    password2 = forms.CharField(
+        label="Подтверждение пароля",
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        required=False,
+        help_text="Введите тот же пароль для подтверждения"
+    )
+
+    class Meta:
+        model = User
+        fields = ["username", "email", "first_name", "last_name", "role", "is_active"]
+        widgets = {
+            "username": forms.TextInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+            "first_name": forms.TextInput(attrs={"class": "form-control"}),
+            "last_name": forms.TextInput(attrs={"class": "form-control"}),
+            "role": forms.Select(attrs={"class": "form-control"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+        
+    def __init__(self, *args, **kwargs):
+        self.autoservice = kwargs.pop('autoservice', None)
+        super().__init__(*args, **kwargs)
+        
+        # Ограничиваем выбор ролей для администратора автосервиса
+        self.fields["role"].choices = [
+            ("manager", "Менеджер"),
+            ("client", "Клиент"),
+        ]
+        
+        # Делаем поля обязательными
+        self.fields["first_name"].required = True
+        self.fields["last_name"].required = True
+        
+        # Если редактируем существующего пользователя
+        if self.instance.pk:
+            self.fields["password1"].help_text = "Оставьте пустым, если не хотите менять пароль"
+        else:
+            self.fields["password1"].required = True
+            self.fields["password2"].required = True
+            self.fields["password1"].help_text = "Введите пароль для нового пользователя"
+    
+    def clean_password2(self):
+        password1 = self.cleaned_data.get("password1")
+        password2 = self.cleaned_data.get("password2")
+        
+        if password1 or password2:
+            if password1 != password2:
+                raise forms.ValidationError("Пароли не совпадают")
+        return password2
+    
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        
+        # Привязываем к автосервису
+        if self.autoservice:
+            user.autoservice = self.autoservice
+        
+        # Устанавливаем пароль, если он был введен
+        password = self.cleaned_data.get("password1")
+        if password:
+            user.set_password(password)
+        
+        if commit:
+            user.save()
+        return user
