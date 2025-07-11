@@ -43,6 +43,44 @@ class AutoService(models.Model):
         return f"{self.name} ({self.region.name})"
 
 
+class UserManager(BaseUserManager):
+    """Менеджер для кастомной модели пользователя"""
+
+    use_in_migrations = True
+
+    def _create_user(self, email, password, **extra_fields):
+        if not email:
+            raise ValueError("Email must be set")
+        email = self.normalize_email(email)
+
+        # Если username не задан, генерируем его из email
+        if not extra_fields.get("username"):
+            extra_fields["username"] = email
+
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_user(self, email, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", False)
+        extra_fields.setdefault("is_superuser", False)
+        extra_fields.setdefault("role", "client")
+        return self._create_user(email, password, **extra_fields)
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("role", "super_admin")
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
+
+        return self._create_user(email, password, **extra_fields)
+
+
 class User(AbstractUser):
     """Расширенная модель пользователя"""
 
@@ -61,10 +99,8 @@ class User(AbstractUser):
     first_name = models.CharField(max_length=150, blank=True, verbose_name="Имя")
     last_name = models.CharField(max_length=150, blank=True, verbose_name="Фамилия")
 
-    # Делаем email уникальным и обязательным для логина 
-    email = models.EmailField(
-        unique=True, verbose_name="Email"
-    )  
+    # Делаем email уникальным и обязательным для логина
+    email = models.EmailField(unique=True, verbose_name="Email")
 
     role = models.CharField(
         max_length=20, choices=ROLE_CHOICES, default="client", verbose_name="Роль"
@@ -87,18 +123,15 @@ class User(AbstractUser):
         "username",
         "first_name",
         "last_name",
-    ]  
+    ]
+
+    # Привязываем кастомный менеджер
+    objects = UserManager()
 
     class Meta:
         verbose_name = "Пользователь"
         verbose_name_plural = "Пользователи"
         ordering = ["email"]
-
-    def get_region(self):
-        """Получить регион пользователя"""
-        if self.autoservice:
-            return self.autoservice.region
-        return None
 
     def can_manage_autoservice(self, autoservice):
         """Может ли управлять автосервисом"""
@@ -113,33 +146,14 @@ class User(AbstractUser):
 
     def get_absolute_url(self):
         """Возвращает URL профиля пользователя"""
-        return reverse('users:profile_detail', kwargs={'username': self.username})
+        return reverse("users:profile_detail", kwargs={"username": self.username})
 
+    def save(self, *args, **kwargs):
+        """Автоматически управляем флагом is_staff в зависимости от роли"""
+        if self.role in ["super_admin", "autoservice_admin", "manager"]:
+            self.is_staff = True
+        elif self.role == "client":
+            self.is_staff = False
+            self.autoservice = None  # У клиента не может быть автосервиса
 
-class UserManager(BaseUserManager):
-    use_in_migrations = True
-
-    def _create_user(self, email, password, **extra_fields):
-        if not email:
-            raise ValueError("Email must be set")
-        email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
-        user.set_password(password)  # <-- критично
-        user.save(using=self._db)
-        return user
-
-    def create_user(self, email, password=None, **extra_fields):
-        extra_fields.setdefault("is_staff", False)
-        extra_fields.setdefault("is_superuser", False)
-        return self._create_user(email, password, **extra_fields)
-
-    def create_superuser(self, email, password=None, **extra_fields):
-        extra_fields.setdefault("is_staff", True)
-        extra_fields.setdefault("is_superuser", True)
-
-        if extra_fields.get("is_staff") is not True:
-            raise ValueError("Superuser must have is_staff=True.")
-        if extra_fields.get("is_superuser") is not True:
-            raise ValueError("Superuser must have is_superuser=True.")
-
-        return self._create_user(email, password, **extra_fields)
+        super().save(*args, **kwargs)

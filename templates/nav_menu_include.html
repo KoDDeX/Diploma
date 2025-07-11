@@ -27,8 +27,11 @@
         <div class="navbar-nav ms-auto"> {# ms-auto для выравнивания по правому краю #}
             {% if user.is_authenticated %}
                 {% if user.is_staff %}
+                    <a href="{% url 'users:profile_detail' username=user.username %}" class="nav-link" title="Личный кабинет">
+                        <i class="bi bi-person-circle"></i> {{ user.username|capfirst }} (Профиль)
+                    </a>
                     <a href="{% url 'admin:index' %}" class="nav-link" title="Админпанель">
-                        <i class="bi bi-person-check-fill"></i> Админ
+                        <i class="bi bi-person-check-fill"></i> Панель администратора
                     </a>
                 {% else %}
                     <a href="{% url 'users:profile_detail' username=user.username %}" class="nav-link" title="Личный кабинет">

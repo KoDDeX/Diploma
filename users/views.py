@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import get_object_or_404
 from django.contrib.auth.views import (
     LoginView,
     LogoutView,
@@ -201,7 +201,7 @@ class UserPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
 
     def get_success_url(self):
         """Определяет URL для перенаправления после успешной смены пароля."""
-        messages.success(self.request, "Ваш пароль успешно изменен.")
+        messages.success(self.request, "Ваш пароль был успешно изменен.")
         return reverse_lazy(
             "users:profile_detail", kwargs={"username": self.request.user.username}
         )
@@ -215,3 +215,7 @@ class UserPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
         context = super().get_context_data(**kwargs)
         context["title"] = "Изменение пароля"
         return context
+
+    def form_valid(self, form):
+        messages.success(self.request, "Ваш пароль успешно изменен.")
+        return super().form_valid(form)
