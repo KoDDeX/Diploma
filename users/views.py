@@ -215,7 +215,3 @@ class UserPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
         context = super().get_context_data(**kwargs)
         context["title"] = "Изменение пароля"
         return context
-
-    def form_valid(self, form):
-        messages.success(self.request, "Ваш пароль успешно изменен.")
-        return super().form_valid(form)

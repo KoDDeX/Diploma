@@ -98,10 +98,14 @@ class User(AbstractUser):
     # Переопределяем поля с русскими verbose_name
     first_name = models.CharField(max_length=150, blank=True, verbose_name="Имя")
     last_name = models.CharField(max_length=150, blank=True, verbose_name="Фамилия")
-
-    # Делаем email уникальным и обязательным для логина
     email = models.EmailField(unique=True, verbose_name="Email")
-
+    avatar = models.ImageField(
+        upload_to="users/avatars/",
+        default="users/avatars/default.jpg",
+        blank=True,
+        verbose_name="Аватар",
+    )
+    birth_date = models.DateField(null=True, blank=True, verbose_name="Дата рождения")
     role = models.CharField(
         max_length=20, choices=ROLE_CHOICES, default="client", verbose_name="Роль"
     )
@@ -112,8 +116,6 @@ class User(AbstractUser):
         blank=True,
         verbose_name="Автосервис",
     )
-    avatar = models.ImageField(upload_to="users/avatars/", blank=True)
-    birth_date = models.DateField(null=True, blank=True)
     # phone = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
 
     # Указываем, что для логина будет использоваться поле email
