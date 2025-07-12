@@ -28,7 +28,7 @@
                         <div class="col-md-4 text-center mb-4">
                             <div class="avatar-section">
                                 <div class="current-avatar mb-3 avatar-container">
-                                    <img src="{% if user.avatar %}{{ user.avatar.url }}{% else %}/media/users/avatars/default.png{% endif %}" 
+                                    <img src="{{ user.avatar.url }}" 
                                         class="rounded-circle avatar-profile">
                                 </div>
                             </div>

@@ -4,45 +4,6 @@ from django.contrib.auth.base_user import BaseUserManager
 from django.urls import reverse
 
 
-class Region(models.Model):
-    """Регионы (города/области)"""
-
-    name = models.CharField(max_length=100, verbose_name="Название региона")
-    slug = models.SlugField(unique=True, verbose_name="Слаг для URL")
-    is_active = models.BooleanField(default=False, verbose_name="Активен")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = "Регион"
-        verbose_name_plural = "Регионы"
-
-    def __str__(self):
-        return f"{self.name}"
-
-
-class AutoService(models.Model):
-    """Автосервисы"""
-
-    name = models.CharField(max_length=200, verbose_name="Название автосервиса")
-    slug = models.SlugField(verbose_name="Слаг для URL")
-    region = models.ForeignKey(Region, on_delete=models.CASCADE, verbose_name="Регион")
-    address = models.TextField(verbose_name="Адрес")
-    phone = models.CharField(max_length=20, verbose_name="Телефон")
-    email = models.EmailField(verbose_name="Email")
-    description = models.TextField(blank=True, verbose_name="Описание")
-    logo = models.ImageField(upload_to="autoservices/logos/", blank=True)
-    is_active = models.BooleanField(default=False, verbose_name="Активен")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = "Автосервис"
-        verbose_name_plural = "Автосервисы"
-        unique_together = [["region", "slug"]]  # Уникальность в рамках региона
-
-    def __str__(self):
-        return f"{self.name} ({self.region.name})"
-
-
 class UserManager(BaseUserManager):
     """Менеджер для кастомной модели пользователя"""
 
@@ -69,6 +30,7 @@ class UserManager(BaseUserManager):
         return self._create_user(email, password, **extra_fields)
 
     def create_superuser(self, email, password=None, **extra_fields):
+        print(f'Creating superuser: {email} password: {password}')
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("role", "super_admin")
@@ -101,7 +63,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True, verbose_name="Email")
     avatar = models.ImageField(
         upload_to="users/avatars/",
-        default="users/avatars/default.jpg",
+        default="users/avatars/default.png",
         blank=True,
         verbose_name="Аватар",
     )
@@ -110,7 +72,7 @@ class User(AbstractUser):
         max_length=20, choices=ROLE_CHOICES, default="client", verbose_name="Роль"
     )
     autoservice = models.ForeignKey(
-        AutoService,
+        "core.AutoService",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
