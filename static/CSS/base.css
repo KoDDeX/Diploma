@@ -128,17 +128,55 @@ body {
     opacity: 1;
 }
 
+/* Исправление стилей для выпадающих списков (select) */
 .form-select {
-    background-color: rgba(255, 255, 255, 0.05) !important;
-    color: #fff !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    backdrop-filter: blur(5px);
+    background-color: #212529 !important;
+    border: 1px solid #495057 !important;
+    color: #ffffff !important;
 }
 
 .form-select:focus {
-    border-color: #0d6efd !important;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
-    background-color: rgba(255, 255, 255, 0.1) !important;
+    background-color: #212529 !important;
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    color: #ffffff !important;
+}
+
+.form-select option {
+    background-color: #212529 !important;
+    color: #ffffff !important;
+}
+
+.form-select:disabled {
+    background-color: #343a40 !important;
+    color: #6c757d !important;
+    border-color: #495057 !important;
+}
+
+.form-select:disabled option {
+    background-color: #343a40 !important;
+    color: #6c757d !important;
+}
+
+/* Стили для dropdown меню */
+.dropdown-menu {
+    background-color: #212529 !important;
+    border: 1px solid #495057 !important;
+}
+
+.dropdown-item {
+    color: #ffffff !important;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
+}
+
+.dropdown-item:active {
+    background-color: #0a58ca !important;
+    color: #ffffff !important;
 }
 
 .form-label {

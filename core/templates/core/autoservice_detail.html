@@ -1,0 +1,147 @@
+<!-- templates/core/autoservice_detail.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock title %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10">
+            <!-- Навигация -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'landing' %}" class="text-primary">
+                            <i class="bi bi-house-door me-1"></i>Главная
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active text-light">{{ autoservice.name }}</li>
+                </ol>
+            </nav>
+            
+            <!-- Основная карточка автосервиса -->
+            <div class="card shadow-lg border-0 text-light">
+                <!-- Заголовок -->
+                <div class="card-header text-center py-4">
+                    <h1 class="display-5 fw-bold text-primary mb-0">
+                        <i class="bi bi-building me-3"></i>
+                        {{ autoservice.name }}
+                    </h1>
+                    <p class="lead text-white-50 mt-2">
+                        <i class="bi bi-geo-alt me-2"></i>
+                        {{ autoservice.region.name }}
+                    </p>
+                </div>
+                
+                <div class="card-body p-4">
+                    <div class="row">
+                        <!-- Изображение автосервиса -->
+                        <div class="col-md-6 mb-4">
+                            {% if autoservice.image %}
+                            <img src="{{ autoservice.image.url }}" 
+                                 class="img-fluid rounded shadow" 
+                                 alt="{{ autoservice.name }}"
+                                 style="width: 100%; height: 350px; object-fit: cover;">
+                            {% else %}
+                            <div class="d-flex align-items-center justify-content-center bg-secondary rounded shadow" 
+                                 style="width: 100%; height: 350px;">
+                                <i class="bi bi-building display-1 text-white-50"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Информация об автосервисе -->
+                        <div class="col-md-6">
+                            <h3 class="text-primary mb-4">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Информация
+                            </h3>
+                            
+                            <!-- Адрес -->
+                            <div class="mb-4">
+                                <h6 class="fw-bold text-primary">
+                                    <i class="bi bi-geo-alt me-2"></i>
+                                    Адрес:
+                                </h6>
+                                <p class="text-light fs-5">{{ autoservice.address }}</p>
+                            </div>
+                            
+                            <!-- Телефон -->
+                            {% if autoservice.phone %}
+                            <div class="mb-4">
+                                <h6 class="fw-bold text-primary">
+                                    <i class="bi bi-telephone me-2"></i>
+                                    Телефон:
+                                </h6>
+                                <p class="text-light fs-5">
+                                    <a href="tel:{{ autoservice.phone }}" class="text-light text-decoration-none">
+                                        {{ autoservice.phone }}
+                                    </a>
+                                </p>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Регион -->
+                            <div class="mb-4">
+                                <h6 class="fw-bold text-primary">
+                                    <i class="bi bi-map me-2"></i>
+                                    Регион:
+                                </h6>
+                                <p class="text-light fs-5">{{ autoservice.region.name }}</p>
+                            </div>
+                            
+                            <!-- Кнопки быстрых действий -->
+                            <div class="d-grid gap-2">
+                                {% if autoservice.phone %}
+                                <a href="tel:{{ autoservice.phone }}" class="btn btn-success btn-lg">
+                                    <i class="bi bi-telephone me-2"></i>
+                                    Позвонить сейчас
+                                </a>
+                                {% endif %}
+                                
+                                <a href="{% url 'landing' %}" class="btn btn-outline-primary btn-lg">
+                                    <i class="bi bi-arrow-left me-2"></i>
+                                    Назад к выбору
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Описание -->
+                    {% if autoservice.description %}
+                    <div class="row mt-5">
+                        <div class="col-12">
+                            <h3 class="text-primary mb-4">
+                                <i class="bi bi-card-text me-2"></i>
+                                О нас
+                            </h3>
+                            <div class="p-4 bg-dark rounded">
+                                <p class="text-light fs-5 mb-0">{{ autoservice.description }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Дополнительные действия -->
+                <div class="card-footer text-center py-4">
+                    <div class="d-grid gap-2 d-md-block">
+                        {% if autoservice.phone %}
+                        <a href="tel:{{ autoservice.phone }}" class="btn btn-success btn-lg me-2">
+                            <i class="bi bi-telephone me-2"></i>
+                            Связаться
+                        </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'landing' %}" class="btn btn-outline-secondary btn-lg">
+                            <i class="bi bi-house-door me-2"></i>
+                            На главную
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

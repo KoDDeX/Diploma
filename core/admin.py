@@ -36,7 +36,7 @@ class AutoServiceAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Основная информация", {"fields": ("name", "slug", "region", "is_active")}),
         ("Контактная информация", {"fields": ("address", "phone", "email")}),
-        ("Дополнительно", {"fields": ("description", "image", "logo")}),
+        ("Дополнительно", {"fields": ("description",)}),
     )
 
     def get_prepopulated_fields(self, request, obj=None):
@@ -128,7 +128,6 @@ class AutoServiceAdmin(admin.ModelAdmin):
                 "phone",
                 "email",
                 "description",
-                "logo",
                 "is_active",
                 "created_at",
             ]

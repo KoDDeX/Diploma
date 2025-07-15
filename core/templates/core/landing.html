@@ -1,186 +1,302 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}{{ title }}{% endblock title %}
+
 {% block content %}
-<!-- Отступ для фиксированной навигации -->
-<div style="height: 76px;"></div>
-
-<!-- Приветствие -->
-<section id="hero" class="page-section">
-    <div class="container">        
-        <div class="row align-items-center">
-            <div class="col-lg-6">
-                <h1 class="display-4 fw-bold text-light mb-4">{{ title }}</h1>
-                <p class="lead mb-4 text-light">{{ description }}</p>
-                <div class="d-flex gap-3">
-                    <a href="#contacts" class="btn btn-primary btn-lg">Записаться на ремонт</a>
-                    <a href="#about" class="btn btn-outline-light btn-lg">Узнать больше</a>
-                </div>
-            </div>
-            {% comment %} <div class="col-lg-6">
-                <img src="{% static 'images/hero-car.jpg' %}" class="img-fluid rounded shadow" alt="Автосервис" style="border: 2px solid rgba(255,255,255,0.1);">
-            </div> {% endcomment %}
-        </div>
-    </div>
-</section>
-
-<!-- О нас -->
-<section id="about" class="page-section">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-8 mx-auto text-center">
-                <h2 class="display-5 fw-bold mb-4">О нас</h2>
-                <p class="lead mb-4">
-                    {{ title }} - это современный автосервисный центр с многолетним опытом работы. 
-                    Мы предоставляем полный спектр услуг по ремонту и обслуживанию автомобилей любых марок.
-                </p>
-            </div>
-        </div>
-        <div class="row mt-5">
-            <div class="col-md-4 mb-4">
-                <div class="text-center">
-                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
-                        <i class="fas fa-tools text-white fa-2x"></i>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <!-- О проекте -->
+            <div class="mb-5">
+                <div class="card shadow-lg border-0 text-light">
+                    <div class="card-header text-center py-4">
+                        <h1 class="display-4 fw-bold text-primary mb-2">
+                            <i class="bi bi-tools me-3"></i>
+                            24АвтоСервис
+                        </h1>
+                        <p class="lead text-white-50 mb-0">
+                            Единая площадка для автосервисов, клиентов и поставщиков
+                        </p>
                     </div>
-                    <h4>Профессиональный ремонт</h4>
-                    <p>Квалифицированные мастера с опытом работы более 10 лет</p>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="text-center">
-                    <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
-                        <i class="fas fa-clock text-white fa-2x"></i>
-                    </div>
-                    <h4>Работаем 24/7</h4>
-                    <p>Круглосуточное обслуживание для вашего удобства</p>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="text-center">
-                    <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
-                        <i class="fas fa-shield-alt text-white fa-2x"></i>
-                    </div>
-                    <h4>Гарантия качества</h4>
-                    <p>Официальная гарантия на все виды выполненных работ</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Карта -->
-<section id="location" class="page-section">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-8 mx-auto text-center mb-5">
-                <h2 class="display-5 fw-bold mb-4">Где нас найти</h2>
-                <p class="lead">Удобное расположение в центре города с легким доступом и парковкой</p>
-            </div>
-        </div>        <div class="row">
-            <div class="col-lg-10 mx-auto">
-                <div class="map-container rounded p-4 text-center" style="height: 400px; background: rgba(44, 48, 52, 0.4); backdrop-filter: blur(8px);">
-                    <!-- Здесь будет карта Яндекс -->
-                    <div class="d-flex align-items-center justify-content-center h-100">
-                        <div>
-                            <i class="fas fa-map-marker-alt fa-3x text-primary mb-3"></i>
-                            <h5>Яндекс карта будет размещена здесь</h5>
-                            <p class="text-muted">Интерактивная карта с точным местоположением автосервиса</p>
+                    
+                    <div class="card-body p-4">
+                        <!-- Основное описание -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h3 class="text-primary mb-3">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    О проекте
+                                </h3>
+                                <p class="text-light fs-5 mb-4">
+                                    Наш проект создан для решения задач всех участников автосервисного рынка и помогает объединить на одной площадке:
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- Участники проекта -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-lg-4">
+                                <div class="h-100 p-3 bg-dark rounded">
+                                    <h5 class="text-primary fw-bold mb-3">
+                                        <i class="bi bi-building me-2"></i>
+                                        Для автосервисов
+                                    </h5>
+                                    <ul class="text-light small mb-0">
+                                        <li>Простая и быстрая реализация процессов поиска клиентов</li>
+                                        <li>Освещение и реклама своих услуг</li>
+                                        <li>Управление записями клиентов</li>
+                                        <li>Недорогой инструмент для привлечения клиентуры</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="col-lg-4">
+                                <div class="h-100 p-3 bg-dark rounded">
+                                    <h5 class="text-primary fw-bold mb-3">
+                                        <i class="bi bi-person-gear me-2"></i>
+                                        Для владельцев авто
+                                    </h5>
+                                    <ul class="text-light small mb-0">
+                                        <li>Поиск автосервисов в своем регионе</li>
+                                        <li>Получение информации об услугах</li>
+                                        <li>Возможность записи на обслуживание</li>
+                                        <li>Оперативная помощь при поломках</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="col-lg-4">
+                                <div class="h-100 p-3 bg-dark rounded">
+                                    <h5 class="text-primary fw-bold mb-3">
+                                        <i class="bi bi-box-seam me-2"></i>
+                                        Для поставщиков
+                                    </h5>
+                                    <ul class="text-light small mb-0">
+                                        <li>Расширение рынка реализации продукции</li>
+                                        <li>Прямая связь с автосервисами</li>
+                                        <li>Реализация коммерческих интересов</li>
+                                        <li>Участие в цепочке предоставления услуг</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Особенности проекта -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h4 class="text-primary mb-3">
+                                    <i class="bi bi-star-fill me-2"></i>
+                                    Особенности проекта
+                                </h4>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-check-circle-fill text-success me-3 mt-1"></i>
+                                            <div>
+                                                <h6 class="text-primary mb-1">Единая площадка</h6>
+                                                <p class="text-light small mb-0">
+                                                    Объединение потребителей услуг, автосервисов и поставщиков материалов
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-check-circle-fill text-success me-3 mt-1"></i>
+                                            <div>
+                                                <h6 class="text-primary mb-1">Удобный выбор</h6>
+                                                <p class="text-light small mb-0">
+                                                    Подбор автосервиса по региону, критериям и отзывам
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-check-circle-fill text-success me-3 mt-1"></i>
+                                            <div>
+                                                <h6 class="text-primary mb-1">Инструмент для бизнеса</h6>
+                                                <p class="text-light small mb-0">
+                                                    Доступный механизм привлечения и управления клиентурой
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-check-circle-fill text-success me-3 mt-1"></i>
+                                            <div>
+                                                <h6 class="text-primary mb-1">Удаленная поддержка</h6>
+                                                <p class="text-light small mb-0">
+                                                    Блог и чат для оперативного решения проблем
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Дисклеймер -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="alert alert-warning text-dark">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    <strong>Важно:</strong> Проект 24АвтоСервис предоставляет площадку для взаимодействия участников, но не несет ответственности за качество оказания услуг. Мы помогаем реализовать потребности всех участников проекта.
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</section>
-
-<!-- Контакты -->
-<section id="contacts" class="page-section text-white">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-8 mx-auto text-center mb-5">
-                <h2 class="display-5 fw-bold mb-4">Контакты</h2>
-                <p class="lead">Свяжитесь с нами любым удобным способом</p>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-4 mb-4">
-                <div class="text-center">
-                    <i class="fas fa-phone fa-2x mb-3"></i>
-                    <h5>Телефон</h5>
-                    <p class="mb-0">
-                        <a href="tel:+79991234567" class="text-white text-decoration-none">+7 (999) 123-45-67</a><br>
-                        <a href="tel:+79991234568" class="text-white text-decoration-none">+7 (999) 123-45-68</a>
-                    </p>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="text-center">
-                    <i class="fas fa-envelope fa-2x mb-3"></i>
-                    <h5>Email</h5>
-                    <p class="mb-0">
-                        <a href="mailto:info@24autoservice.ru" class="text-white text-decoration-none">info@24autoservice.ru</a><br>
-                        <a href="mailto:service@24autoservice.ru" class="text-white text-decoration-none">service@24autoservice.ru</a>
-                    </p>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="text-center">
-                    <i class="fas fa-map-marker-alt fa-2x mb-3"></i>
-                    <h5>Адрес</h5>
-                    <p class="mb-0">
-                        г. Москва,<br>
-                        ул. Автосервисная, 24<br>
-                        ТЦ "Автопарк", 1 этаж
-                    </p>
-                </div>
-            </div>
-        </div>
-        <div class="row mt-5">
-            <div class="col-lg-6 mx-auto">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title text-dark">Записаться на ремонт</h5>
-                        <form>
-                            <div class="mb-3">
-                                <input type="text" class="form-control" placeholder="Ваше имя" required>
-                            </div>
-                            <div class="mb-3">
-                                <input type="tel" class="form-control" placeholder="Телефон" required>
-                            </div>
-                            <div class="mb-3">
-                                <select class="form-select">
-                                    <option>Выберите услугу</option>
-                                    <option>Диагностика</option>
-                                    <option>Ремонт двигателя</option>
-                                    <option>Замена масла</option>
-                                    <option>Шиномонтаж</option>
-                                    <option>Другое</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <textarea class="form-control" rows="3" placeholder="Описание проблемы"></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">Отправить заявку</button>
-                        </form>
+            
+            <!-- Блок выбора автосервиса -->
+            <div class="row mb-5">
+                <div class="col-12">
+                    <div class="card shadow-lg border-0 text-light">
+                        <div class="card-header text-center py-3">
+                            <h3 class="text-primary mb-0">
+                                <i class="bi bi-search me-2"></i>
+                                Выберите автосервис
+                            </h3>
+                        </div>
+                        <div class="card-body p-4">
+                            <form id="autoservice-search-form" class="row g-3">
+                                <!-- Выбор региона -->
+                                <div class="col-md-6">
+                                    <label for="region-select" class="form-label text-primary fw-bold">
+                                        <i class="bi bi-geo-alt me-2"></i>
+                                        Выберите регион:
+                                    </label>
+                                    <select id="region-select" class="form-select form-select-lg">
+                                        <option value="">Все регионы</option>
+                                        {% for region in regions %}
+                                        <option value="{{ region.id }}">{{ region.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <!-- Выбор автосервиса -->
+                                <div class="col-md-6">
+                                    <label for="autoservice-select" class="form-label text-primary fw-bold">
+                                        <i class="bi bi-building me-2"></i>
+                                        Выберите автосервис:
+                                    </label>
+                                    <select id="autoservice-select" class="form-select form-select-lg" disabled>
+                                        <option value="">Сначала выберите регион</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Кнопка перехода -->
+                                <div class="col-12 text-center">
+                                    <button type="submit" class="btn btn-primary btn-lg" id="go-to-autoservice" disabled>
+                                        <i class="bi bi-arrow-right me-2"></i>
+                                        Перейти к автосервису
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
+            
         </div>
     </div>
-</section>
+</div>
 
-<!-- Рабочие часы -->
-<section id="hours" class="page-section text-white">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-12 text-center">
-                <h6 class="mb-2">Режим работы</h6>
-                <p class="mb-0">
-                    <strong>Круглосуточно, без выходных</strong> | 
-                    Экстренный вызов: <a href="tel:+79991234567" class="text-warning">+7 (999) 123-45-67</a>
-                </p>
-            </div>
-        </div>
-    </div>
-</section>
-{% endblock %}
+<!-- Стили для hover эффектов -->
+<style>
+.autoservice-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.autoservice-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const regionSelect = document.getElementById('region-select');
+    const autoserviceSelect = document.getElementById('autoservice-select');
+    const submitButton = document.getElementById('go-to-autoservice');
+    const form = document.getElementById('autoservice-search-form');
+    
+    // Данные автосервисов по регионам
+    const autoservicesByRegion = {
+        {% for region, autoservices in autoservices_by_region.items %}
+        "{{ region.id }}": [
+            {% for autoservice in autoservices %}
+            {
+                "slug": "{{ autoservice.slug }}",
+                "name": "{{ autoservice.name }}",
+                "address": "{{ autoservice.address|truncatewords:5 }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    };
+    
+    // Обработчик изменения региона
+    regionSelect.addEventListener('change', function() {
+        const regionId = this.value;
+        
+        // Очищаем список автосервисов
+        autoserviceSelect.innerHTML = '';
+        autoserviceSelect.disabled = true;
+        submitButton.disabled = true;
+        
+        if (regionId) {
+            const autoservices = autoservicesByRegion[regionId] || [];
+            
+            if (autoservices.length > 0) {
+                // Добавляем опцию по умолчанию
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Выберите автосервис';
+                autoserviceSelect.appendChild(defaultOption);
+                
+                // Добавляем автосервисы
+                autoservices.forEach(function(autoservice) {
+                    const option = document.createElement('option');
+                    option.value = autoservice.slug;
+                    option.textContent = autoservice.name + ' - ' + autoservice.address;
+                    autoserviceSelect.appendChild(option);
+                });
+                
+                autoserviceSelect.disabled = false;
+            } else {
+                const noOption = document.createElement('option');
+                noOption.value = '';
+                noOption.textContent = 'Нет доступных автосервисов';
+                autoserviceSelect.appendChild(noOption);
+            }
+        } else {
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Сначала выберите регион';
+            autoserviceSelect.appendChild(defaultOption);
+        }
+    });
+    
+    // Обработчик изменения автосервиса
+    autoserviceSelect.addEventListener('change', function() {
+        submitButton.disabled = !this.value;
+    });
+    
+    // Обработчик отправки формы
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const autoserviceSlug = autoserviceSelect.value;
+        if (autoserviceSlug) {
+            window.location.href = `/autoservice/${autoserviceSlug}/`;
+        }
+    });
+});
+</script>
+{% endblock content %}
