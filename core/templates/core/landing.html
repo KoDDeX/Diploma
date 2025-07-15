@@ -204,6 +204,120 @@
                 </div>
             </div>
             
+            <!-- Блок "Хотите стать участником проекта?" -->
+            <div class="row mb-5">
+                <div class="col-12">
+                    <div class="card shadow-lg border-0 text-light">
+                        <div class="card-header text-center py-3">
+                            <h3 class="text-primary mb-0">
+                                <i class="bi bi-people-fill me-2"></i>
+                                Хотите стать участником проекта?
+                            </h3>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row g-4">
+                                <!-- Для клиентов -->
+                                <div class="col-lg-4">
+                                    <div class="h-100 p-4 bg-dark rounded text-center">
+                                        <div class="mb-3">
+                                            <i class="bi bi-person-check display-4 text-success"></i>
+                                        </div>
+                                        <h5 class="text-primary fw-bold mb-3">
+                                            Для клиентов
+                                        </h5>
+                                        <p class="text-light mb-4">
+                                            Если вы клиент, то просто зарегистрируйтесь на сайте бесплатно, и получите доступ к услугам автосервисов.
+                                        </p>
+                                        <div class="d-grid">
+                                            <a href="{% url 'users:register' %}" class="btn btn-success btn-lg text-white">
+                                                <i class="bi bi-person-plus me-2"></i>
+                                                Зарегистрироваться
+                                            </a>
+                                        </div>
+                                        <div class="mt-3">
+                                            <small class="text-white-50">
+                                                <i class="bi bi-gift me-1"></i>
+                                                Бесплатно
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Для автосервисов -->
+                                <div class="col-lg-4">
+                                    <div class="h-100 p-4 bg-dark rounded text-center">
+                                        <div class="mb-3">
+                                            <i class="bi bi-building display-4 text-warning"></i>
+                                        </div>
+                                        <h5 class="text-primary fw-bold mb-3">
+                                            Для автосервисов
+                                        </h5>
+                                        <p class="text-light mb-4">
+                                            Если вы руководитель автосервиса, то зарегистрируйте на сайте свой автосервис и привлекайте новых клиентов.
+                                        </p>
+                                        <div class="d-grid">
+                                            <a href="{% url 'users:register' %}" class="btn btn-warning btn-lg">
+                                                <i class="bi bi-building-add me-2"></i>
+                                                Зарегистрировать сервис
+                                            </a>
+                                        </div>
+                                        <div class="mt-3">
+                                            <small class="text-white-50">
+                                                <i class="bi bi-credit-card me-1"></i>
+                                                10 000 руб./мес.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Для поставщиков -->
+                                <div class="col-lg-4">
+                                    <div class="h-100 p-4 bg-dark rounded text-center">
+                                        <div class="mb-3">
+                                            <i class="bi bi-box-seam display-4" style="color: #ffd700;"></i>
+                                        </div>
+                                        <h5 class="text-primary fw-bold mb-3">
+                                            Для поставщиков
+                                        </h5>
+                                        <p class="text-light mb-4">
+                                            Если вы магазин автозапчастей, то напишите нам на почту для обсуждения условий сотрудничества.
+                                        </p>
+                                        <div class="d-grid">
+                                            <a href="mailto:24autoservice@ya.ru" class="btn btn-lg text-white" style="background-color: #ffd700;">
+                                                <i class="bi bi-envelope-fill me-2"></i>
+                                                Написать письмо
+                                            </a>
+                                        </div>
+                                        <div class="mt-3">
+                                            <small class="text-white-50">
+                                                <i class="bi bi-credit-card me-1"></i>
+                                                10 000 руб./мес.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Дополнительная информация -->
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <div class="text-center p-3 bg-primary bg-opacity-10 rounded">
+                                        <h6 class="text-success mb-2">
+                                            <i class="bi bi-info-circle me-2"></i>
+                                            Присоединяйтесь к нашему проекту!
+                                        </h6>
+                                        <p class="text-light small mb-0">
+                                            Мы стремимся создать удобную экосистему для всех участников автосервисного рынка. 
+                                            Вместе мы делаем процесс обслуживания автомобилей проще и доступнее!
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
         </div>
     </div>
 </div>
