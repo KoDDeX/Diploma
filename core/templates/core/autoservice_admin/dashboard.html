@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock title %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <!-- Заголовок -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="text-primary mb-2">
+                        <i class="bi bi-speedometer2 me-2"></i>
+                        Панель управления
+                    </h1>
+                    <p class="text-muted mb-0">
+                        <i class="bi bi-building me-1"></i>
+                        {{ autoservice.name }}
+                    </p>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-{% if autoservice.is_active %}success{% else %}danger{% endif %} fs-6">
+                        {% if autoservice.is_active %}
+                            <i class="bi bi-check-circle me-1"></i>Активен
+                        {% else %}
+                            <i class="bi bi-x-circle me-1"></i>Неактивен
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Статистика -->
+            <div class="row g-4 mb-5">
+                <div class="col-md-6 col-lg-4">
+                    <div class="card bg-primary text-white h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-people-fill display-4 mb-3"></i>
+                            <h3 class="fw-bold">{{ total_managers }}</h3>
+                            <p class="mb-0">Менеджеров</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 col-lg-4">
+                    <div class="card bg-success text-white h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-geo-alt-fill display-4 mb-3"></i>
+                            <h5 class="fw-bold">{{ autoservice.region.name }}</h5>
+                            <p class="mb-0">Регион работы</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 col-lg-4">
+                    <div class="card bg-info text-white h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-calendar-fill display-4 mb-3"></i>
+                            <h6 class="fw-bold">{{ autoservice.created_at|date:"d.m.Y" }}</h6>
+                            <p class="mb-0">Дата создания</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Быстрые действия -->
+            <div class="row g-4 mb-5">
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="bi bi-pencil-square text-primary display-5 mb-3"></i>
+                            <h5 class="card-title">Редактировать информацию</h5>
+                            <p class="card-text text-muted">
+                                Обновите информацию о вашем автосервисе: название, адрес, контакты и описание
+                            </p>
+                            <a href="{% url 'core:autoservice_edit_profile' %}" class="btn btn-primary">
+                                <i class="bi bi-pencil me-2"></i>Редактировать
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="bi bi-people text-success display-5 mb-3"></i>
+                            <h5 class="card-title">Управление менеджерами</h5>
+                            <p class="card-text text-muted">
+                                Добавляйте и управляйте менеджерами вашего автосервиса
+                            </p>
+                            <a href="{% url 'core:autoservice_managers_list' %}" class="btn btn-success">
+                                <i class="bi bi-people me-2"></i>Менеджеры
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Информация об автосервисе -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Информация об автосервисе
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <strong class="text-primary">
+                                <i class="bi bi-building me-1"></i>
+                                Название:
+                            </strong>
+                            <p class="mb-2">{{ autoservice.name }}</p>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <strong class="text-primary">
+                                <i class="bi bi-geo-alt me-1"></i>
+                                Регион:
+                            </strong>
+                            <p class="mb-2">{{ autoservice.region.name }}</p>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <strong class="text-primary">
+                                <i class="bi bi-telephone me-1"></i>
+                                Телефон:
+                            </strong>
+                            <p class="mb-2">{{ autoservice.phone }}</p>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <strong class="text-primary">
+                                <i class="bi bi-envelope me-1"></i>
+                                Email:
+                            </strong>
+                            <p class="mb-2">{{ autoservice.email }}</p>
+                        </div>
+                        
+                        <div class="col-12">
+                            <strong class="text-primary">
+                                <i class="bi bi-map me-1"></i>
+                                Адрес:
+                            </strong>
+                            <p class="mb-2">{{ autoservice.address }}</p>
+                        </div>
+                        
+                        {% if autoservice.description %}
+                        <div class="col-12">
+                            <strong class="text-primary">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Описание:
+                            </strong>
+                            <p class="mb-0">{{ autoservice.description }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+}
+
+.display-5 {
+    font-size: 3rem;
+}
+</style>
+{% endblock content %}

@@ -587,3 +587,48 @@ textarea.form-control {
     /* Включаем рамку в общую ширину элемента */
     box-sizing: border-box;
 }
+
+/* Улучшенные стили для text-muted на темном фоне */
+.text-muted {
+    color: #a8a8a8 !important;
+    opacity: 0.9;
+}
+
+/* Специальные стили для text-muted в разных контекстах */
+.card .text-muted {
+    color: #b0b0b0 !important;
+}
+
+.alert .text-muted {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.bg-primary .text-muted,
+.bg-success .text-muted,
+.bg-info .text-muted,
+.bg-warning .text-muted,
+.bg-danger .text-muted {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Стили для малого текста */
+.small,
+small {
+    color: #b8b8b8 !important;
+}
+
+.form-text {
+    color: #9a9a9a !important;
+}
+
+/* Стили для подписей в формах */
+.form-label {
+    color: #e0e0e0 !important;
+    font-weight: 500;
+}
+
+/* Улучшение читаемости для параграфов с классом text-muted */
+p.text-muted {
+    line-height: 1.5;
+    font-size: 0.9rem;
+}

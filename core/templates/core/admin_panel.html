@@ -1,0 +1,483 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock title %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <!-- Заголовок панели -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="text-primary">
+                    <i class="bi bi-gear-fill me-2"></i>
+                    {{ title }}
+                </h1>
+                <div class="text-muted">
+                    <i class="bi bi-building me-1"></i>
+                    Всего автосервисов: {{ autoservices|length }}
+                </div>
+            </div>
+
+            <!-- Фильтры -->
+            <div class="card mb-4">
+                <div class="card-body p-3">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-2 mb-md-0">
+                                <i class="bi bi-funnel me-2"></i>
+                                Фильтры:
+                            </h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="btn-group w-100" role="group">
+                                {% for filter_key, filter_name in filters %}
+                                <a href="?filter={{ filter_key }}" 
+                                   class="btn {% if current_filter == filter_key %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                                    {% if filter_key == 'all' %}
+                                        <i class="bi bi-list-ul me-1"></i>
+                                    {% elif filter_key == 'active' %}
+                                        <i class="bi bi-check-circle me-1"></i>
+                                    {% else %}
+                                        <i class="bi bi-x-circle me-1"></i>
+                                    {% endif %}
+                                    {{ filter_name }}
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Карточки автосервисов -->
+            <div class="row g-4">
+                {% for autoservice in autoservices %}
+                <div class="col-lg-6 col-xl-4">
+                    <div class="card h-100 shadow-sm border-0">
+                        <div class="card-header bg-dark text-light d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold">
+                                <i class="bi bi-building me-2"></i>
+                                {{ autoservice.name }}
+                            </h6>
+                            <span class="badge {% if autoservice.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                {% if autoservice.is_active %}
+                                    <i class="bi bi-check-circle me-1"></i>Активен
+                                {% else %}
+                                    <i class="bi bi-x-circle me-1"></i>Неактивен
+                                {% endif %}
+                            </span>
+                        </div>
+                        
+                        <div class="card-body">
+                            <!-- Основная информация -->
+                            <div class="mb-3">
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <strong class="text-primary">
+                                            <i class="bi bi-geo-alt me-1"></i>
+                                            Регион:
+                                        </strong>
+                                        <span class="text-light">{{ autoservice.region.name }}</span>
+                                    </div>
+                                    <div class="col-12">
+                                        <strong class="text-primary">
+                                            <i class="bi bi-map me-1"></i>
+                                            Адрес:
+                                        </strong>
+                                        <span class="text-light">{{ autoservice.address|truncatewords:10 }}</span>
+                                    </div>
+                                    <div class="col-12">
+                                        <strong class="text-primary">
+                                            <i class="bi bi-telephone me-1"></i>
+                                            Телефон:
+                                        </strong>
+                                        <span class="text-light">{{ autoservice.phone }}</span>
+                                    </div>
+                                    <div class="col-12">
+                                        <strong class="text-primary">
+                                            <i class="bi bi-envelope me-1"></i>
+                                            Email:
+                                        </strong>
+                                        <span class="text-light">{{ autoservice.email }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Описание -->
+                            {% if autoservice.description %}
+                            <div class="mb-3">
+                                <strong class="text-primary">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Описание:
+                                </strong>
+                                <p class="text-light small mb-0 mt-1">{{ autoservice.description|truncatewords:15 }}</p>
+                            </div>
+                            {% endif %}
+
+                            <!-- Сотрудники автосервиса -->
+                            {% if autoservice.admins or autoservice.managers %}
+                            <div class="mb-3">
+                                <!-- Администраторы -->
+                                {% if autoservice.admins %}
+                                <div class="mb-2">
+                                    <strong class="text-warning">
+                                        <i class="bi bi-shield-fill-check me-1"></i>
+                                        Администраторы:
+                                    </strong>
+                                    <div class="mt-1">
+                                        {% for admin in autoservice.admins %}
+                                        <span class="badge bg-warning text-dark me-1 mb-1">
+                                            <i class="bi bi-person-gear me-1"></i>
+                                            {% if admin.last_name or admin.first_name %}
+                                                {{ admin.last_name }} {{ admin.first_name }}
+                                            {% else %}
+                                                {{ admin.username }}
+                                            {% endif %}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Менеджеры -->
+                                {% if autoservice.managers %}
+                                <div class="mb-2">
+                                    <strong class="text-info">
+                                        <i class="bi bi-people me-1"></i>
+                                        Менеджеры:
+                                    </strong>
+                                    <div class="mt-1">
+                                        {% for manager in autoservice.managers %}
+                                        <span class="badge bg-info me-1 mb-1">
+                                            <i class="bi bi-person me-1"></i>
+                                            {% if manager.last_name or manager.first_name %}
+                                                {{ manager.last_name }} {{ manager.first_name }}
+                                            {% else %}
+                                                {{ manager.username }}
+                                            {% endif %}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Статистика сотрудников -->
+                                <div class="small text-muted">
+                                    <i class="bi bi-people-fill me-1"></i>
+                                    Всего сотрудников: {{ autoservice.total_staff }}
+                                    {% if autoservice.admins %}
+                                        ({{ autoservice.admins|length }} админ{% if autoservice.admins|length > 1 %}ов{% endif %})
+                                    {% endif %}
+                                    {% if autoservice.managers %}
+                                        ({{ autoservice.managers|length }} менеджер{% if autoservice.managers|length > 1 %}ов{% endif %})
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="mb-3">
+                                <strong class="text-muted">
+                                    <i class="bi bi-people me-1"></i>
+                                    Сотрудники:
+                                </strong>
+                                <div class="mt-1">
+                                    <span class="text-muted small">
+                                        <i class="bi bi-person-x me-1"></i>
+                                        Нет назначенных сотрудников
+                                    </span>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Дата создания -->
+                            <div class="small text-muted">
+                                <i class="bi bi-calendar me-1"></i>
+                                Создан: {{ autoservice.created_at|date:"d.m.Y H:i" }}
+                            </div>
+                        </div>
+
+                        <div class="card-footer bg-transparent">
+                            <div class="d-grid gap-2">
+                                <!-- Кнопка активации/деактивации -->
+                                <button type="button" 
+                                        class="btn {% if autoservice.is_active %}btn-warning{% else %}btn-success{% endif %} btn-sm toggle-status-btn"
+                                        data-autoservice-id="{{ autoservice.id }}"
+                                        data-autoservice-name="{{ autoservice.name }}">
+                                    <i class="bi bi-toggle-{% if autoservice.is_active %}off{% else %}on{% endif %} me-1"></i>
+                                    {% if autoservice.is_active %}Деактивировать{% else %}Активировать{% endif %}
+                                </button>
+                                
+                                <!-- Кнопка добавления сотрудника -->
+                                <button type="button" 
+                                        class="btn btn-primary btn-sm add-manager-btn"
+                                        data-autoservice-id="{{ autoservice.id }}"
+                                        data-autoservice-name="{{ autoservice.name }}">
+                                    <i class="bi bi-person-plus me-1"></i>
+                                    Добавить сотрудника
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Автосервисы с выбранным фильтром не найдены.
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для выбора менеджера -->
+<div class="modal fade" id="managerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-primary">
+                    <i class="bi bi-person-plus me-2"></i>
+                    Добавить сотрудника
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="users-loading" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                    <p class="mt-2">Загрузка пользователей...</p>
+                </div>
+                <div id="users-list" style="display: none;">
+                    <p class="text-muted">Выберите пользователя для назначения сотрудником автосервиса <strong id="modal-autoservice-name"></strong>:</p>
+                    <div class="list-group" id="users-container">
+                        <!-- Список пользователей будет загружен через AJAX -->
+                    </div>
+                </div>
+                <div id="users-error" style="display: none;" class="alert alert-danger">
+                    <!-- Ошибка загрузки -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// URL-ы для AJAX запросов
+const URLS = {
+    getUsers: '{% url "core:get_users_for_manager" 0 %}'.replace('0', '{autoservice_id}'),
+    toggleStatus: '{% url "core:toggle_autoservice_status" 0 %}'.replace('0', '{autoservice_id}'),
+    assignManager: '{% url "core:assign_manager" 0 0 %}'.replace('0', '{autoservice_id}').replace('0', '{user_id}')
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработчик кнопки изменения статуса
+    document.querySelectorAll('.toggle-status-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const autoserviceId = this.dataset.autoserviceId;
+            const autoserviceName = this.dataset.autoserviceName;
+            
+            if (!confirm(`Изменить статус автосервиса "${autoserviceName}"?`)) {
+                return;
+            }
+            
+            // Показываем индикатор загрузки
+            const originalText = this.innerHTML;
+            this.disabled = true;
+            this.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i>Изменение...';
+            
+            fetch(URLS.toggleStatus.replace('{autoservice_id}', autoserviceId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Обновляем кнопку
+                    this.className = `btn ${data.button_class} btn-sm toggle-status-btn`;
+                    this.innerHTML = `<i class="bi bi-toggle-${data.is_active ? 'off' : 'on'} me-1"></i>${data.button_text}`;
+                    
+                    // Обновляем badge статуса
+                    const card = this.closest('.card');
+                    const statusBadge = card.querySelector('.badge');
+                    statusBadge.className = `badge ${data.is_active ? 'bg-success' : 'bg-danger'}`;
+                    statusBadge.innerHTML = data.is_active ? 
+                        '<i class="bi bi-check-circle me-1"></i>Активен' : 
+                        '<i class="bi bi-x-circle me-1"></i>Неактивен';
+                    
+                    // Показываем уведомление
+                    alert(data.message);
+                } else {
+                    alert(`Ошибка: ${data.error}`);
+                    this.innerHTML = originalText;
+                }
+                this.disabled = false;
+            })
+            .catch(error => {
+                alert(`Ошибка при изменении статуса: ${error}`);
+                this.innerHTML = originalText;
+                this.disabled = false;
+            });
+        });
+    });
+    
+    // Обработчик кнопки добавления менеджера
+    document.querySelectorAll('.add-manager-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const autoserviceId = this.dataset.autoserviceId;
+            const autoserviceName = this.dataset.autoserviceName;
+            
+            // Сохраняем данные в модальном окне
+            const modal = new bootstrap.Modal(document.getElementById('managerModal'));
+            document.getElementById('modal-autoservice-name').textContent = autoserviceName;
+            
+            // Показываем модальное окно
+            modal.show();
+            
+            // Загружаем список пользователей
+            loadUsers(autoserviceId);
+        });
+    });
+    
+    function loadUsers(autoserviceId) {
+        const loadingDiv = document.getElementById('users-loading');
+        const listDiv = document.getElementById('users-list');
+        const errorDiv = document.getElementById('users-error');
+        const container = document.getElementById('users-container');
+        
+        // Показываем индикатор загрузки
+        loadingDiv.style.display = 'block';
+        listDiv.style.display = 'none';
+        errorDiv.style.display = 'none';
+        
+        fetch(URLS.getUsers.replace('{autoservice_id}', autoserviceId), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                loadingDiv.style.display = 'none';
+                
+                if (data.success) {
+                    container.innerHTML = '';
+                    
+                    data.users.forEach(user => {
+                        const userElement = document.createElement('button');
+                        userElement.className = `list-group-item list-group-item-action ${user.is_manager ? 'list-group-item-warning' : ''}`;
+                        userElement.innerHTML = `
+                            <div class="d-flex w-100 justify-content-between">
+                                <div>
+                                    <h6 class="mb-1">${user.display_name}</h6>
+                                    <small class="text-muted">${user.email} • ${user.role}</small>
+                                </div>
+                                ${user.is_manager ? '<span class="badge bg-warning text-dark">Уже сотрудник</span>' : ''}
+                            </div>
+                        `;
+                        
+                        if (!user.is_manager) {
+                            userElement.addEventListener('click', function() {
+                                assignManager(autoserviceId, user.id, userElement);
+                            });
+                        } else {
+                            userElement.disabled = true;
+                            userElement.style.cursor = 'not-allowed';
+                        }
+                        
+                        container.appendChild(userElement);
+                    });
+                    
+                    listDiv.style.display = 'block';
+                } else {
+                    errorDiv.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>Ошибка загрузки: ${data.error}`;
+                    errorDiv.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                loadingDiv.style.display = 'none';
+                errorDiv.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>Ошибка загрузки пользователей: ${error}`;
+                errorDiv.style.display = 'block';
+            });
+    }
+    
+    function assignManager(autoserviceId, userId, buttonElement) {
+        if (!confirm('Назначить выбранного пользователя сотрудником автосервиса?')) {
+            return;
+        }
+        
+        // Показываем индикатор загрузки
+        const originalText = buttonElement.innerHTML;
+        buttonElement.disabled = true;
+        buttonElement.innerHTML = '<div class="spinner-border spinner-border-sm me-2" role="status"></div>Назначение...';
+        
+        fetch(URLS.assignManager.replace('{autoservice_id}', autoserviceId).replace('{user_id}', userId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                // Закрываем модальное окно
+                bootstrap.Modal.getInstance(document.getElementById('managerModal')).hide();
+                // Перезагружаем страницу для обновления данных
+                window.location.reload();
+            } else {
+                alert(`Ошибка: ${data.error}`);
+                buttonElement.innerHTML = originalText;
+                buttonElement.disabled = false;
+            }
+        })
+        .catch(error => {
+            alert(`Ошибка при назначении менеджера: ${error}`);
+            buttonElement.innerHTML = originalText;
+            buttonElement.disabled = false;
+        });
+    }
+});
+</script>
+
+<style>
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+}
+
+.list-group-item {
+    border-left: 4px solid transparent;
+}
+
+.list-group-item:hover:not(:disabled) {
+    border-left-color: var(--bs-primary);
+    background-color: var(--bs-primary-bg-subtle);
+}
+
+.list-group-item-warning {
+    border-left-color: var(--bs-warning);
+}
+</style>
+{% endblock content %}

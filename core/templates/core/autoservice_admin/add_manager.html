@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock title %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-6 mx-auto">
+            <!-- Заголовок -->
+            <div class="d-flex align-items-center mb-4">
+                <a href="{% url 'core:autoservice_managers_list' %}" class="btn btn-link text-decoration-none p-0 me-3">
+                    <i class="bi bi-arrow-left fs-4"></i>
+                </a>
+                <div>
+                    <h1 class="text-primary mb-2">
+                        <i class="bi bi-person-plus me-2"></i>
+                        Добавить сотрудника
+                    </h1>
+                    <p class="text-muted mb-0">Добавление нового сотрудника в автосервис "{{ autoservice.name }}"</p>
+                </div>
+            </div>
+
+            <!-- Форма добавления -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Поиск пользователя -->
+                        <div class="mb-4">
+                            <h5 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-search me-2"></i>
+                                Поиск пользователя
+                            </h5>
+
+                            <div class="row g-3">
+                                <!-- Email -->
+                                <div class="col-12">
+                                    <label for="{{ form.email.id_for_label }}" class="form-label fw-bold">
+                                        <i class="bi bi-envelope me-1"></i>
+                                        {{ form.email.label }}
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.email }}
+                                    {% if form.email.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.email.errors %}
+                                                <div>{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">
+                                        {{ form.email.help_text }}
+                                    </small>
+                                </div>
+
+                                <!-- Роль -->
+                                <div class="col-12">
+                                    <label for="{{ form.role.id_for_label }}" class="form-label fw-bold">
+                                        <i class="bi bi-shield me-1"></i>
+                                        {{ form.role.label }}
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.role }}
+                                    {% if form.role.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.role.errors %}
+                                                <div>{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">
+                                        {{ form.role.help_text }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Кнопки управления -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'core:autoservice_managers_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>
+                                Отмена
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-person-plus me-2"></i>
+                                Добавить сотрудника
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Информация о ролях -->
+            <div class="card mt-4 bg-light">
+                <div class="card-body">
+                    <h6 class="card-title text-primary">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Описание ролей
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="d-flex align-items-start mb-3">
+                                <span class="badge bg-warning me-3 mt-1">
+                                    <i class="bi bi-shield-fill-check"></i>
+                                </span>
+                                <div>
+                                    <strong class="text-dark">Администратор автосервиса</strong>
+                                    <ul class="small text-muted mb-0 mt-1">
+                                        <li>Полный доступ к управлению автосервисом</li>
+                                        <li>Может редактировать информацию об автосервисе</li>
+                                        <li>Может добавлять и удалять менеджеров</li>
+                                        <li>Доступ ко всем функциям панели управления</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-info me-3 mt-1">
+                                    <i class="bi bi-person-badge"></i>
+                                </span>
+                                <div>
+                                    <strong class="text-dark">Менеджер</strong>
+                                    <ul class="small text-muted mb-0 mt-1">
+                                        <li>Доступ к основным функциям управления</li>
+                                        <li>Может работать с записями клиентов</li>
+                                        <li>Может просматривать информацию об автосервисе</li>
+                                        <li>Не может изменять настройки автосервиса</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Дополнительная информация -->
+            <div class="card mt-4 border-primary">
+                <div class="card-body">
+                    <h6 class="card-title text-primary">
+                        <i class="bi bi-lightbulb me-2"></i>
+                        Важная информация
+                    </h6>
+                    <ul class="mb-0 small text-muted">
+                        <li><strong>Пользователь должен быть зарегистрирован</strong> в системе с указанным email</li>
+                        <li><strong>Проверьте правильность email</strong> перед добавлением</li>
+                        <li><strong>Один пользователь может быть менеджером только одного автосервиса</strong></li>
+                        <li><strong>После добавления</strong> пользователь получит доступ к панели управления</li>
+                        <li><strong>Вы можете изменить роль менеджера</strong> в любое время</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Подсказка если нет пользователей -->
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger mt-4">
+                {% for error in form.non_field_errors %}
+                    <div><i class="bi bi-exclamation-triangle me-2"></i>{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    padding: 12px 16px;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.card {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+.card:hover {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+.btn {
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 500;
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+}
+
+.alert {
+    border-radius: 8px;
+    border: none;
+}
+
+.border-primary {
+    border-color: var(--bs-primary) !important;
+    border-width: 2px !important;
+}
+
+.form-label {
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.form-text {
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Добавляем автозаполнение для поля email
+    const emailField = document.getElementById('{{ form.email.id_for_label }}');
+    if (emailField) {
+        emailField.addEventListener('input', function() {
+            // Можно добавить логику автодополнения email'ов
+        });
+    }
+    
+    // Добавляем подсказки для выбора роли
+    const roleField = document.getElementById('{{ form.role.id_for_label }}');
+    if (roleField) {
+        roleField.addEventListener('change', function() {
+            // Можно добавить динамическое обновление описания роли
+        });
+    }
+});
+</script>
+{% endblock content %}
