@@ -6,8 +6,10 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.conf import settings
 from .models import Region, AutoService
-from .forms import AutoServiceEditForm, AddManagerForm
+from .forms import AutoServiceEditForm, AddManagerForm, AutoServiceRegistrationForm
 
 User = get_user_model()
 
@@ -422,3 +424,101 @@ def autoservice_remove_manager(request, user_id):
         messages.error(request, f"Ошибка при удалении менеджера: {str(e)}")
 
     return redirect("core:autoservice_managers_list")
+
+
+@login_required
+def autoservice_register_view(request):
+    """Представление для регистрации нового автосервиса"""
+
+    # Проверяем, что пользователь уже не является администратором автосервиса
+    # Пользователь может иметь несколько автосервисов! Такое возможно!
+    # if request.user.autoservice is not None:
+    #     messages.warning(request, "Вы уже являетесь администратором автосервиса")
+    #     return redirect("core:landing")
+
+    # Проверяем, что пользователь не является суперадминистратором
+    # А я что не знаю что мне ненадо регистрировать автосервис?
+    # if request.user.role == "super_admin":
+    #     messages.warning(
+    #         request, "Суперадминистратор не может регистрировать автосервис"
+    #     )
+    #     return redirect("core:admin_panel")
+
+    if request.method == "POST":
+        form = AutoServiceRegistrationForm(request.POST)
+        if form.is_valid():
+            try:
+                # Создаем автосервис
+                autoservice = form.save()
+
+                # Назначаем текущего пользователя администратором автосервиса
+                request.user.role = "autoservice_admin"
+                request.user.autoservice = autoservice
+                request.user.save()
+
+                # Отправляем уведомление суперадминистратору
+                send_autoservice_registration_notification(autoservice, request.user)
+
+                messages.success(
+                    request,
+                    "Автосервис успешно зарегистрирован! "
+                    "Он станет доступен после модерации администратором.",
+                )
+
+                # Перенаправляем на главную страницу
+                return redirect("core:landing")
+
+            except Exception as e:
+                messages.error(request, f"Ошибка при регистрации автосервиса: {str(e)}")
+                print(f"Ошибка регистрации автосервиса: {str(e)}")  # Для отладки
+    else:
+        form = AutoServiceRegistrationForm()
+
+    return render(
+        request,
+        "core/autoservice_register.html",
+        {"form": form, "title": "Регистрация автосервиса"},
+    )
+
+
+def send_autoservice_registration_notification(autoservice, user):
+    """Отправляет уведомление суперадминистратору о регистрации нового автосервиса"""
+    try:
+        # Получаем email суперадминистратора
+        superadmins = User.objects.filter(role="super_admin", is_active=True)
+        print(f'e-mail to admin: {[admin.email for admin in superadmins]}')
+        if not superadmins.exists():
+            return
+
+        subject = f"Новый автосервис: {autoservice.name}"
+        message = f"""
+Зарегистрирован новый автосервис:
+
+Название: {autoservice.name}
+Регион: {autoservice.region.name}
+Адрес: {autoservice.address}
+Телефон: {autoservice.phone}
+Email: {autoservice.email}
+Описание: {autoservice.description}
+
+Администратор:
+Имя: {user.first_name} {user.last_name}
+Email: {user.email}
+
+Для активации автосервиса перейдите в панель администратора.
+        """
+
+        # Отправляем email всем суперадминистраторам
+        recipient_list = [admin.email for admin in superadmins]
+
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=recipient_list,
+            fail_silently=False,
+        )
+
+    except Exception as e:
+        # Логируем ошибку, но не прерываем процесс регистрации
+        print(f"Ошибка отправки email: {str(e)}")

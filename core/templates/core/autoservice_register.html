@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock title %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-0 text-light">
+                <div class="card-header text-center py-4">
+                    <h2 class="text-primary mb-2">
+                        <i class="bi bi-building-add me-3"></i>
+                        Регистрация автосервиса
+                    </h2>
+                    <p class="text-white-50 mb-0">
+                        Зарегистрируйте свой автосервис на нашей платформе
+                    </p>
+                </div>
+                
+                <div class="card-body p-4">
+                    <!-- Информационное сообщение -->
+                    <div class="alert alert-info text-dark mb-4">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Внимание:</strong> После подачи заявки ваш автосервис будет рассмотрен администратором. 
+                        Активация произойдет в течение 24 часов после проверки данных.
+                    </div>
+
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row g-4">
+                            <!-- Название автосервиса -->
+                            <div class="col-12">
+                                <label for="{{ form.name.id_for_label }}" class="form-label text-primary fw-bold">
+                                    <i class="bi bi-building me-2"></i>
+                                    {{ form.name.label }}
+                                </label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.name.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text text-white-50">
+                                    Укажите полное название вашего автосервиса
+                                </div>
+                            </div>
+
+                            <!-- Регион -->
+                            <div class="col-md-6">
+                                <label for="{{ form.region.id_for_label }}" class="form-label text-primary fw-bold">
+                                    <i class="bi bi-geo-alt me-2"></i>
+                                    {{ form.region.label }}
+                                </label>
+                                {{ form.region }}
+                                {% if form.region.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.region.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Телефон -->
+                            <div class="col-md-6">
+                                <label for="{{ form.phone.id_for_label }}" class="form-label text-primary fw-bold">
+                                    <i class="bi bi-telephone me-2"></i>
+                                    {{ form.phone.label }}
+                                </label>
+                                {{ form.phone }}
+                                {% if form.phone.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.phone.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Email -->
+                            <div class="col-12">
+                                <label for="{{ form.email.id_for_label }}" class="form-label text-primary fw-bold">
+                                    <i class="bi bi-envelope me-2"></i>
+                                    {{ form.email.label }}
+                                </label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.email.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text text-white-50">
+                                    Email для связи с клиентами и получения уведомлений
+                                </div>
+                            </div>
+
+                            <!-- Адрес -->
+                            <div class="col-12">
+                                <label for="{{ form.address.id_for_label }}" class="form-label text-primary fw-bold">
+                                    <i class="bi bi-geo me-2"></i>
+                                    {{ form.address.label }}
+                                </label>
+                                {{ form.address }}
+                                {% if form.address.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.address.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text text-white-50">
+                                    Укажите полный адрес с названием улицы и номером дома
+                                </div>
+                            </div>
+
+                            <!-- Описание услуг -->
+                            <div class="col-12">
+                                <label for="{{ form.description.id_for_label }}" class="form-label text-primary fw-bold">
+                                    <i class="bi bi-card-text me-2"></i>
+                                    {{ form.description.label }}
+                                </label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.description.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text text-white-50">
+                                    Расскажите о специализации, услугах и особенностях вашего автосервиса
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Условия сотрудничества -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="p-3 bg-warning bg-opacity-10 rounded">
+                                    <h6 class="text-warning mb-2">
+                                        <i class="bi bi-credit-card me-2"></i>
+                                        Условия сотрудничества
+                                    </h6>
+                                    <ul class="text-light small mb-0">
+                                        <li>Стоимость размещения: <strong>10 000 руб./месяц</strong></li>
+                                        <li>Первый месяц предоставляется бесплатно для тестирования</li>
+                                        <li>Возможность управления записями клиентов</li>
+                                        <li>Продвижение в поисковой выдаче по региону</li>
+                                        <li>Техническая поддержка и консультации</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Кнопки действий -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <a href="{% url 'core:landing' %}" class="btn btn-secondary btn-lg me-md-2">
+                                        <i class="bi bi-arrow-left me-2"></i>
+                                        Отмена
+                                    </a>
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="bi bi-check-circle me-2"></i>
+                                        Зарегистрировать автосервис
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Validation JavaScript -->
+<script>
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+</script>
+{% endblock content %}

@@ -12,6 +12,8 @@ from .views import (
     autoservice_managers_list,
     autoservice_add_manager,
     autoservice_remove_manager,
+    # Регистрация автосервиса
+    autoservice_register_view,
 )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -19,6 +21,12 @@ from django.conf.urls.static import static
 app_name = "core"
 
 urlpatterns = [
+    # Главная страница
+    path("", LandingPageView.as_view(), name="landing"),
+    # Регистрация автосервиса
+    path(
+        "register-autoservice/", autoservice_register_view, name="autoservice_register"
+    ),
     # Панель управления для суперадминистратора
     path("admin-panel/", admin_panel_view, name="admin_panel"),
     path(

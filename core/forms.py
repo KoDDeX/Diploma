@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.utils.text import slugify
 from .models import AutoService, Region
 
 User = get_user_model()
@@ -144,3 +145,118 @@ class AddManagerForm(forms.Form):
             except User.DoesNotExist:
                 return None
         return None
+
+
+class AutoServiceRegistrationForm(forms.ModelForm):
+    """Форма регистрации нового автосервиса"""
+
+    class Meta:
+        model = AutoService
+        fields = [
+            "name",
+            "region",
+            "address",
+            "phone",
+            "email",
+            "description",
+        ]
+        widgets = {
+            "name": forms.TextInput(
+                attrs={
+                    "class": "form-control form-control-lg",
+                    "placeholder": "Название вашего автосервиса",
+                    "required": True,
+                }
+            ),
+            "region": forms.Select(
+                attrs={
+                    "class": "form-select form-select-lg",
+                    "required": True,
+                }
+            ),
+            "address": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 3,
+                    "placeholder": "Полный адрес автосервиса с указанием города и улицы",
+                    "required": True,
+                }
+            ),
+            "phone": forms.TextInput(
+                attrs={
+                    "class": "form-control form-control-lg",
+                    "placeholder": "+7 (XXX) XXX-XX-XX",
+                    "required": True,
+                }
+            ),
+            "email": forms.EmailInput(
+                attrs={
+                    "class": "form-control form-control-lg",
+                    "placeholder": "email@autoservice.ru",
+                    "required": True,
+                }
+            ),
+            "description": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": "Краткое описание ваших услуг, специализации и особенностей автосервиса",
+                }
+            ),
+        }
+        labels = {
+            "name": "Название автосервиса *",
+            "region": "Регион *",
+            "address": "Адрес *",
+            "phone": "Телефон *",
+            "email": "Email *",
+            "description": "Описание услуг",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Добавляем пустой вариант для региона
+        self.fields["region"].empty_label = "Выберите регион"
+
+    def clean_name(self):
+        name = self.cleaned_data["name"]
+
+        # Проверяем, не существует ли уже автосервис с таким названием в том же регионе
+        region = self.cleaned_data.get("region")
+        if region:
+            if AutoService.objects.filter(name=name, region=region).exists():
+                raise forms.ValidationError(
+                    f'Автосервис с названием "{name}" уже существует в регионе {region.name}'
+                )
+
+        return name
+
+    def clean_email(self):
+        email = self.cleaned_data["email"]
+
+        # Проверяем, не используется ли уже этот email
+        if AutoService.objects.filter(email=email).exists():
+            raise forms.ValidationError("Автосервис с таким email уже зарегистрирован")
+
+        return email
+
+    def save(self, commit=True):
+        """Создаём автосервис с автоматически сгенерированным slug и статусом неактивен"""
+        autoservice = super().save(commit=False)
+
+        # Генерируем уникальный slug
+        base_slug = slugify(autoservice.name)
+        slug = base_slug
+        counter = 1
+
+        while AutoService.objects.filter(slug=slug).exists():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+
+        autoservice.slug = slug
+        autoservice.is_active = False  # По умолчанию неактивен до модерации
+
+        if commit:
+            autoservice.save()
+
+        return autoservice
