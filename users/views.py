@@ -104,7 +104,9 @@ class UserLoginView(LoginView):
 
     def get_success_url(self):
         """Определяет URL для перенаправления после успешного входа."""
-        messages.success(self.request, f"С возвращением, {self.request.user.username}!")
+        messages.success(
+            self.request, f"Вы успешно вошли в систему, {self.request.user.username}!"
+        )
         next_url = self.request.GET.get("next")
         return next_url or reverse_lazy("landing")
 
@@ -127,7 +129,7 @@ class UserProfileDetailView(LoginRequiredMixin, DetailView):
 
     model = User
     template_name = "users/profile_detail.html"
-    context_object_name = "user"
+    context_object_name = "profile_user"  # Изменено с "user" на "profile_user"
     slug_field = "username"  # Добавить эту строку
     slug_url_kwarg = "username"  # Добавить эту строку
 

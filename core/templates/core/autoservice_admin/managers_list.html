@@ -31,7 +31,7 @@
 
             <!-- Статистика -->
             <div class="row g-3 mb-4">
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-4">
                     <div class="card bg-primary text-white">
                         <div class="card-body text-center">
                             <i class="bi bi-people-fill fs-1 mb-2"></i>
@@ -41,28 +41,18 @@
                     </div>
                 </div>
                 
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-4">
                     <div class="card bg-success text-white">
                         <div class="card-body text-center">
                             <i class="bi bi-person-check-fill fs-1 mb-2"></i>
                             <h3 class="fw-bold">{{ active_managers }}</h3>
-                            <p class="mb-0">Активных</p>
+                            <p class="mb-0">Активных менеджеров</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-4">
                     <div class="card bg-info text-white">
-                        <div class="card-body text-center">
-                            <i class="bi bi-shield-check fs-1 mb-2"></i>
-                            <h3 class="fw-bold">{{ manager_count }}</h3>
-                            <p class="mb-0">Менеджеров</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3">
-                    <div class="card bg-warning text-white">
                         <div class="card-body text-center">
                             <i class="bi bi-person-gear fs-1 mb-2"></i>
                             <h3 class="fw-bold">{{ admin_count }}</h3>
@@ -74,39 +64,39 @@
 
             <!-- Список менеджеров -->
             {% if managers %}
-            <div class="card shadow-sm">
+            <div class="card shadow-sm text-light">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">
+                    <h5 class="card-title mb-0 text-light">
                         <i class="bi bi-list-ul me-2"></i>
                         Список менеджеров ({{ total_managers }})
                     </h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
+                        <table class="table table-dark table-hover mb-0">
+                            <thead class="table-dark border-secondary">
                                 <tr>
-                                    <th>
+                                    <th class="text-light">
                                         <i class="bi bi-person me-1"></i>
                                         Менеджер
                                     </th>
-                                    <th>
+                                    <th class="text-light">
                                         <i class="bi bi-envelope me-1"></i>
                                         Контакты
                                     </th>
-                                    <th>
+                                    <th class="text-light">
                                         <i class="bi bi-shield me-1"></i>
                                         Роль
                                     </th>
-                                    <th>
+                                    <th class="text-light">
                                         <i class="bi bi-activity me-1"></i>
                                         Статус
                                     </th>
-                                    <th>
+                                    <th class="text-light">
                                         <i class="bi bi-calendar me-1"></i>
                                         Добавлен
                                     </th>
-                                    <th width="120">
+                                    <th width="120" class="text-light">
                                         <i class="bi bi-gear me-1"></i>
                                         Действия
                                     </th>
@@ -125,14 +115,14 @@
                                                 {% endif %}
                                             </div>
                                             <div>
-                                                <h6 class="mb-1">
+                                                <h6 class="mb-1 text-light">
                                                     {% if manager.last_name or manager.first_name %}
                                                         {{ manager.last_name }} {{ manager.first_name }}
                                                     {% else %}
                                                         {{ manager.username }}
                                                     {% endif %}
                                                 </h6>
-                                                <small class="text-muted">@{{ manager.username }}</small>
+                                                <small class="text-white-50">@{{ manager.username }}</small>
                                             </div>
                                         </div>
                                     </td>
@@ -140,12 +130,12 @@
                                         <div>
                                             <div class="mb-1">
                                                 <i class="bi bi-envelope-fill text-primary me-1"></i>
-                                                <small>{{ manager.email }}</small>
+                                                <small class="text-light">{{ manager.email }}</small>
                                             </div>
                                             {% if manager.phone %}
                                             <div>
                                                 <i class="bi bi-telephone-fill text-success me-1"></i>
-                                                <small>{{ manager.phone }}</small>
+                                                <small class="text-light">{{ manager.phone }}</small>
                                             </div>
                                             {% endif %}
                                         </div>
@@ -163,7 +153,7 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <small class="text-muted">
+                                        <small class="text-white-50">
                                             <i class="bi bi-calendar3 me-1"></i>
                                             {{ manager.date_joined|date:"d.m.Y" }}
                                         </small>
@@ -191,11 +181,11 @@
             </div>
             {% else %}
             <!-- Пустое состояние -->
-            <div class="card shadow-sm">
+            <div class="card shadow-sm text-light">
                 <div class="card-body text-center py-5">
-                    <i class="bi bi-people text-muted display-1 mb-4"></i>
-                    <h4 class="text-muted mb-3">Нет менеджеров</h4>
-                    <p class="text-muted mb-4">
+                    <i class="bi bi-people text-white-50 display-1 mb-4"></i>
+                    <h4 class="text-light mb-3">Нет менеджеров</h4>
+                    <p class="text-white-50 mb-4">
                         У вашего автосервиса пока нет менеджеров.<br>
                         Добавьте первого менеджера для начала работы.
                     </p>
@@ -212,32 +202,25 @@
                 <div class="card-body">
                     <h6 class="card-title text-primary">
                         <i class="bi bi-info-circle me-2"></i>
-                        Информация о ролях
+                        Информация о менеджерах
                     </h6>
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-start">
-                                <span class="badge bg-warning me-2 mt-1">
-                                    <i class="bi bi-shield-fill-check"></i>
-                                </span>
-                                <div>
-                                    <strong>Администратор автосервиса</strong>
-                                    <p class="small text-muted mb-0">
-                                        Полный доступ к управлению автосервисом и менеджерами
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <div class="d-flex align-items-start">
                                 <span class="badge bg-info me-2 mt-1">
                                     <i class="bi bi-person-badge"></i>
                                 </span>
                                 <div>
-                                    <strong>Менеджер</strong>
+                                    <strong>Менеджер автосервиса</strong>
                                     <p class="small text-muted mb-0">
-                                        Доступ к основным функциям управления записями и клиентами
+                                        Доступ к основным функциям управления записями и клиентами. 
+                                        Менеджеры работают под руководством администратора автосервиса 
+                                        и помогают в обслуживании клиентов.
                                     </p>
+                                    <small class="text-muted">
+                                        <strong>Примечание:</strong> Администраторы автосервиса управляют 
+                                        менеджерами через отдельную систему и не отображаются в этом списке.
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -263,8 +246,13 @@
 .table th {
     border-top: none;
     font-weight: 600;
-    color: #495057;
+    color: #f8f9fa;
     font-size: 0.875rem;
+    border-bottom: 1px solid #495057;
+}
+
+.table-dark th {
+    border-color: #495057;
 }
 
 .card {
@@ -292,8 +280,8 @@
     border-radius: 8px;
 }
 
-.table tbody tr:hover {
-    background-color: #f8f9fa;
+.table-dark tbody tr:hover {
+    background-color: #495057;
 }
 </style>
 {% endblock content %}

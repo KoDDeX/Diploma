@@ -70,6 +70,14 @@ class User(AbstractUser):
     role = models.CharField(
         max_length=20, choices=ROLE_CHOICES, default="client", verbose_name="Роль"
     )
+    # Поле для хранения предыдущей роли при деактивации автосервиса
+    previous_role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Предыдущая роль",
+    )
     autoservice = models.ForeignKey(
         "core.AutoService",
         on_delete=models.SET_NULL,
@@ -117,6 +125,7 @@ class User(AbstractUser):
             self.is_staff = True
         elif self.role == "client":
             self.is_staff = False
-            self.autoservice = None  # У клиента не может быть автосервиса
+            # Не убираем автосервис у клиента - может быть деактивированный сотрудник
+            # self.autoservice = None  # У клиента не может быть автосервиса
 
         super().save(*args, **kwargs)

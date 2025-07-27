@@ -11,15 +11,7 @@
                 <div class="card-header text-center py-4">
                     <h2 class="mb-0">
                         <i class="bi bi-person-circle me-2"></i>
-                        {% if user.role == 'super_admin' %}
-                            Профиль главного администратора
-                        {% elif user.role == 'autoservice_admin' %}
-                            Профиль администратора автосервиса
-                        {% elif user.role == 'manager' %}
-                            Профиль менеджера
-                        {% else %}
-                            Профиль пользователя
-                        {% endif %}
+                        Профиль {{ profile_user.username }}
                     </h2>
                 </div>
                 
@@ -28,7 +20,7 @@
                         <div class="col-md-4 text-center mb-4">
                             <div class="avatar-section">
                                 <div class="current-avatar mb-3 avatar-container">
-                                    <img src="{{ user.avatar.url }}" 
+                                    <img src="{{ profile_user.avatar.url }}" 
                                         class="rounded-circle avatar-profile">
                                 </div>
                             </div>
@@ -43,12 +35,12 @@
                                 </h5>
                                   <!-- Имя и Фамилия -->
                                 <div class="mb-3">
-                                    {% if user.first_name or user.last_name %}
-                                        <h3 class="fw-bold text-light">{{ user.first_name }} {{ user.last_name }}</h3>
+                                    {% if profile_user.first_name or profile_user.last_name %}
+                                        <h3 class="fw-bold text-light">{{ profile_user.first_name }} {{ profile_user.last_name }}</h3>
                                     {% else %}
-                                        <h3 class="fw-bold text-light">{{ user.username }}</h3>
+                                        <h3 class="fw-bold text-light">{{ profile_user.username }}</h3>
                                     {% endif %}
-                                    <p class="text-primary lead">@{{ user.username }}</p>
+                                    <p class="text-primary lead">@{{ profile_user.username }}</p>
                                 </div>
 
                                 <!-- Email -->
@@ -57,7 +49,7 @@
                                         <i class="bi bi-envelope me-2 text-primary"></i>
                                         Email:
                                     </label>
-                                    <p class="text-light fs-5">{{ user.email }}</p>
+                                    <p class="text-light fs-5">{{ profile_user.email }}</p>
                                 </div>
                                   <!-- Дата рождения -->
                                 <div class="mb-3">
@@ -66,8 +58,8 @@
                                         Дата рождения:
                                     </label>
                                     <p class="text-light">
-                                        {% if user.birth_date %}
-                                            {{ user.birth_date|date:"d.m.Y" }}
+                                        {% if profile_user.birth_date %}
+                                            {{ profile_user.birth_date|date:"d.m.Y" }}
                                         {% else %}
                                             <span class="text-white-50">Не указана</span>
                                         {% endif %}
@@ -81,11 +73,11 @@
                                         Роль:
                                     </label>
                                     <p class="text-light">
-                                        {% if user.role == 'super_admin' %}
+                                        {% if profile_user.role == 'super_admin' %}
                                             <span class="badge bg-danger fs-6"><i class="bi bi-crown me-1"></i>Главный администратор</span>
-                                        {% elif user.role == 'autoservice_admin' %}
+                                        {% elif profile_user.role == 'autoservice_admin' %}
                                             <span class="badge bg-warning fs-6"><i class="bi bi-gear-fill me-1"></i>Администратор автосервиса</span>
-                                        {% elif user.role == 'manager' %}
+                                        {% elif profile_user.role == 'manager' %}
                                             <span class="badge bg-info fs-6"><i class="bi bi-person-gear me-1"></i>Менеджер</span>
                                         {% else %}
                                             <span class="badge bg-success fs-6"><i class="bi bi-person me-1"></i>Клиент</span>
@@ -94,16 +86,16 @@
                                 </div>
 
                                 <!-- Автосервис -->
-                                {% if user.autoservice %}
+                                {% if profile_user.autoservice %}
                                 <div class="mb-3">
                                     <label class="form-label fw-bold text-primary">
                                         <i class="bi bi-building me-2 text-primary"></i>
                                         Автосервис:
                                     </label>
                                     <p class="text-light">
-                                        <strong>{{ user.autoservice.name }}</strong><br>
-                                        <small class="text-white-50">{{ user.autoservice.region.name }}</small><br>
-                                        <small class="text-white-50">{{ user.autoservice.address }}</small>
+                                        <strong>{{ profile_user.autoservice.name }}</strong><br>
+                                        <small class="text-white-50">{{ profile_user.autoservice.region.name }}</small><br>
+                                        <small class="text-white-50">{{ profile_user.autoservice.address }}</small>
                                     </p>
                                 </div>
                                 {% endif %}                                <!-- Статус аккаунта -->
@@ -113,17 +105,17 @@
                                         Статус аккаунта:
                                     </label>
                                     <p>
-                                        {% if user.is_active %}
+                                        {% if profile_user.is_active %}
                                             <span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>Активен</span>
                                         {% else %}
                                             <span class="badge bg-danger fs-6"><i class="bi bi-x-circle me-1"></i>Неактивен</span>
                                         {% endif %}
                                         
-                                        {% if user.is_staff %}
+                                        {% if profile_user.is_staff %}
                                             <span class="badge bg-warning fs-6 ms-1"><i class="bi bi-gear-fill me-1"></i>Персонал</span>
                                         {% endif %}
                                         
-                                        {% if user.is_superuser %}
+                                        {% if profile_user.is_superuser %}
                                             <span class="badge bg-danger fs-6 ms-1"><i class="bi bi-star-fill me-1"></i>Суперпользователь</span>
                                         {% endif %}
                                     </p>
@@ -137,13 +129,13 @@
                 <div class="card-footer text-center py-3">
                     <div class="d-grid gap-2 d-md-block" role="group">
                         {% if is_own_profile %}
-                            <a href="{% url 'users:profile_edit' username=user.username %}" class="btn btn-primary btn-lg me-2">
+                            <a href="{% url 'users:profile_edit' username=profile_user.username %}" class="btn btn-primary btn-lg me-2">
                                 <i class="bi bi-pencil-square me-2"></i>
                                 Редактировать профиль
                             </a>
                         {% endif %}
                         
-                        {% if user.role == 'autoservice_admin' or user.role == 'super_admin' %}
+                        {% if profile_user.role == 'autoservice_admin' or profile_user.role == 'super_admin' %}
                             <a href="#" class="btn btn-warning btn-lg me-2">
                                 <i class="bi bi-people me-2"></i>
                                 Управление сотрудниками
@@ -167,46 +159,46 @@
                             Статистика
                         </h6>                        <div>
                             <small class="text-light">
-                                <strong>ID пользователя:</strong> {{ user.id }}
+                                <strong>ID пользователя:</strong> {{ profile_user.id }}
                             </small>
                         </div>
                         <div class="mt-2">
                             <small class="text-light">
-                                <strong>Роль:</strong> {{ user.get_role_display }}
+                                <strong>Роль:</strong> {{ profile_user.get_role_display }}
                             </small>
                         </div>
                         <div class="mt-2">
                             <small class="text-light">
                                 <strong>Регион:</strong> 
-                                {% if user.autoservice and user.autoservice.region %}
-                                    {{ user.autoservice.region.name }}
+                                {% if profile_user.autoservice and profile_user.autoservice.region %}
+                                    {{ profile_user.autoservice.region.name }}
                                 {% else %}
                                     <span class="text-white-50">Не указан</span>
                                 {% endif %}
                             </small>
                         </div>
-                        {% if user.autoservice %}
+                        {% if profile_user.autoservice %}
                         <div class="mt-2">
                             <small class="text-light">
                                 <strong>Автосервис:</strong><br>
-                                {{ user.autoservice.name }}<br>
-                                <span class="text-white-50" style="font-size: 0.8em;">{{ user.autoservice.address }}</span>
-                                {% if user.autoservice.phone %}
-                                    <br><span class="text-white-50" style="font-size: 0.8em;">{{ user.autoservice.phone }}</span>
+                                {{ profile_user.autoservice.name }}<br>
+                                <span class="text-white-50" style="font-size: 0.8em;">{{ profile_user.autoservice.address }}</span>
+                                {% if profile_user.autoservice.phone %}
+                                    <br><span class="text-white-50" style="font-size: 0.8em;">{{ profile_user.autoservice.phone }}</span>
                                 {% endif %}
                             </small>
                         </div>
                         {% endif %}
                         <div class="mt-2">
                             <small class="text-light">
-                                <strong>Дней с нами:</strong> {{ user.date_joined|timesince }}
+                                <strong>Дней с нами:</strong> {{ profile_user.date_joined|timesince }}
                             </small>
                         </div>
                         <div class="mt-2">
                             <small class="text-light">
                                 <strong>Последний вход:</strong> 
-                                {% if user.last_login %}
-                                    {{ user.last_login|date:"d.m.Y H:i" }}
+                                {% if profile_user.last_login %}
+                                    {{ profile_user.last_login|date:"d.m.Y H:i" }}
                                 {% else %}
                                     <span class="text-white-50">Никогда</span>
                                 {% endif %}
@@ -221,11 +213,11 @@
                             Настройки аккаунта
                         </h6>
                         <div class="form-check form-switch mb-2">
-                            <input class="form-check-input" type="checkbox" role="switch" id="isActive" {% if user.is_active %}checked{% endif %} disabled>
+                            <input class="form-check-input" type="checkbox" role="switch" id="isActive" {% if profile_user.is_active %}checked{% endif %} disabled>
                             <label class="form-check-label small text-light" for="isActive">Аккаунт активен</label>
                         </div>
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" id="isStaff" {% if user.is_staff %}checked{% endif %} disabled>
+                            <input class="form-check-input" type="checkbox" role="switch" id="isStaff" {% if profile_user.is_staff %}checked{% endif %} disabled>
                             <label class="form-check-label small text-light" for="isStaff">Доступ к админ-панели</label>
                         </div>
                     </div>

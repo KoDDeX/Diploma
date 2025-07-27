@@ -15,6 +15,54 @@
       <!-- Базовые стили -->
     <link href="{% static 'CSS/base.css' %}" rel="stylesheet">
     
+    <!-- Стили для фиксированных сообщений -->
+    <style>
+        .fixed-messages {
+            position: fixed;
+            top: 56px; /* Высота navbar (обычно 56px для Bootstrap navbar) */
+            left: 0;
+            right: 0;
+            z-index: 1040; /* Выше чем обычный контент, но ниже чем модальные окна */
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            padding: 10px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* Добавляем отступ для контента, чтобы он не перекрывался сообщениями */
+        .content-wrapper {
+            margin-top: 0;
+        }
+        
+        /* Анимация появления сообщений */
+        .fixed-messages .alert {
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Стили для темной темы (если навбар темный) */
+        .navbar-dark ~ .fixed-messages {
+            background: rgba(33, 37, 41, 0.95);
+        }
+        
+        /* Адаптивность для мобильных устройств */
+        @media (max-width: 768px) {
+            .fixed-messages {
+                top: 56px; /* Может быть другая высота на мобильных */
+            }
+        }
+    </style>
+    
     {% block styles %}
     {% endblock %}
 </head>
@@ -23,21 +71,41 @@
         {% include 'nav_menu_include.html' %}
     {% endblock %}
 
-    <main class="content-wrapper pt-5">
-        {% if messages %}
+    <!-- Фиксированные сообщения под navbar -->
+    {% if messages %}
+        <div class="fixed-messages">
             <div class="container">
                 {% for message in messages %}
                     <div class="alert 
                     {% if message.tags == 'error' %}alert-danger{% endif %}
                     {% if message.tags == 'success' %}alert-success{% endif %}
                     {% if message.tags == 'info' %}alert-info{% endif %}
-                    alert-dismissible fade show" role="alert">
+                    {% if message.tags == 'warning' %}alert-warning{% endif %}
+                    alert-dismissible fade show mb-2" role="alert">
+                        <i class="bi bi-{% if message.tags == 'error' %}exclamation-triangle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'info' %}info-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
             </div>
-        {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Предупреждение для пользователей с деактивированными автосервисами -->
+    {% if user.is_authenticated and user.autoservice and not user.autoservice.is_active %}
+        <div class="fixed-messages">
+            <div class="container">
+                <div class="alert alert-warning alert-dismissible fade show mb-2" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Внимание!</strong> Ваш автосервис "{{ user.autoservice.name }}" временно деактивирован. 
+                    Обратитесь к администратору для получения дополнительной информации.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <main class="content-wrapper pt-5">
         {% block content %}
         {% endblock %}
     </main>
@@ -52,6 +120,38 @@
 
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Скрипт для автоматического скрытия сообщений -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Автоматически скрывать success и info сообщения через 5 секунд
+            const autoHideAlerts = document.querySelectorAll('.fixed-messages .alert-success, .fixed-messages .alert-info');
+            autoHideAlerts.forEach(function(alert) {
+                setTimeout(function() {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 5000); // 5 секунд
+            });
+            
+            // Warning и error сообщения остаются до ручного закрытия
+            
+            // Обновляем отступ контента при закрытии сообщений
+            const alerts = document.querySelectorAll('.fixed-messages .alert');
+            alerts.forEach(function(alert) {
+                alert.addEventListener('closed.bs.alert', function() {
+                    // Проверяем, есть ли еще открытые сообщения
+                    const remainingAlerts = document.querySelectorAll('.fixed-messages .alert');
+                    if (remainingAlerts.length <= 1) { // <= 1 потому что текущий alert еще не удален из DOM
+                        // Если это последнее сообщение, убираем контейнер
+                        const messagesContainer = document.querySelector('.fixed-messages');
+                        if (messagesContainer) {
+                            messagesContainer.style.display = 'none';
+                        }
+                    }
+                });
+            });
+        });
+    </script>
     
     {% block scripts %}
     {% endblock %}

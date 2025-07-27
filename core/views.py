@@ -92,15 +92,43 @@ def admin_panel_view(request):
 
     # Добавляем информацию о администраторах и менеджерах для каждого автосервиса
     for autoservice in autoservices:
-        # Получаем всех сотрудников автосервиса
-        all_staff = autoservice.user_set.filter(is_active=True).exclude(
+        # Получаем всех пользователей автосервиса (включая деактивированных)
+        all_users = autoservice.user_set.filter(is_active=True).exclude(
             role="super_admin"
         )
 
-        # Разделяем на администраторов и менеджеров
-        autoservice.admins = all_staff.filter(role="autoservice_admin")
-        autoservice.managers = all_staff.filter(role="manager")
-        autoservice.total_staff = all_staff.count()
+        # Разделяем пользователей по ролям, учитывая previous_role для клиентов
+        admins = []
+        managers = []
+
+        for user in all_users:
+            # Определяем эффективную роль пользователя
+            if user.role in ["autoservice_admin", "manager"]:
+                # Активная роль
+                effective_role = user.role
+            elif user.role == "client" and user.previous_role in [
+                "autoservice_admin",
+                "manager",
+            ]:
+                # Клиент с сохраненной ролью (деактивированный сотрудник)
+                effective_role = user.previous_role
+            else:
+                # Обычный клиент
+                continue
+
+            # Добавляем флаг деактивации для отображения
+            user.is_deactivated = (
+                user.role == "client" and user.previous_role is not None
+            )
+
+            if effective_role == "autoservice_admin":
+                admins.append(user)
+            elif effective_role == "manager":
+                managers.append(user)
+
+        autoservice.admins = admins
+        autoservice.managers = managers
+        autoservice.total_staff = len(admins) + len(managers)
 
     context = {
         "title": "Панель управления автосервисами",
@@ -128,21 +156,42 @@ def toggle_autoservice_status(request, autoservice_id):
 
     try:
         autoservice = get_object_or_404(AutoService, id=autoservice_id)
+        old_status = autoservice.is_active
         autoservice.is_active = not autoservice.is_active
         autoservice.save()
 
-        status_text = "активен" if autoservice.is_active else "неактивен"
-        button_text = "Деактивировать" if autoservice.is_active else "Активировать"
-        button_class = "btn-warning" if autoservice.is_active else "btn-success"
+        # Управляем ролями пользователей при изменении статуса автосервиса
+        if autoservice.is_active and not old_status:
+            # Автосервис активируется - восстанавливаем роли
+            activated_users = activate_autoservice_users(autoservice)
+            if activated_users > 0:
+                messages.success(
+                    request,
+                    f'Автосервис "{autoservice.name}" активирован! '
+                    f"Восстановлены роли для {activated_users} пользователей.",
+                )
+            else:
+                messages.success(
+                    request, f'Автосервис "{autoservice.name}" активирован!'
+                )
+        elif not autoservice.is_active and old_status:
+            # Автосервис деактивируется - сохраняем роли и переводим в клиенты
+            deactivated_users = deactivate_autoservice_users(autoservice)
+            if deactivated_users > 0:
+                messages.info(
+                    request,
+                    f'Автосервис "{autoservice.name}" деактивирован! '
+                    f"Роли сохранены для {deactivated_users} пользователей.",
+                )
+            else:
+                messages.info(
+                    request, f'Автосервис "{autoservice.name}" деактивирован!'
+                )
 
         return JsonResponse(
             {
                 "success": True,
-                "is_active": autoservice.is_active,
-                "status_text": status_text,
-                "button_text": button_text,
-                "button_class": button_class,
-                "message": f'Статус автосервиса "{autoservice.name}" изменён на "{status_text}"',
+                "reload_page": True,  # Указываем, что нужно перезагрузить страницу
             }
         )
 
@@ -229,9 +278,17 @@ def assign_manager(request, autoservice_id, user_id):
                 }
             )
 
-        # Назначаем пользователя менеджером
+        # Назначаем пользователя сотрудником автосервиса
         user.autoservice = autoservice
-        user.role = "manager"  # По умолчанию назначаем роль менеджера
+
+        # Если автосервис активен, назначаем роль менеджера сразу
+        if autoservice.is_active:
+            user.role = "manager"
+        else:
+            # Если автосервис неактивен, оставляем пользователя клиентом
+            # Роль будет назначена администратором автосервиса позже
+            pass
+
         user.save()
 
         # Определяем отображаемое имя
@@ -240,10 +297,23 @@ def assign_manager(request, autoservice_id, user_id):
         else:
             display_name = user.username
 
+        # Добавляем сообщение через Django messages
+        if autoservice.is_active:
+            messages.success(
+                request,
+                f'Пользователь "{display_name}" назначен менеджером автосервиса "{autoservice.name}"',
+            )
+        else:
+            messages.info(
+                request,
+                f'Пользователь "{display_name}" добавлен к автосервису "{autoservice.name}". '
+                f"Роль менеджера будет назначена при активации автосервиса.",
+            )
+
         return JsonResponse(
             {
                 "success": True,
-                "message": f'Пользователь "{display_name}" назначен сотрудником автосервиса "{autoservice.name}"',
+                "reload_page": True,  # Указываем, что нужно перезагрузить страницу
             }
         )
 
@@ -262,6 +332,7 @@ def is_autoservice_admin(user):
         user.is_authenticated
         and user.role == "autoservice_admin"
         and user.autoservice is not None
+        and user.autoservice.is_active  # Добавляем проверку активности автосервиса
     )
 
 
@@ -328,18 +399,20 @@ def autoservice_managers_list(request):
     """Список менеджеров автосервиса"""
     autoservice = request.user.autoservice
 
-    # Получаем всех сотрудников автосервиса
-    all_managers = User.objects.filter(autoservice=autoservice, is_active=True).exclude(
-        role="super_admin"
+    # Получаем только менеджеров автосервиса (исключаем администраторов)
+    managers = (
+        User.objects.filter(autoservice=autoservice, role="manager", is_active=True)
+        .exclude(role="super_admin")
+        .order_by("last_name", "first_name", "username")
     )
 
-    managers = all_managers.order_by("last_name", "first_name", "username")
-
     # Статистика для шаблона
-    total_managers = all_managers.count()
-    active_managers = all_managers.filter(is_active=True).count()
-    manager_count = all_managers.filter(role="manager").count()
-    admin_count = all_managers.filter(role="autoservice_admin").count()
+    total_managers = managers.count()
+    active_managers = managers.filter(is_active=True).count()
+
+    # Дополнительная статистика для информации
+    all_staff = User.objects.filter(autoservice=autoservice).exclude(role="super_admin")
+    admin_count = all_staff.filter(role="autoservice_admin").count()
 
     context = {
         "title": f"Менеджеры - {autoservice.name}",
@@ -347,8 +420,8 @@ def autoservice_managers_list(request):
         "managers": managers,
         "total_managers": total_managers,
         "active_managers": active_managers,
-        "manager_count": manager_count,
-        "admin_count": admin_count,
+        "manager_count": total_managers,  # Все в списке - менеджеры
+        "admin_count": admin_count,  # Для информационной панели
     }
     return render(request, "core/autoservice_admin/managers_list.html", context)
 
@@ -368,7 +441,7 @@ def autoservice_add_manager(request):
             if user:
                 # Назначаем пользователя сотрудником автосервиса
                 user.autoservice = autoservice
-                user.role = role
+                user.role = role  # Администратор автосервиса назначает роль напрямую
                 user.save()
 
                 display_name = (
@@ -426,6 +499,41 @@ def autoservice_remove_manager(request, user_id):
     return redirect("core:autoservice_managers_list")
 
 
+def activate_autoservice_users(autoservice):
+    """Активирует пользователей автосервиса, восстанавливая их роли"""
+    # Получаем всех пользователей, привязанных к автосервису, у которых есть сохраненная роль
+    users = User.objects.filter(autoservice=autoservice, previous_role__isnull=False)
+
+    activated_count = 0
+    for user in users:
+        # Восстанавливаем роль из previous_role
+        user.role = user.previous_role
+        user.previous_role = None  # Очищаем поле предыдущей роли
+        user.save()
+        activated_count += 1
+
+    return activated_count
+
+
+def deactivate_autoservice_users(autoservice):
+    """Деактивирует пользователей автосервиса, сохраняя их роли"""
+    # Получаем всех пользователей автосервиса (кроме суперадминов и уже клиентов)
+    users = User.objects.filter(autoservice=autoservice).exclude(
+        role__in=["super_admin", "client"]
+    )
+
+    deactivated_count = 0
+    for user in users:
+        # Сохраняем текущую роль в поле previous_role
+        user.previous_role = user.role
+        # Переводим в клиенты
+        user.role = "client"
+        user.save()
+        deactivated_count += 1
+
+    return deactivated_count
+
+
 @login_required
 def autoservice_register_view(request):
     """Представление для регистрации нового автосервиса"""
@@ -451,9 +559,12 @@ def autoservice_register_view(request):
                 # Создаем автосервис
                 autoservice = form.save()
 
-                # Назначаем текущего пользователя администратором автосервиса
-                request.user.role = "autoservice_admin"
+                # Привязываем пользователя к автосервису и сохраняем роль администратора
+                # для будущей активации
                 request.user.autoservice = autoservice
+                request.user.previous_role = (
+                    "autoservice_admin"  # Сохраняем роль для активации
+                )
                 request.user.save()
 
                 # Отправляем уведомление суперадминистратору
@@ -462,7 +573,7 @@ def autoservice_register_view(request):
                 messages.success(
                     request,
                     "Автосервис успешно зарегистрирован! "
-                    "Он станет доступен после модерации администратором.",
+                    "Вы будете назначены администратором после активации автосервиса модератором.",
                 )
 
                 # Перенаправляем на главную страницу
@@ -486,7 +597,7 @@ def send_autoservice_registration_notification(autoservice, user):
     try:
         # Получаем email суперадминистратора
         superadmins = User.objects.filter(role="super_admin", is_active=True)
-        print(f'e-mail to admin: {[admin.email for admin in superadmins]}')
+        print(f"e-mail to admin: {[admin.email for admin in superadmins]}")
         if not superadmins.exists():
             return
 
@@ -501,10 +612,11 @@ def send_autoservice_registration_notification(autoservice, user):
 Email: {autoservice.email}
 Описание: {autoservice.description}
 
-Администратор:
+Будущий администратор:
 Имя: {user.first_name} {user.last_name}
 Email: {user.email}
 
+Автосервис неактивен. При активации пользователь получит роль администратора автосервиса.
 Для активации автосервиса перейдите в панель администратора.
         """
 
