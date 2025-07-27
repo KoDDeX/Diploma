@@ -638,6 +638,68 @@ def autoservice_services_list(request):
 
 
 @login_required
+@user_passes_test(is_autoservice_admin)
+def autoservice_service_edit(request, service_id):
+    """Редактирование услуги администратором автосервиса"""
+    autoservice = request.user.autoservice
+    service = get_object_or_404(Service, id=service_id, autoservice=autoservice)
+
+    if request.method == "POST":
+        form = ServiceCreateForm(
+            request.POST, request.FILES, instance=service, autoservice=autoservice
+        )
+        if form.is_valid():
+            service = form.save()
+            messages.success(request, f'Услуга "{service.name}" успешно обновлена!')
+            return redirect("core:autoservice_services_list")
+        else:
+            messages.error(request, "Пожалуйста, исправьте ошибки в форме.")
+    else:
+        form = ServiceCreateForm(instance=service, autoservice=autoservice)
+
+    context = {
+        "title": f"Редактирование услуги - {autoservice.name}",
+        "autoservice": autoservice,
+        "service": service,
+        "form": form,
+        "is_edit": True,
+    }
+    return render(request, "core/autoservice_admin/service_create.html", context)
+
+
+@login_required
+@user_passes_test(is_autoservice_admin)
+@require_POST
+def autoservice_service_toggle(request, service_id):
+    """Переключение активности услуги"""
+    autoservice = request.user.autoservice
+    service = get_object_or_404(Service, id=service_id, autoservice=autoservice)
+
+    service.is_active = not service.is_active
+    service.save()
+
+    status = "активирована" if service.is_active else "деактивирована"
+    messages.success(request, f'Услуга "{service.name}" {status}.')
+
+    return redirect("core:autoservice_services_list")
+
+
+@login_required
+@user_passes_test(is_autoservice_admin)
+@require_POST
+def autoservice_service_delete(request, service_id):
+    """Удаление услуги"""
+    autoservice = request.user.autoservice
+    service = get_object_or_404(Service, id=service_id, autoservice=autoservice)
+
+    service_name = service.name
+    service.delete()
+
+    messages.success(request, f'Услуга "{service_name}" удалена.')
+    return redirect("core:autoservice_services_list")
+
+
+@login_required
 def autoservice_register_view(request):
     """Представление для регистрации нового автосервиса"""
 

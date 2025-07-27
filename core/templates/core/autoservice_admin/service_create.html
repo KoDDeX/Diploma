@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Создание услуги - {{ autoservice.name }}{% endblock title %}
+{% block title %}{% if is_edit %}Редактирование услуги{% else %}Создание услуги{% endif %} - {{ autoservice.name }}{% endblock title %}
 
 {% block content %}
 <div class="container py-5">
@@ -14,12 +14,16 @@
                 </a>
                 <div>
                     <h1 class="text-primary mb-1">
-                        <i class="bi bi-plus-circle me-2"></i>
-                        Создание новой услуги
+                        <i class="bi bi-{% if is_edit %}pencil-square{% else %}plus-circle{% endif %} me-2"></i>
+                        {% if is_edit %}Редактирование услуги{% else %}Создание новой услуги{% endif %}
                     </h1>
                     <p class="text-muted mb-0">
                         <i class="bi bi-building me-1"></i>
                         {{ autoservice.name }}
+                        {% if is_edit %}
+                            <span class="mx-2">•</span>
+                            <span class="text-info">{{ service.name }}</span>
+                        {% endif %}
                     </p>
                 </div>
             </div>
@@ -199,14 +203,28 @@
                         <!-- Кнопки -->
                         <div class="d-flex gap-3">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-2"></i>
-                                Создать услугу
+                                <i class="bi bi-{% if is_edit %}check-lg{% else %}check-lg{% endif %} me-2"></i>
+                                {% if is_edit %}Сохранить изменения{% else %}Создать услугу{% endif %}
                             </button>
                             
                             <a href="{% url 'core:autoservice_services_list' %}" class="btn btn-outline-secondary">
                                 <i class="bi bi-x-lg me-2"></i>
                                 Отмена
                             </a>
+                            
+                            {% if is_edit %}
+                                <div class="ms-auto">
+                                    <form method="post" 
+                                          action="{% url 'core:autoservice_service_delete' service.id %}" 
+                                          class="d-inline delete-service-form">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-danger">
+                                            <i class="bi bi-trash me-2"></i>
+                                            Удалить услугу
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endif %}
                         </div>
                     </form>
                 </div>
@@ -342,14 +360,28 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Индикатор загрузки при отправке формы
-    const form = document.querySelector('form');
+    const form = document.querySelector('form[method="post"]:not(.delete-service-form)');
     if (form) {
         form.addEventListener('submit', function() {
             form.classList.add('form-loading');
             const submitBtn = form.querySelector('button[type="submit"]');
             if (submitBtn) {
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Создание...';
+                const isEdit = document.querySelector('h1').textContent.includes('Редактирование');
+                submitBtn.innerHTML = `<i class="bi bi-hourglass-split me-2"></i>${isEdit ? 'Сохранение...' : 'Создание...'}`;
+            }
+        });
+    }
+    
+    // Подтверждение удаления услуги в режиме редактирования
+    const deleteForm = document.querySelector('.delete-service-form');
+    if (deleteForm) {
+        deleteForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const serviceName = document.querySelector('.text-info')?.textContent || 'эту услугу';
+            
+            if (confirm(`Вы уверены, что хотите удалить услугу "${serviceName}"?\n\nЭто действие нельзя отменить.`)) {
+                this.submit();
             }
         });
     }

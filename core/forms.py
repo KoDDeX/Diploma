@@ -400,8 +400,12 @@ class ServiceCreateForm(forms.ModelForm):
             min_duration, max_duration = standard_service.get_duration_range()
 
             if min_duration and max_duration:
+                # Конвертируем в int для безопасного сравнения
+                min_threshold = int(min_duration * 0.3)
+                max_threshold = int(max_duration * 3)
+
                 # Показываем только информацию, не блокируем
-                if duration < min_duration * 0.3 or duration > max_duration * 3:
+                if duration < min_threshold or duration > max_threshold:
                     # Очень сильное отклонение - показываем предупреждение в консоли
                     print(
                         f"ПРЕДУПРЕЖДЕНИЕ: Длительность {duration} мин сильно отличается от обычной для '{standard_service.name}' ({min_duration}-{max_duration} мин)"
@@ -411,8 +415,14 @@ class ServiceCreateForm(forms.ModelForm):
             min_price, max_price = standard_service.get_price_range()
 
             if min_price and max_price:
+                # Используем Decimal для безопасного сравнения
+                from decimal import Decimal
+
+                min_threshold = min_price * Decimal("0.1")
+                max_threshold = max_price * Decimal("10")
+
                 # Показываем только информацию, не блокируем
-                if price < min_price * 0.1 or price > max_price * 10:
+                if price < min_threshold or price > max_threshold:
                     # Очень сильное отклонение - показываем предупреждение в консоли
                     print(
                         f"ПРЕДУПРЕЖДЕНИЕ: Цена {price} руб сильно отличается от обычной для '{standard_service.name}' ({min_price}-{max_price} руб)"

@@ -53,20 +53,20 @@ class StandardService(models.Model):
 
     def get_price_range(self):
         """Возвращает диапазон цен на основе реальных услуг автосервисов"""
-        services = self.autoservice_services.filter(is_active=True)
+        services = self.service_set.filter(is_active=True)
         if not services.exists():
             return None, None
-
-        prices = services.values_list("price", flat=True)
+        
+        prices = services.values_list('price', flat=True)
         return min(prices), max(prices)
 
     def get_duration_range(self):
         """Возвращает диапазон времени на основе реальных услуг автосервисов"""
-        services = self.autoservice_services.filter(is_active=True)
+        services = self.service_set.filter(is_active=True)
         if not services.exists():
             return None, None
-
-        durations = services.values_list("duration", flat=True)
+        
+        durations = services.values_list('duration', flat=True)
         return min(durations), max(durations)
 
     def get_typical_duration_display(self):
@@ -74,7 +74,7 @@ class StandardService(models.Model):
         min_duration, max_duration = self.get_duration_range()
         if min_duration is None or max_duration is None:
             return "Время не указано"
-
+        
         if min_duration == max_duration:
             hours = min_duration // 60
             minutes = min_duration % 60
@@ -89,7 +89,7 @@ class StandardService(models.Model):
         min_price, max_price = self.get_price_range()
         if min_price is None or max_price is None:
             return "Цена не указана"
-
+        
         if min_price == max_price:
             return f"{min_price} руб."
         else:
@@ -97,18 +97,17 @@ class StandardService(models.Model):
 
     def get_average_price(self):
         """Возвращает среднюю цену услуги"""
-        services = self.autoservice_services.filter(is_active=True)
+        services = self.service_set.filter(is_active=True)
         if not services.exists():
             return None
-
+        
         from django.db.models import Avg
-
-        avg_price = services.aggregate(avg_price=Avg("price"))["avg_price"]
+        avg_price = services.aggregate(avg_price=Avg('price'))['avg_price']
         return round(avg_price, 2) if avg_price else None
 
     def get_services_count(self):
         """Возвращает количество автосервисов, предоставляющих эту услугу"""
-        return self.autoservice_services.filter(is_active=True).count()
+        return self.service_set.filter(is_active=True).count()
 
     @property
     def typical_duration_min(self):
@@ -254,14 +253,32 @@ class Service(models.Model):
         """Валидация данных"""
         super().clean()
 
-        # Базовые проверки
-        if self.duration <= 0:
-            raise ValidationError(
-                {"duration": "Длительность должна быть больше 0 минут"}
-            )
+        # Проверка соответствия длительности стандартной услуге
+        if self.standard_service:
+            if (
+                self.duration < self.standard_service.typical_duration_min
+                or self.duration > self.standard_service.typical_duration_max
+            ):
+                raise ValidationError(
+                    {
+                        "duration": f"Длительность должна быть в диапазоне "
+                        f"{self.standard_service.typical_duration_min}-"
+                        f"{self.standard_service.typical_duration_max} минут "
+                        f'для услуги "{self.standard_service.name}"'
+                    }
+                )
 
-        if self.price <= 0:
-            raise ValidationError({"price": "Цена должна быть больше 0 рублей"})
+            # Предупреждение о сильном отклонении цены (не блокирующее)
+            if (
+                self.standard_service.typical_price_min
+                and self.standard_service.typical_price_max
+            ):
+                min_price = self.standard_service.typical_price_min
+                max_price = self.standard_service.typical_price_max
+
+                if self.price < min_price * 0.5 or self.price > max_price * 2:
+                    # Можно логировать или показывать предупреждение
+                    pass
 
     class Meta:
         verbose_name = "Услуга"
