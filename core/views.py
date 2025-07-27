@@ -556,7 +556,7 @@ def autoservice_service_create(request):
         if form.is_valid():
             service = form.save()
             messages.success(request, f'Услуга "{service.name}" успешно создана!')
-            return redirect("core:autoservice_admin_dashboard")
+            return redirect("core:autoservice_services_list")
         else:
             messages.error(request, "Пожалуйста, исправьте ошибки в форме.")
     else:
@@ -568,6 +568,73 @@ def autoservice_service_create(request):
         "form": form,
     }
     return render(request, "core/autoservice_admin/service_create.html", context)
+
+
+@login_required
+@user_passes_test(is_autoservice_admin)
+def autoservice_services_list(request):
+    """Управление услугами автосервиса"""
+    autoservice = request.user.autoservice
+
+    # Получаем все услуги автосервиса
+    services = (
+        Service.objects.filter(autoservice=autoservice)
+        .select_related("standard_service", "standard_service__category")
+        .order_by("-is_popular", "standard_service__category__name", "name")
+    )
+
+    # Фильтрация по категориям
+    category_filter = request.GET.get("category")
+    if category_filter:
+        services = services.filter(standard_service__category__slug=category_filter)
+
+    # Фильтрация по статусу
+    status_filter = request.GET.get("status")
+    if status_filter == "active":
+        services = services.filter(is_active=True)
+    elif status_filter == "inactive":
+        services = services.filter(is_active=False)
+    elif status_filter == "popular":
+        services = services.filter(is_popular=True)
+
+    # Поиск по названию
+    search_query = request.GET.get("search")
+    if search_query:
+        services = services.filter(name__icontains=search_query)
+
+    # Статистика
+    total_services = Service.objects.filter(autoservice=autoservice).count()
+    active_services = Service.objects.filter(
+        autoservice=autoservice, is_active=True
+    ).count()
+    popular_services = Service.objects.filter(
+        autoservice=autoservice, is_popular=True
+    ).count()
+
+    # Получаем категории для фильтра (только те, у которых есть услуги в данном автосервисе)
+    from core.models import ServiceCategory
+
+    categories = (
+        ServiceCategory.objects.filter(
+            standard_services__autoservice_services__autoservice=autoservice
+        )
+        .distinct()
+        .order_by("name")
+    )
+
+    context = {
+        "title": f"Управление услугами - {autoservice.name}",
+        "autoservice": autoservice,
+        "services": services,
+        "categories": categories,
+        "total_services": total_services,
+        "active_services": active_services,
+        "popular_services": popular_services,
+        "current_category": category_filter,
+        "current_status": status_filter,
+        "search_query": search_query or "",
+    }
+    return render(request, "core/autoservice_admin/services_list.html", context)
 
 
 @login_required

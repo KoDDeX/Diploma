@@ -348,7 +348,7 @@ class ServiceCreateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         # Добавляем пустой вариант для стандартной услуги
-        self.fields["standard_service"].empty_label = "Выберите стандартную услуга"
+        self.fields["standard_service"].empty_label = "Выберите стандартную услугу"
 
         # Группируем стандартные услуги по категориям для удобства выбора
         standard_services = StandardService.objects.select_related("category").order_by(
@@ -364,22 +364,16 @@ class ServiceCreateForm(forms.ModelForm):
                 choices.append(("", f"📁 {service.category.name}"))
                 current_category = service.category
 
-            # Добавляем информацию о типичной цене и длительности
-            price_info = (
-                service.get_typical_price_display()
-                if hasattr(service, "get_typical_price_display")
-                else ""
-            )
-            duration_info = (
-                service.get_typical_duration_display()
-                if hasattr(service, "get_typical_duration_display")
-                else ""
-            )
-            extra_info = (
-                f" ({duration_info}, {price_info})"
-                if duration_info and price_info
-                else ""
-            )
+            # Добавляем информацию о типичной цене и длительности на основе реальных данных
+            services_count = service.get_services_count()
+            if services_count > 0:
+                price_info = service.get_typical_price_display()
+                duration_info = service.get_typical_duration_display()
+                extra_info = (
+                    f" ({duration_info}, {price_info}, {services_count} автосервисов)"
+                )
+            else:
+                extra_info = " (новая услуга)"
 
             choices.append((service.id, f"  └ {service.name}{extra_info}"))
 
@@ -394,39 +388,35 @@ class ServiceCreateForm(forms.ModelForm):
         duration = cleaned_data.get("duration")
         price = cleaned_data.get("price")
 
+        # Базовые проверки
+        if duration and duration <= 0:
+            self.add_error("duration", "Длительность должна быть больше 0 минут")
+
+        if price and price <= 0:
+            self.add_error("price", "Цена должна быть больше 0 рублей")
+
+        # Информационные сообщения (не блокирующие)
         if standard_service and duration:
-            # Проверяем соответствие длительности стандартной услуге
-            if (
-                duration < standard_service.typical_duration_min
-                or duration > standard_service.typical_duration_max
-            ):
-                self.add_error(
-                    "duration",
-                    f"Длительность должна быть в диапазоне "
-                    f"{standard_service.typical_duration_min}-"
-                    f"{standard_service.typical_duration_max} минут "
-                    f'для услуги "{standard_service.name}"',
-                )
+            min_duration, max_duration = standard_service.get_duration_range()
+
+            if min_duration and max_duration:
+                # Показываем только информацию, не блокируем
+                if duration < min_duration * 0.3 or duration > max_duration * 3:
+                    # Очень сильное отклонение - показываем предупреждение в консоли
+                    print(
+                        f"ПРЕДУПРЕЖДЕНИЕ: Длительность {duration} мин сильно отличается от обычной для '{standard_service.name}' ({min_duration}-{max_duration} мин)"
+                    )
 
         if standard_service and price:
-            # Проверяем соответствие цены (если установлены ограничения)
-            if (
-                standard_service.typical_price_min
-                and price < standard_service.typical_price_min
-            ):
-                self.add_error(
-                    "price",
-                    f"Цена слишком низкая. Рекомендуемый минимум: {standard_service.typical_price_min} руб.",
-                )
+            min_price, max_price = standard_service.get_price_range()
 
-            if (
-                standard_service.typical_price_max
-                and price > standard_service.typical_price_max * 3
-            ):
-                self.add_error(
-                    "price",
-                    f"Цена слишком высокая. Рекомендуемый максимум: {standard_service.typical_price_max * 3} руб.",
-                )
+            if min_price and max_price:
+                # Показываем только информацию, не блокируем
+                if price < min_price * 0.1 or price > max_price * 10:
+                    # Очень сильное отклонение - показываем предупреждение в консоли
+                    print(
+                        f"ПРЕДУПРЕЖДЕНИЕ: Цена {price} руб сильно отличается от обычной для '{standard_service.name}' ({min_price}-{max_price} руб)"
+                    )
 
         return cleaned_data
 
