@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.utils.text import slugify
-from .models import AutoService, Region
+from .models import AutoService, Region, Service, ServiceCategory, StandardService
 
 User = get_user_model()
 
@@ -260,3 +260,182 @@ class AutoServiceRegistrationForm(forms.ModelForm):
             autoservice.save()
 
         return autoservice
+
+
+class ServiceCreateForm(forms.ModelForm):
+    """Форма создания услуги администратором автосервиса"""
+
+    class Meta:
+        model = Service
+        fields = [
+            "standard_service",
+            "name",
+            "description",
+            "price",
+            "duration",
+            "is_popular",
+            "is_active",
+            "image",
+        ]
+        widgets = {
+            "standard_service": forms.Select(
+                attrs={
+                    "class": "form-select",
+                    "id": "id_standard_service",
+                }
+            ),
+            "name": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Название услуги",
+                    "id": "id_name",
+                }
+            ),
+            "description": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": "Подробное описание услуги, что входит в работу, особенности",
+                }
+            ),
+            "price": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "0",
+                    "min": "0",
+                    "step": "0.01",
+                }
+            ),
+            "duration": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "60",
+                    "min": "1",
+                    "step": "1",
+                    "id": "id_duration",
+                }
+            ),
+            "is_popular": forms.CheckboxInput(
+                attrs={
+                    "class": "form-check-input",
+                }
+            ),
+            "is_active": forms.CheckboxInput(
+                attrs={
+                    "class": "form-check-input",
+                }
+            ),
+            "image": forms.FileInput(
+                attrs={
+                    "class": "form-control",
+                    "accept": "image/*",
+                }
+            ),
+        }
+        labels = {
+            "standard_service": "Стандартная услуга",
+            "name": "Название услуги",
+            "description": "Описание",
+            "price": "Цена (руб.)",
+            "duration": "Длительность (мин.)",
+            "is_popular": "Популярная услуга",
+            "is_active": "Услуга активна",
+            "image": "Изображение услуги",
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.autoservice = kwargs.pop("autoservice", None)
+        super().__init__(*args, **kwargs)
+
+        # Добавляем пустой вариант для стандартной услуги
+        self.fields["standard_service"].empty_label = "Выберите стандартную услуга"
+
+        # Группируем стандартные услуги по категориям для удобства выбора
+        standard_services = StandardService.objects.select_related("category").order_by(
+            "category__name", "name"
+        )
+        choices = [("", "Выберите стандартную услугу")]
+
+        current_category = None
+        for service in standard_services:
+            if service.category != current_category:
+                if current_category is not None:
+                    choices.append(("", "─" * 30))  # Разделитель
+                choices.append(("", f"📁 {service.category.name}"))
+                current_category = service.category
+
+            # Добавляем информацию о типичной цене и длительности
+            price_info = (
+                service.get_typical_price_display()
+                if hasattr(service, "get_typical_price_display")
+                else ""
+            )
+            duration_info = (
+                service.get_typical_duration_display()
+                if hasattr(service, "get_typical_duration_display")
+                else ""
+            )
+            extra_info = (
+                f" ({duration_info}, {price_info})"
+                if duration_info and price_info
+                else ""
+            )
+
+            choices.append((service.id, f"  └ {service.name}{extra_info}"))
+
+        self.fields["standard_service"].choices = choices
+
+        # Устанавливаем начальные значения
+        self.fields["is_active"].initial = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        standard_service = cleaned_data.get("standard_service")
+        duration = cleaned_data.get("duration")
+        price = cleaned_data.get("price")
+
+        if standard_service and duration:
+            # Проверяем соответствие длительности стандартной услуге
+            if (
+                duration < standard_service.typical_duration_min
+                or duration > standard_service.typical_duration_max
+            ):
+                self.add_error(
+                    "duration",
+                    f"Длительность должна быть в диапазоне "
+                    f"{standard_service.typical_duration_min}-"
+                    f"{standard_service.typical_duration_max} минут "
+                    f'для услуги "{standard_service.name}"',
+                )
+
+        if standard_service and price:
+            # Проверяем соответствие цены (если установлены ограничения)
+            if (
+                standard_service.typical_price_min
+                and price < standard_service.typical_price_min
+            ):
+                self.add_error(
+                    "price",
+                    f"Цена слишком низкая. Рекомендуемый минимум: {standard_service.typical_price_min} руб.",
+                )
+
+            if (
+                standard_service.typical_price_max
+                and price > standard_service.typical_price_max * 3
+            ):
+                self.add_error(
+                    "price",
+                    f"Цена слишком высокая. Рекомендуемый максимум: {standard_service.typical_price_max * 3} руб.",
+                )
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        """Сохраняем услугу с привязкой к автосервису"""
+        service = super().save(commit=False)
+        service.autoservice = self.autoservice
+
+        if commit:
+            service.save()
+
+        return service

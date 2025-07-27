@@ -8,8 +8,13 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import Region, AutoService
-from .forms import AutoServiceEditForm, AddManagerForm, AutoServiceRegistrationForm
+from .models import Region, AutoService, Service
+from .forms import (
+    AutoServiceEditForm,
+    AddManagerForm,
+    AutoServiceRegistrationForm,
+    ServiceCreateForm,
+)
 
 User = get_user_model()
 
@@ -55,9 +60,15 @@ def autoservice_detail_view(request, autoservice_slug):
     """Страница конкретного автосервиса"""
     autoservice = get_object_or_404(AutoService, slug=autoservice_slug)
 
+    # Получаем активные услуги автосервиса
+    services = autoservice.services.filter(is_active=True).order_by(
+        "-is_popular", "name"
+    )
+
     context = {
         "title": f"{autoservice.name} - {autoservice.region.name}",
         "autoservice": autoservice,
+        "services": services,
     }
     return render(request, "core/autoservice_detail.html", context)
 
@@ -532,6 +543,31 @@ def deactivate_autoservice_users(autoservice):
         deactivated_count += 1
 
     return deactivated_count
+
+
+@login_required
+@user_passes_test(is_autoservice_admin)
+def autoservice_service_create(request):
+    """Создание новой услуги администратором автосервиса"""
+    autoservice = request.user.autoservice
+
+    if request.method == "POST":
+        form = ServiceCreateForm(request.POST, request.FILES, autoservice=autoservice)
+        if form.is_valid():
+            service = form.save()
+            messages.success(request, f'Услуга "{service.name}" успешно создана!')
+            return redirect("core:autoservice_admin_dashboard")
+        else:
+            messages.error(request, "Пожалуйста, исправьте ошибки в форме.")
+    else:
+        form = ServiceCreateForm(autoservice=autoservice)
+
+    context = {
+        "title": f"Создание услуги - {autoservice.name}",
+        "autoservice": autoservice,
+        "form": form,
+    }
+    return render(request, "core/autoservice_admin/service_create.html", context)
 
 
 @login_required

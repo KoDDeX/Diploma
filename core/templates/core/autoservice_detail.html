@@ -20,9 +20,8 @@
                 </ol>
             </nav>
             
-            <!-- Основная карточка автосервиса -->
-            <div class="card shadow-lg border-0 text-light">
-                <!-- Заголовок -->
+            <!-- Блок 1: Основная информация -->
+            <div class="card shadow-lg border-0 text-light mb-4">
                 <div class="card-header text-center py-4">
                     <h1 class="display-5 fw-bold text-primary mb-0">
                         <i class="bi bi-building me-3"></i>
@@ -82,6 +81,21 @@
                             </div>
                             {% endif %}
                             
+                            <!-- Email -->
+                            {% if autoservice.email %}
+                            <div class="mb-4">
+                                <h6 class="fw-bold text-primary">
+                                    <i class="bi bi-envelope me-2"></i>
+                                    Email:
+                                </h6>
+                                <p class="text-light fs-5">
+                                    <a href="mailto:{{ autoservice.email }}" class="text-light text-decoration-none">
+                                        {{ autoservice.email }}
+                                    </a>
+                                </p>
+                            </div>
+                            {% endif %}
+                            
                             <!-- Регион -->
                             <div class="mb-4">
                                 <h6 class="fw-bold text-primary">
@@ -90,58 +104,273 @@
                                 </h6>
                                 <p class="text-light fs-5">{{ autoservice.region.name }}</p>
                             </div>
-                            
-                            <!-- Кнопки быстрых действий -->
-                            <div class="d-grid gap-2">
-                                {% if autoservice.phone %}
-                                <a href="tel:{{ autoservice.phone }}" class="btn btn-success btn-lg">
-                                    <i class="bi bi-telephone me-2"></i>
-                                    Позвонить сейчас
-                                </a>
-                                {% endif %}
-                                
-                                <a href="{% url 'landing' %}" class="btn btn-outline-primary btn-lg">
-                                    <i class="bi bi-arrow-left me-2"></i>
-                                    Назад к выбору
-                                </a>
-                            </div>
                         </div>
                     </div>
-                    
-                    <!-- Описание -->
-                    {% if autoservice.description %}
-                    <div class="row mt-5">
-                        <div class="col-12">
-                            <h3 class="text-primary mb-4">
-                                <i class="bi bi-card-text me-2"></i>
-                                О нас
-                            </h3>
-                            <div class="p-4 bg-dark rounded">
-                                <p class="text-light fs-5 mb-0">{{ autoservice.description }}</p>
+                </div>
+            </div>
+
+            <!-- Блок 2: О нас -->
+            {% if autoservice.description %}
+            <div class="card shadow-lg border-0 text-light mb-4">
+                <div class="card-header py-3">
+                    <h2 class="text-primary mb-0">
+                        <i class="bi bi-card-text me-2"></i>
+                        О нас
+                    </h2>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-light fs-5 mb-0 lh-lg">{{ autoservice.description }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Блок 3: Наши услуги -->
+            <div class="card shadow-lg border-0 text-light mb-4">
+                <div class="card-header py-3">
+                    <h2 class="text-primary mb-0">
+                        <i class="bi bi-wrench-adjustable me-2"></i>
+                        Наши услуги
+                    </h2>
+                </div>
+                <div class="card-body p-4">
+                    {% if services %}
+                    <div class="row g-4">
+                        {% for service in services %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100 bg-dark border-secondary text-light">
+                                {% if service.image %}
+                                <img src="{{ service.image.url }}" 
+                                     class="card-img-top" 
+                                     alt="{{ service.name }}"
+                                     style="height: 200px; object-fit: cover;">
+                                {% else %}
+                                <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" 
+                                     style="height: 200px;">
+                                    <i class="bi bi-wrench display-4 text-white-50"></i>
+                                </div>
+                                {% endif %}
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="card-title text-primary">
+                                        {{ service.name }}
+                                        {% if service.is_popular %}
+                                        <span class="badge bg-warning text-dark ms-2">
+                                            <i class="bi bi-star-fill"></i> Популярная
+                                        </span>
+                                        {% endif %}
+                                    </h5>
+                                    <p class="card-text text-light flex-grow-1">{{ service.description }}</p>
+                                    
+                                    <div class="mt-auto">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div>
+                                                <h4 class="text-success mb-0">{{ service.price }} ₽</h4>
+                                                <small class="text-white-50">
+                                                    <i class="bi bi-clock me-1"></i>
+                                                    {{ service.get_duration_display }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="d-grid gap-2">
+                                            {% if autoservice.phone %}
+                                            <a href="tel:{{ autoservice.phone }}" class="btn btn-primary btn-sm">
+                                                <i class="bi bi-telephone me-1"></i>
+                                                Записаться
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <!-- Пустое состояние для услуг -->
+                    <div class="text-center py-5">
+                        <i class="bi bi-wrench-adjustable display-1 text-white-50 mb-4"></i>
+                        <h4 class="text-white-50 mb-3">Услуги скоро появятся</h4>
+                        <p class="text-white-50 mb-4">
+                            Автосервис пока не добавил информацию о своих услугах.<br>
+                            Свяжитесь с ними через контакты ниже для уточнения деталей.
+                        </p>
                     </div>
                     {% endif %}
                 </div>
-                
-                <!-- Дополнительные действия -->
-                <div class="card-footer text-center py-4">
-                    <div class="d-grid gap-2 d-md-block">
+            </div>
+
+            <!-- Блок 4: Контакты и действия -->
+            <div class="card shadow-lg border-0 text-light">
+                <div class="card-header py-3">
+                    <h2 class="text-primary mb-0">
+                        <i class="bi bi-telephone me-2"></i>
+                        Связаться с нами
+                    </h2>
+                </div>
+                <div class="card-body text-center py-4">
+                    <div class="row g-3 justify-content-center">
                         {% if autoservice.phone %}
-                        <a href="tel:{{ autoservice.phone }}" class="btn btn-success btn-lg me-2">
-                            <i class="bi bi-telephone me-2"></i>
-                            Связаться
-                        </a>
+                        <div class="col-md-6 col-lg-4">
+                            <a href="tel:{{ autoservice.phone }}" class="btn btn-success btn-lg w-100">
+                                <i class="bi bi-telephone me-2"></i>
+                                Позвонить
+                            </a>
+                        </div>
                         {% endif %}
                         
-                        <a href="{% url 'landing' %}" class="btn btn-outline-secondary btn-lg">
-                            <i class="bi bi-house-door me-2"></i>
-                            На главную
-                        </a>
+                        {% if autoservice.email %}
+                        <div class="col-md-6 col-lg-4">
+                            <a href="mailto:{{ autoservice.email }}" class="btn btn-info btn-lg w-100">
+                                <i class="bi bi-envelope me-2"></i>
+                                Написать
+                            </a>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="col-md-6 col-lg-4">
+                            <a href="{% url 'landing' %}" class="btn btn-outline-secondary btn-lg w-100">
+                                <i class="bi bi-house-door me-2"></i>
+                                На главную
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+.card {
+    border-radius: 15px;
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+
+.card-header {
+    border-bottom: 2px solid #0d6efd;
+    border-radius: 15px 15px 0 0 !important;
+}
+
+.btn {
+    border-radius: 10px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Исправляем контрастность кнопок раз и навсегда */
+.btn-success {
+    background-color: #198754 !important;
+    border-color: #198754 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+.btn-success:hover {
+    background-color: #146c43 !important;
+    border-color: #146c43 !important;
+    color: #ffffff !important;
+}
+
+.btn-info {
+    background-color: #0dcaf0 !important;
+    border-color: #0dcaf0 !important;
+    color: #000000 !important;
+    font-weight: 600 !important;
+}
+
+.btn-info:hover {
+    background-color: #31d2f2 !important;
+    border-color: #31d2f2 !important;
+    color: #000000 !important;
+}
+
+.btn-warning {
+    background-color: #ffc107 !important;
+    border-color: #ffc107 !important;
+    color: #000000 !important;
+    font-weight: 600 !important;
+}
+
+.btn-warning:hover {
+    background-color: #ffcd39 !important;
+    border-color: #ffcd39 !important;
+    color: #000000 !important;
+}
+
+.btn-primary {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7 !important;
+    border-color: #0b5ed7 !important;
+    color: #ffffff !important;
+}
+
+.btn-danger {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+.btn-danger:hover {
+    background-color: #bb2d3b !important;
+    border-color: #bb2d3b !important;
+    color: #ffffff !important;
+}
+
+.btn-outline-secondary {
+    color: #6c757d !important;
+    border-color: #6c757d !important;
+    font-weight: 600 !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    color: #ffffff !important;
+}
+
+.breadcrumb {
+    background: none;
+    padding: 0;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: ">";
+    color: #6c757d;
+}
+
+.lh-lg {
+    line-height: 1.8 !important;
+}
+
+/* Карточки услуг */
+.card.h-100 {
+    transition: all 0.3s ease;
+}
+
+.card.h-100:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.badge {
+    font-size: 0.7rem;
+    padding: 0.4rem 0.6rem;
+}
+</style>
 {% endblock content %}

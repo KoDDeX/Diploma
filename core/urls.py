@@ -12,6 +12,7 @@ from .views import (
     autoservice_managers_list,
     autoservice_add_manager,
     autoservice_remove_manager,
+    autoservice_service_create,
     # Регистрация автосервиса
     autoservice_register_view,
 )
@@ -69,6 +70,12 @@ urlpatterns = [
         "autoservice-admin/managers/remove/<int:user_id>/",
         autoservice_remove_manager,
         name="autoservice_remove_manager",
+    ),
+    # Управление услугами
+    path(
+        "autoservice-admin/services/create/",
+        autoservice_service_create,
+        name="autoservice_service_create",
     ),
     # Детальная страница автосервиса
     path(
