@@ -13,6 +13,10 @@ from .views import (
     autoservice_add_manager,
     autoservice_remove_manager,
     autoservice_service_create,
+    autoservice_services_list,
+    autoservice_service_edit,
+    autoservice_service_toggle,
+    autoservice_service_delete,
     # Регистрация автосервиса
     autoservice_register_view,
 )
@@ -73,9 +77,29 @@ urlpatterns = [
     ),
     # Управление услугами
     path(
+        "autoservice-admin/services/",
+        autoservice_services_list,
+        name="autoservice_services_list",
+    ),
+    path(
         "autoservice-admin/services/create/",
         autoservice_service_create,
         name="autoservice_service_create",
+    ),
+    path(
+        "autoservice-admin/services/edit/<int:service_id>/",
+        autoservice_service_edit,
+        name="autoservice_service_edit",
+    ),
+    path(
+        "autoservice-admin/services/toggle/<int:service_id>/",
+        autoservice_service_toggle,
+        name="autoservice_service_toggle",
+    ),
+    path(
+        "autoservice-admin/services/delete/<int:service_id>/",
+        autoservice_service_delete,
+        name="autoservice_service_delete",
     ),
     # Детальная страница автосервиса
     path(

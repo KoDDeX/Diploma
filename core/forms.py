@@ -400,9 +400,9 @@ class ServiceCreateForm(forms.ModelForm):
             min_duration, max_duration = standard_service.get_duration_range()
 
             if min_duration and max_duration:
-                # Конвертируем в int для безопасного сравнения
-                min_threshold = int(min_duration * 0.3)
-                max_threshold = int(max_duration * 3)
+                # Безопасное преобразование для сравнения
+                min_threshold = int(float(min_duration) * 0.3)
+                max_threshold = int(float(max_duration) * 3)
 
                 # Показываем только информацию, не блокируем
                 if duration < min_threshold or duration > max_threshold:
@@ -418,8 +418,12 @@ class ServiceCreateForm(forms.ModelForm):
                 # Используем Decimal для безопасного сравнения
                 from decimal import Decimal
 
-                min_threshold = min_price * Decimal("0.1")
-                max_threshold = max_price * Decimal("10")
+                # Преобразуем в Decimal для корректных вычислений
+                min_price_decimal = Decimal(str(min_price)) if not isinstance(min_price, Decimal) else min_price
+                max_price_decimal = Decimal(str(max_price)) if not isinstance(max_price, Decimal) else max_price
+                
+                min_threshold = min_price_decimal * Decimal("0.1")
+                max_threshold = max_price_decimal * Decimal("10")
 
                 # Показываем только информацию, не блокируем
                 if price < min_threshold or price > max_threshold:
