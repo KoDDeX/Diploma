@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .order-card {
+        transition: transform 0.2s;
+    }
+    
+    .order-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .status-badge {
+        font-size: 0.875rem;
+    }
+    
+    .filter-form {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        backdrop-filter: blur(10px);
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <!-- Заголовок и навигация -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-light mb-0">
+                    <i class="bi bi-journal-text me-2"></i>
+                    {{ title }}
+                </h2>
+                <a href="{% url 'users:profile_detail' username=user.username %}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left me-1"></i>
+                    Вернуться в профиль
+                </a>
+            </div>
+
+            <!-- Статистика заказов -->
+            <div class="row mb-4">
+                <div class="col-md-2">
+                    <div class="stats-card text-center p-3">
+                        <h4 class="text-primary mb-1">{{ orders_stats.total }}</h4>
+                        <small class="text-light">Всего</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="stats-card text-center p-3">
+                        <h4 class="text-warning mb-1">{{ orders_stats.pending }}</h4>
+                        <small class="text-light">Ожидают</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="stats-card text-center p-3">
+                        <h4 class="text-info mb-1">{{ orders_stats.confirmed }}</h4>
+                        <small class="text-light">Подтверждены</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="stats-card text-center p-3">
+                        <h4 class="text-primary mb-1">{{ orders_stats.in_progress }}</h4>
+                        <small class="text-light">В работе</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="stats-card text-center p-3">
+                        <h4 class="text-success mb-1">{{ orders_stats.completed }}</h4>
+                        <small class="text-light">Выполнены</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="stats-card text-center p-3">
+                        <h4 class="text-danger mb-1">{{ orders_stats.cancelled }}</h4>
+                        <small class="text-light">Отменены</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Фильтры -->
+            <div class="filter-form p-4 mb-4">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="status" class="form-label text-light">Статус</label>
+                        <select name="status" id="status" class="form-select">
+                            <option value="">Все статусы</option>
+                            {% for status_key, status_name in status_choices %}
+                                <option value="{{ status_key }}" {% if current_filters.status == status_key %}selected{% endif %}>
+                                    {{ status_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="autoservice" class="form-label text-light">Автосервис</label>
+                        <select name="autoservice" id="autoservice" class="form-select">
+                            <option value="">Все автосервисы</option>
+                            {% for autoservice in user_autoservices %}
+                                <option value="{{ autoservice.id }}" {% if current_filters.autoservice == autoservice.id %}selected{% endif %}>
+                                    {{ autoservice.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label for="date_from" class="form-label text-light">Дата с</label>
+                        <input type="date" name="date_from" id="date_from" class="form-control" value="{{ current_filters.date_from }}">
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label for="date_to" class="form-label text-light">Дата по</label>
+                        <input type="date" name="date_to" id="date_to" class="form-control" value="{{ current_filters.date_to }}">
+                    </div>
+                    
+                    <div class="col-md-2 d-flex align-items-end">
+                        <div class="d-grid w-100 gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-funnel me-1"></i>
+                                Фильтр
+                            </button>
+                            <a href="{% url 'core:user_orders_list' %}" class="btn btn-outline-secondary btn-sm">
+                                Сбросить
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Список заказов -->
+            {% if orders %}
+                <div class="row">
+                    {% for order in orders %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card order-card h-100 text-light">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-receipt me-1"></i>
+                                        Заказ №{{ order.id }}
+                                    </h6>
+                                    <span class="badge status-badge
+                                        {% if order.status == 'pending' %}bg-warning
+                                        {% elif order.status == 'confirmed' %}bg-info
+                                        {% elif order.status == 'in_progress' %}bg-primary
+                                        {% elif order.status == 'completed' %}bg-success
+                                        {% elif order.status == 'cancelled' %}bg-danger
+                                        {% endif %}">
+                                        {{ order.get_status_display }}
+                                    </span>
+                                </div>
+                                
+                                <div class="card-body">
+                                    <h6 class="card-title text-primary">{{ order.service.name }}</h6>
+                                    <p class="card-text small text-light mb-2">
+                                        <i class="bi bi-building me-1"></i>
+                                        {{ order.autoservice.name }}
+                                    </p>
+                                    
+                                    <div class="mb-2">
+                                        <small class="text-light">
+                                            <i class="bi bi-car-front me-1"></i>
+                                            {% if order.car %}
+                                                {{ order.car.brand }} {{ order.car.model }} ({{ order.car.year }})
+                                            {% else %}
+                                                {{ order.car_brand }} {{ order.car_model }} ({{ order.car_year }})
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <small class="text-light">
+                                            <i class="bi bi-calendar me-1"></i>
+                                            {{ order.preferred_date|date:"d.m.Y" }} в {{ order.preferred_time|time:"H:i" }}
+                                        </small>
+                                    </div>
+                                    
+                                    {% if order.estimated_price %}
+                                        <div class="mb-2">
+                                            <small class="text-success">
+                                                <i class="bi bi-currency-dollar me-1"></i>
+                                                {{ order.estimated_price }} ₽
+                                            </small>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-clock me-1"></i>
+                                            Создан: {{ order.created_at|date:"d.m.Y H:i" }}
+                                        </small>
+                                    </div>
+                                </div>
+                                
+                                <div class="card-footer">
+                                    <div class="d-grid gap-2">
+                                        <a href="{% url 'core:user_order_detail' order.id %}" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-eye me-1"></i>
+                                            Подробнее
+                                        </a>
+                                        {% if order.status in 'pending,confirmed' %}
+                                            <button type="button" 
+                                                    class="btn btn-outline-danger btn-sm" 
+                                                    onclick="cancelOrder({{ order.id }})">
+                                                <i class="bi bi-x-circle me-1"></i>
+                                                Отменить
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox display-1 text-muted"></i>
+                    <h4 class="text-light mt-3">Заказы не найдены</h4>
+                    <p class="text-muted">
+                        {% if current_filters.status or current_filters.autoservice or current_filters.date_from or current_filters.date_to %}
+                            Попробуйте изменить параметры фильтра
+                        {% else %}
+                            У вас пока нет заказов
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'core:landing' %}" class="btn btn-primary">
+                        <i class="bi bi-plus me-1"></i>
+                        Создать первый заказ
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно подтверждения отмены -->
+<div class="modal fade" id="cancelOrderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5 class="modal-title text-light">Отмена заказа</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-light">
+                <p>Вы уверены, что хотите отменить заказ №<span id="orderIdToCancel"></span>?</p>
+                <p class="text-warning small">Это действие нельзя будет отменить.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отменить</button>
+                <form id="cancelOrderForm" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Да, отменить заказ</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function cancelOrder(orderId) {
+    document.getElementById('orderIdToCancel').textContent = orderId;
+    document.getElementById('cancelOrderForm').action = '{% url "core:user_order_cancel" 0 %}'.replace('0', orderId);
+    new bootstrap.Modal(document.getElementById('cancelOrderModal')).show();
+}
+</script>
+{% endblock %}

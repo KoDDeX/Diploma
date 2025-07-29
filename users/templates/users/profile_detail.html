@@ -137,6 +137,10 @@
                                 <i class="bi bi-car-front me-2"></i>
                                 Мои автомобили
                             </a>
+                            <a href="{% url 'core:user_orders_list' %}" class="btn btn-success btn-lg me-2">
+                                <i class="bi bi-journal-text me-2"></i>
+                                Мои заказы
+                            </a>
                         {% endif %}
                         
                         {% if profile_user.role == 'autoservice_admin' or profile_user.role == 'super_admin' %}
@@ -156,7 +160,7 @@
             <!-- Дополнительные блоки со статистикой и настройками -->
             {% if is_own_profile %}
             <div class="row mt-4">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="mt-4 p-3 border border-primary rounded text-light info-block-primary">
                         <h6 class="mb-3 text-primary">
                             <i class="bi bi-info-circle me-2 text-primary"></i>
@@ -199,7 +203,7 @@
                     </div>
                 </div>
                 
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="mt-4 p-3 border border-info rounded text-light info-block-primary">
                         <h6 class="mb-3 text-info">
                             <i class="bi bi-car-front me-2 text-info"></i>
@@ -241,7 +245,49 @@
                     </div>
                 </div>
                 
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <div class="mt-4 p-3 border border-success rounded text-light info-block-primary">
+                        <h6 class="mb-3 text-success">
+                            <i class="bi bi-journal-text me-2 text-success"></i>
+                            Мои заказы
+                        </h6>
+                        {% if orders_stats %}
+                        <div class="mb-2">
+                            <small class="text-light">
+                                <strong>Всего заказов:</strong> {{ orders_stats.total }}
+                            </small>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-light">
+                                <strong>Активных:</strong> 
+                                <span class="text-warning">{{ orders_stats.pending }}</span> + 
+                                <span class="text-info">{{ orders_stats.confirmed }}</span> + 
+                                <span class="text-primary">{{ orders_stats.in_progress }}</span>
+                            </small>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-light">
+                                <strong>Выполнено:</strong> 
+                                <span class="text-success">{{ orders_stats.completed }}</span>
+                            </small>
+                        </div>
+                        {% else %}
+                            <div class="mb-2">
+                                <small class="text-light">
+                                    <strong>Всего заказов:</strong> 0
+                                </small>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-white-50">
+                                    <i class="bi bi-plus-circle me-1"></i>
+                                    Создайте первый заказ
+                                </small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
                     <div class="mt-4 p-3 border border-primary rounded text-light info-block-primary">
                         <h6 class="mb-3 text-primary">
                             <i class="bi bi-gear me-2 text-primary"></i>

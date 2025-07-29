@@ -142,6 +142,21 @@ class UserProfileDetailView(LoginRequiredMixin, DetailView):
         user_cars = self.object.cars.all().order_by('-is_default', 'brand', 'model')
         context["user_cars"] = user_cars
         
+        # Получаем статистику заказов пользователя
+        if self.object == self.request.user:
+            from core.models import Order
+            user_orders = Order.objects.filter(client=self.object)
+            context["orders_stats"] = {
+                'total': user_orders.count(),
+                'pending': user_orders.filter(status='pending').count(),
+                'confirmed': user_orders.filter(status='confirmed').count(),
+                'in_progress': user_orders.filter(status='in_progress').count(),
+                'completed': user_orders.filter(status='completed').count(),
+                'cancelled': user_orders.filter(status='cancelled').count(),
+            }
+            # Последние заказы для быстрого просмотра
+            context["recent_orders"] = user_orders.order_by('-created_at')[:3]
+        
         return context
 
 

@@ -24,10 +24,15 @@ from .views import (
     order_success,
     # Управление автомобилями пользователя
     user_cars_list,
+    # Управление автомобилями пользователя
     user_car_add,
     user_car_edit,
     user_car_delete,
     user_car_set_default,
+    # Управление заказами пользователя
+    user_orders_list,
+    user_order_detail,
+    user_order_cancel,
 )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -135,6 +140,22 @@ urlpatterns = [
         "my-cars/set-default/<int:car_id>/",
         user_car_set_default,
         name="user_car_set_default",
+    ),
+    # Управление заказами пользователя
+    path(
+        "my-orders/",
+        user_orders_list,
+        name="user_orders_list",
+    ),
+    path(
+        "my-orders/<int:order_id>/",
+        user_order_detail,
+        name="user_order_detail",
+    ),
+    path(
+        "my-orders/<int:order_id>/cancel/",
+        user_order_cancel,
+        name="user_order_cancel",
     ),
     # Детальная страница автосервиса (должна быть последней среди обычных маршрутов)
     path(

@@ -1,0 +1,344 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .order-detail-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+    }
+    
+    .status-timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .status-timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, #007bff, #6c757d);
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -24px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #6c757d;
+        border: 2px solid #fff;
+    }
+    
+    .timeline-item.active::before {
+        background: #007bff;
+    }
+    
+    .timeline-item.completed::before {
+        background: #28a745;
+    }
+    
+    .timeline-item.cancelled::before {
+        background: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Заголовок и навигация -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-light mb-0">
+                    <i class="bi bi-receipt me-2"></i>
+                    {{ title }}
+                </h2>
+                <div>
+                    <a href="{% url 'core:user_orders_list' %}" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-arrow-left me-1"></i>
+                        К списку заказов
+                    </a>
+                    {% if can_cancel %}
+                        <button type="button" class="btn btn-outline-danger" onclick="cancelOrder({{ order.id }})">
+                            <i class="bi bi-x-circle me-1"></i>
+                            Отменить заказ
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Основная информация о заказе -->
+            <div class="order-detail-card mb-4">
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h4 class="text-primary mb-0">{{ order.service.name }}</h4>
+                                    <span class="badge fs-6
+                                        {% if order.status == 'pending' %}bg-warning
+                                        {% elif order.status == 'confirmed' %}bg-info
+                                        {% elif order.status == 'in_progress' %}bg-primary
+                                        {% elif order.status == 'completed' %}bg-success
+                                        {% elif order.status == 'cancelled' %}bg-danger
+                                        {% endif %}">
+                                        {{ order.get_status_display }}
+                                    </span>
+                                </div>
+                                
+                                <p class="text-light mb-3">
+                                    <i class="bi bi-building me-2"></i>
+                                    {{ order.autoservice.name }}
+                                </p>
+                                
+                                {% if order.service.description %}
+                                    <p class="text-muted">{{ order.service.description }}</p>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Детали заказа -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-primary">
+                                        <i class="bi bi-calendar me-1"></i>
+                                        Время визита
+                                    </h6>
+                                    <p class="text-light">
+                                        {{ order.preferred_date|date:"d F Y" }}<br>
+                                        <small class="text-muted">в {{ order.preferred_time|time:"H:i" }}</small>
+                                    </p>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <h6 class="text-primary">
+                                        <i class="bi bi-clock me-1"></i>
+                                        Дата создания
+                                    </h6>
+                                    <p class="text-light">{{ order.created_at|date:"d F Y, H:i" }}</p>
+                                </div>
+                            </div>
+                            
+                            {% if order.estimated_price or order.estimated_duration %}
+                                <div class="row">
+                                    {% if order.estimated_price %}
+                                        <div class="col-md-6">
+                                            <h6 class="text-primary">
+                                                <i class="bi bi-currency-dollar me-1"></i>
+                                                Ориентировочная стоимость
+                                            </h6>
+                                            <p class="text-success fs-5">{{ order.estimated_price }} ₽</p>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if order.estimated_duration %}
+                                        <div class="col-md-6">
+                                            <h6 class="text-primary">
+                                                <i class="bi bi-stopwatch me-1"></i>
+                                                Ориентировочное время
+                                            </h6>
+                                            <p class="text-light">{{ order.estimated_duration }} минут</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Статус и временная шкала -->
+                        <div class="col-md-4">
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-list-check me-1"></i>
+                                Статус заказа
+                            </h6>
+                            
+                            <div class="status-timeline">
+                                <div class="timeline-item {% if order.status == 'pending' %}active{% endif %} {% if order.status != 'cancelled' and order.status != 'pending' %}completed{% endif %}">
+                                    <strong class="text-light">Ожидает подтверждения</strong>
+                                    <br><small class="text-muted">Заказ отправлен автосервису</small>
+                                </div>
+                                
+                                <div class="timeline-item {% if order.status == 'confirmed' %}active{% endif %} {% if order.status == 'in_progress' or order.status == 'completed' %}completed{% endif %}">
+                                    <strong class="text-light">Подтвержден</strong>
+                                    <br><small class="text-muted">Автосервис подтвердил заказ</small>
+                                </div>
+                                
+                                <div class="timeline-item {% if order.status == 'in_progress' %}active{% endif %} {% if order.status == 'completed' %}completed{% endif %}">
+                                    <strong class="text-light">В работе</strong>
+                                    <br><small class="text-muted">Услуга выполняется</small>
+                                </div>
+                                
+                                <div class="timeline-item {% if order.status == 'completed' %}active completed{% elif order.status == 'cancelled' %}cancelled{% endif %}">
+                                    <strong class="text-light">
+                                        {% if order.status == 'cancelled' %}
+                                            Отменен
+                                        {% else %}
+                                            Выполнен
+                                        {% endif %}
+                                    </strong>
+                                    <br><small class="text-muted">
+                                        {% if order.status == 'cancelled' %}
+                                            Заказ был отменен
+                                        {% else %}
+                                            Услуга оказана
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Информация об автомобиле -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="order-detail-card h-100">
+                        <div class="card-body">
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-car-front me-1"></i>
+                                Автомобиль
+                            </h6>
+                            
+                            {% if order.car %}
+                                <p class="text-light mb-1">
+                                    <strong>{{ order.car.brand }} {{ order.car.model }}</strong>
+                                </p>
+                                <p class="text-muted mb-1">Год выпуска: {{ order.car.year }}</p>
+                                {% if order.car.number %}
+                                    <p class="text-muted mb-0">Номер: {{ order.car.number }}</p>
+                                {% endif %}
+                                <small class="text-info">
+                                    <i class="bi bi-bookmark me-1"></i>
+                                    Из сохраненных автомобилей
+                                </small>
+                            {% else %}
+                                <p class="text-light mb-1">
+                                    <strong>{{ order.car_brand }} {{ order.car_model }}</strong>
+                                </p>
+                                <p class="text-muted mb-1">Год выпуска: {{ order.car_year }}</p>
+                                {% if order.car_number %}
+                                    <p class="text-muted mb-0">Номер: {{ order.car_number }}</p>
+                                {% endif %}
+                                <small class="text-warning">
+                                    <i class="bi bi-pencil me-1"></i>
+                                    Введено вручную
+                                </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Контактная информация автосервиса -->
+                <div class="col-md-6">
+                    <div class="order-detail-card h-100">
+                        <div class="card-body">
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-building me-1"></i>
+                                Контакты автосервиса
+                            </h6>
+                            
+                            <p class="text-light mb-1">
+                                <strong>{{ order.autoservice.name }}</strong>
+                            </p>
+                            <p class="text-muted mb-2">
+                                <i class="bi bi-geo-alt me-1"></i>
+                                {{ order.autoservice.address }}
+                            </p>
+                            <p class="text-muted mb-2">
+                                <i class="bi bi-telephone me-1"></i>
+                                {{ order.autoservice.phone }}
+                            </p>
+                            {% if order.autoservice.email %}
+                                <p class="text-muted mb-0">
+                                    <i class="bi bi-envelope me-1"></i>
+                                    {{ order.autoservice.email }}
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Описание проблемы -->
+            {% if order.description %}
+                <div class="order-detail-card mb-4">
+                    <div class="card-body">
+                        <h6 class="text-primary mb-3">
+                            <i class="bi bi-chat-text me-1"></i>
+                            Описание проблемы
+                        </h6>
+                        <p class="text-light mb-0">{{ order.description }}</p>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Информационная панель -->
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Что дальше?</strong>
+                <ul class="mb-0 mt-2">
+                    {% if order.status == 'pending' %}
+                        <li>Ожидайте подтверждения от автосервиса</li>
+                        <li>Вам позвонят для уточнения деталей</li>
+                    {% elif order.status == 'confirmed' %}
+                        <li>Заказ подтвержден, готовьтесь к визиту</li>
+                        <li>В случае изменений вам сообщат</li>
+                    {% elif order.status == 'in_progress' %}
+                        <li>Услуга выполняется</li>
+                        <li>Ожидайте завершения работ</li>
+                    {% elif order.status == 'completed' %}
+                        <li>Услуга выполнена</li>
+                        <li>Спасибо за обращение к нам!</li>
+                    {% elif order.status == 'cancelled' %}
+                        <li>Заказ отменен</li>
+                        <li>Вы можете создать новый заказ в любое время</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно подтверждения отмены -->
+<div class="modal fade" id="cancelOrderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5 class="modal-title text-light">Отмена заказа</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-light">
+                <p>Вы уверены, что хотите отменить заказ №{{ order.id }}?</p>
+                <p class="text-warning small">Это действие нельзя будет отменить.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отменить</button>
+                <form method="post" action="{% url 'core:user_order_cancel' order.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Да, отменить заказ</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function cancelOrder(orderId) {
+    new bootstrap.Modal(document.getElementById('cancelOrderModal')).show();
+}
+</script>
+{% endblock %}

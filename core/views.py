@@ -953,3 +953,119 @@ def user_car_set_default(request, car_id):
     
     messages.success(request, f'Автомобиль "{car}" установлен как основной.')
     return redirect('core:user_cars_list')
+
+
+# === Управление заказами пользователя ===
+
+@login_required
+def user_orders_list(request):
+    """Список заказов пользователя с фильтрами"""
+    # Получаем все заказы пользователя
+    orders = Order.objects.filter(client=request.user).select_related(
+        'autoservice', 'service', 'car'
+    ).order_by('-created_at')
+    
+    # Фильтры
+    status_filter = request.GET.get('status')
+    autoservice_filter = request.GET.get('autoservice')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    # Применяем фильтры
+    if status_filter:
+        orders = orders.filter(status=status_filter)
+    
+    if autoservice_filter:
+        orders = orders.filter(autoservice_id=autoservice_filter)
+    
+    if date_from:
+        orders = orders.filter(preferred_date__gte=date_from)
+        
+    if date_to:
+        orders = orders.filter(preferred_date__lte=date_to)
+    
+    # Получаем данные для фильтров
+    user_autoservices = AutoService.objects.filter(
+        orders__client=request.user
+    ).distinct().order_by('name')
+    
+    # Статистика заказов
+    orders_stats = {
+        'total': orders.count(),
+        'pending': orders.filter(status='pending').count(),
+        'confirmed': orders.filter(status='confirmed').count(),
+        'in_progress': orders.filter(status='in_progress').count(),
+        'completed': orders.filter(status='completed').count(),
+        'cancelled': orders.filter(status='cancelled').count(),
+    }
+    
+    context = {
+        'title': 'Мои заказы',
+        'orders': orders,
+        'orders_stats': orders_stats,
+        'user_autoservices': user_autoservices,
+        'status_choices': Order.STATUS_CHOICES,
+        # Передаем текущие фильтры обратно в шаблон
+        'current_filters': {
+            'status': status_filter,
+            'autoservice': int(autoservice_filter) if autoservice_filter else None,
+            'date_from': date_from,
+            'date_to': date_to,
+        }
+    }
+    
+    return render(request, 'core/user_orders_list.html', context)
+
+
+@login_required
+def user_order_detail(request, order_id):
+    """Детальная информация о заказе пользователя"""
+    order = get_object_or_404(
+        Order.objects.select_related('autoservice', 'service', 'car'),
+        id=order_id,
+        client=request.user
+    )
+    
+    context = {
+        'title': f'Заказ №{order.id}',
+        'order': order,
+        'can_cancel': order.status in ['pending', 'confirmed'],
+    }
+    
+    return render(request, 'core/user_order_detail.html', context)
+
+
+@login_required
+@require_POST
+def user_order_cancel(request, order_id):
+    """Отмена заказа пользователем"""
+    order = get_object_or_404(Order, id=order_id, client=request.user)
+    
+    # Проверяем, можно ли отменить заказ
+    if order.status not in ['pending', 'confirmed']:
+        messages.error(
+            request,
+            f'Заказ №{order.id} нельзя отменить. Текущий статус: {order.get_status_display()}'
+        )
+    else:
+        order.status = 'cancelled'
+        order.save()
+        
+        messages.success(
+            request,
+            f'Заказ №{order.id} успешно отменен.'
+        )
+        
+        # Отправляем уведомление автосервису
+        try:
+            send_mail(
+                subject=f'Отмена заказа №{order.id}',
+                message=f'Клиент {order.get_client_name()} отменил заказ №{order.id} на услугу "{order.service.name}".',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[order.autoservice.email] if order.autoservice.email else [],
+                fail_silently=True,
+            )
+        except Exception:
+            pass  # Не прерываем работу, если email не отправился
+    
+    return redirect('core:user_order_detail', order_id=order.id)
