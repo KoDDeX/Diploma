@@ -1,0 +1,378 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Исправляем стили для select элементов на темном фоне */
+    .form-select {
+        background-color: #212529 !important;
+        border-color: #495057 !important;
+        color: #fff !important;
+    }
+    
+    .form-select:focus {
+        background-color: #212529 !important;
+        border-color: #86b7fe !important;
+        color: #fff !important;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    }
+    
+    .form-select option {
+        background-color: #212529 !important;
+        color: #fff !important;
+    }
+    
+    /* Стили для readonly полей */
+    .form-control[readonly] {
+        background-color: #343a40 !important;
+        border-color: #495057 !important;
+        color: #adb5bd !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Заголовок и информация об автосервисе -->
+            <div class="card border-primary mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-calendar-plus me-2"></i>
+                        Оформить заказ
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="text-primary">{{ autoservice.name }}</h5>
+                            <p class="text-muted mb-1">
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                {{ autoservice.address }}
+                            </p>
+                            <p class="text-muted mb-0">
+                                <i class="fas fa-phone me-1"></i>
+                                {{ autoservice.phone }}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="service-info bg-light p-3 rounded">
+                                <h6 class="text-primary mb-2">Выбранная услуга:</h6>
+                                <h5 class="mb-1">{{ service.name }}</h5>
+                                {% if service.description %}
+                                    <p class="text-muted small mb-2">{{ service.description }}</p>
+                                {% endif %}
+                                <div class="d-flex justify-content-between">
+                                    {% if service.price %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-ruble-sign me-1"></i>
+                                            {{ service.price }}
+                                        </span>
+                                    {% endif %}
+                                    {% if service.duration %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ service.duration }} мин
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Форма заказа -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-edit me-2"></i>
+                        Информация для заказа
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Информация о пользователе (только для просмотра) -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-user me-2"></i>
+                                    Информация о заказчике
+                                </h6>
+                                <div class="alert alert-info">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-1">
+                                                <strong>Имя:</strong> 
+                                                {% if user.first_name or user.last_name %}
+                                                    {{ user.first_name }} {{ user.last_name }}
+                                                {% else %}
+                                                    {{ user.username }}
+                                                {% endif %}
+                                            </p>
+                                            <p class="mb-0">
+                                                <strong>Email:</strong> {{ user.email }}
+                                            </p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            {% if user.phone %}
+                                                <p class="mb-1">
+                                                    <strong>Телефон:</strong> {{ user.phone }}
+                                                </p>
+                                            {% else %}
+                                                <p class="mb-1">
+                                                    <strong>Телефон:</strong> 
+                                                    <span class="text-warning">Не указан в профиле</span>
+                                                </p>
+                                            {% endif %}
+                                            <small class="text-muted">
+                                                Данные берутся из вашего профиля
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Информация об автомобиле -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-car me-2"></i>
+                                    Информация об автомобиле
+                                </h6>
+                            </div>
+                            
+                            {% if form.saved_car %}
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.saved_car.id_for_label }}" class="form-label">
+                                    {{ form.saved_car.label }}
+                                </label>
+                                {{ form.saved_car }}
+                                {% if form.saved_car.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.saved_car.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">
+                                    Выберите из сохраненных автомобилей или заполните данные ниже вручную
+                                </div>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <hr>
+                                <small class="text-muted">Или введите данные автомобиля:</small>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.car_brand.id_for_label }}" class="form-label">
+                                    {{ form.car_brand.label }}
+                                </label>
+                                {{ form.car_brand }}
+                                {% if form.car_brand.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.car_brand.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.car_model.id_for_label }}" class="form-label">
+                                    {{ form.car_model.label }}
+                                </label>
+                                {{ form.car_model }}
+                                {% if form.car_model.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.car_model.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.car_year.id_for_label }}" class="form-label">
+                                    {{ form.car_year.label }}
+                                </label>
+                                {{ form.car_year }}
+                                {% if form.car_year.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.car_year.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.car_number.id_for_label }}" class="form-label">
+                                    {{ form.car_number.label }}
+                                </label>
+                                {{ form.car_number }}
+                                {% if form.car_number.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.car_number.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Детали заказа -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-calendar-alt me-2"></i>
+                                    Детали заказа
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.preferred_date.id_for_label }}" class="form-label">
+                                    {{ form.preferred_date.label }}
+                                </label>
+                                {{ form.preferred_date }}
+                                {% if form.preferred_date.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.preferred_date.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.preferred_time.id_for_label }}" class="form-label">
+                                    {{ form.preferred_time.label }}
+                                </label>
+                                {{ form.preferred_time }}
+                                {% if form.preferred_time.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.preferred_time.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Время работы: 08:00 - 20:00</div>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">
+                                    {{ form.description.label }}
+                                </label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.description.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Кнопки управления -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'core:autoservice_detail' autoservice.slug %}" 
+                               class="btn btn-outline-secondary me-md-2">
+                                <i class="fas fa-arrow-left me-1"></i>
+                                Вернуться к автосервису
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane me-1"></i>
+                                Отправить заказ
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Информационная заметка -->
+            {% if not user.is_authenticated %}
+            <div class="alert alert-info mt-4">
+                <i class="fas fa-user-plus me-2"></i>
+                <strong>Совет:</strong>
+                <a href="{% url 'users:login' %}" class="alert-link">Войдите в систему</a> 
+                или <a href="{% url 'users:register' %}" class="alert-link">зарегистрируйтесь</a>, 
+                чтобы ваши данные автоматически заполнялись в формах заказов.
+            </div>
+            {% endif %}
+            
+            <div class="alert alert-info mt-4">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Обратите внимание:</strong>
+                После отправки заказа с вами свяжутся в течение рабочего дня для подтверждения времени и уточнения деталей.
+                Поля, отмеченные звездочкой (*), являются обязательными для заполнения.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Валидация даты
+    const dateInput = document.getElementById('{{ form.preferred_date.id_for_label }}');
+    if (dateInput) {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const minDate = tomorrow.toISOString().split('T')[0];
+        dateInput.setAttribute('min', minDate);
+    }
+    
+    // Автозаполнение данных автомобиля при выборе из сохраненных
+    const savedCarSelect = document.getElementById('{{ form.saved_car.id_for_label }}');
+    if (savedCarSelect) {
+        // Создаем объект с данными автомобилей для быстрого доступа
+        const carData = {};
+        {% for car in user.cars.all %}
+            carData[{{ car.id }}] = {
+                brand: '{{ car.brand|escapejs }}',
+                model: '{{ car.model|escapejs }}',
+                year: {{ car.year }},
+                number: '{{ car.number|escapejs }}'
+            };
+        {% endfor %}
+        
+        savedCarSelect.addEventListener('change', function() {
+            const carId = this.value;
+            const brandInput = document.getElementById('{{ form.car_brand.id_for_label }}');
+            const modelInput = document.getElementById('{{ form.car_model.id_for_label }}');
+            const yearInput = document.getElementById('{{ form.car_year.id_for_label }}');
+            const numberInput = document.getElementById('{{ form.car_number.id_for_label }}');
+            
+            if (carId && carData[carId]) {
+                // Заполняем поля данными выбранного автомобиля
+                const car = carData[carId];
+                if (brandInput) brandInput.value = car.brand;
+                if (modelInput) modelInput.value = car.model;
+                if (yearInput) yearInput.value = car.year;
+                if (numberInput) numberInput.value = car.number;
+                
+                // Делаем поля readonly, чтобы показать, что они заполнены автоматически
+                [brandInput, modelInput, yearInput, numberInput].forEach(input => {
+                    if (input) {
+                        input.readOnly = true;
+                        input.classList.add('bg-secondary');
+                        input.style.color = '#adb5bd';
+                    }
+                });
+                
+                console.log('Автомобиль выбран:', car);
+            } else {
+                // Очищаем поля и делаем их редактируемыми
+                [brandInput, modelInput, yearInput, numberInput].forEach(input => {
+                    if (input) {
+                        input.value = '';
+                        input.readOnly = false;
+                        input.classList.remove('bg-secondary');
+                        input.style.color = '';
+                    }
+                });
+                
+                console.log('Выбор автомобиля сброшен');
+            }
+        });
+        
+        // Инициализируем, если уже выбран автомобиль
+        if (savedCarSelect.value) {
+            savedCarSelect.dispatchEvent(new Event('change'));
+        }
+    }
+});
+</script>
+{% endblock %}

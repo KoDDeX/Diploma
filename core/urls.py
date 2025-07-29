@@ -19,6 +19,15 @@ from .views import (
     autoservice_service_delete,
     # Регистрация автосервиса
     autoservice_register_view,
+    # Система заказов
+    order_create,
+    order_success,
+    # Управление автомобилями пользователя
+    user_cars_list,
+    user_car_add,
+    user_car_edit,
+    user_car_delete,
+    user_car_set_default,
 )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -101,9 +110,46 @@ urlpatterns = [
         autoservice_service_delete,
         name="autoservice_service_delete",
     ),
-    # Детальная страница автосервиса
+    # Управление автомобилями пользователя
+    path(
+        "my-cars/",
+        user_cars_list,
+        name="user_cars_list",
+    ),
+    path(
+        "my-cars/add/",
+        user_car_add,
+        name="user_car_add",
+    ),
+    path(
+        "my-cars/edit/<int:car_id>/",
+        user_car_edit,
+        name="user_car_edit",
+    ),
+    path(
+        "my-cars/delete/<int:car_id>/",
+        user_car_delete,
+        name="user_car_delete",
+    ),
+    path(
+        "my-cars/set-default/<int:car_id>/",
+        user_car_set_default,
+        name="user_car_set_default",
+    ),
+    # Детальная страница автосервиса (должна быть последней среди обычных маршрутов)
     path(
         "<slug:autoservice_slug>/", autoservice_detail_view, name="autoservice_detail"
+    ),
+    # Система заказов
+    path(
+        "autoservice/<int:autoservice_id>/service/<int:service_id>/order/",
+        order_create,
+        name="order_create",
+    ),
+    path(
+        "order/<int:order_id>/success/",
+        order_success,
+        name="order_success",
     ),
 ]
 

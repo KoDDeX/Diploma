@@ -1,7 +1,15 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.utils.text import slugify
-from .models import AutoService, Region, Service, ServiceCategory, StandardService
+from .models import (
+    AutoService,
+    Region,
+    Service,
+    ServiceCategory,
+    StandardService,
+    Order,
+    Car,
+)
 
 User = get_user_model()
 
@@ -419,9 +427,17 @@ class ServiceCreateForm(forms.ModelForm):
                 from decimal import Decimal
 
                 # Преобразуем в Decimal для корректных вычислений
-                min_price_decimal = Decimal(str(min_price)) if not isinstance(min_price, Decimal) else min_price
-                max_price_decimal = Decimal(str(max_price)) if not isinstance(max_price, Decimal) else max_price
-                
+                min_price_decimal = (
+                    Decimal(str(min_price))
+                    if not isinstance(min_price, Decimal)
+                    else min_price
+                )
+                max_price_decimal = (
+                    Decimal(str(max_price))
+                    if not isinstance(max_price, Decimal)
+                    else max_price
+                )
+
                 min_threshold = min_price_decimal * Decimal("0.1")
                 max_threshold = max_price_decimal * Decimal("10")
 
@@ -443,3 +459,239 @@ class ServiceCreateForm(forms.ModelForm):
             service.save()
 
         return service
+
+
+class CarForm(forms.ModelForm):
+    """Форма для добавления/редактирования автомобиля"""
+    
+    class Meta:
+        model = Car
+        fields = ['brand', 'model', 'year', 'number', 'is_default']
+        widgets = {
+            'brand': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Например: Toyota, BMW, Lada',
+                }
+            ),
+            'model': forms.TextInput(
+                attrs={
+                    'class': 'form-control', 
+                    'placeholder': 'Например: Camry, X5, Granta',
+                }
+            ),
+            'year': forms.NumberInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': '2020',
+                    'min': '1980',
+                    'max': '2025',
+                }
+            ),
+            'number': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'А123БВ777 (необязательно)',
+                }
+            ),
+            'is_default': forms.CheckboxInput(
+                attrs={
+                    'class': 'form-check-input',
+                }
+            ),
+        }
+        labels = {
+            'brand': 'Марка автомобиля *',
+            'model': 'Модель автомобиля *', 
+            'year': 'Год выпуска *',
+            'number': 'Государственный номер',
+            'is_default': 'Сделать основным автомобилем',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # Обновляем максимальный год
+        from datetime import date
+        current_year = date.today().year
+        self.fields['year'].widget.attrs['max'] = str(current_year + 1)
+    
+    def clean_year(self):
+        year = self.cleaned_data['year']
+        from datetime import date
+        
+        current_year = date.today().year
+        if year < 1980:
+            raise forms.ValidationError('Год выпуска не может быть раньше 1980')
+        if year > current_year + 1:
+            raise forms.ValidationError(f'Год выпуска не может быть больше {current_year + 1}')
+            
+        return year
+    
+    def save(self, commit=True):
+        car = super().save(commit=False)
+        if self.user:
+            car.owner = self.user
+        
+        if commit:
+            car.save()
+            
+        return car
+
+
+class OrderCreateForm(forms.ModelForm):
+    """Форма создания заказа клиентом"""
+    
+    # Поле для выбора сохраненного автомобиля
+    saved_car = forms.ModelChoiceField(
+        queryset=Car.objects.none(),
+        required=False,
+        empty_label="Выбрать из сохраненных автомобилей...",
+        widget=forms.Select(attrs={'class': 'form-select form-select-lg'}),
+        label="Сохраненный автомобиль"
+    )
+
+    class Meta:
+        model = Order
+        fields = [
+            "saved_car",
+            "car_brand",
+            "car_model", 
+            "car_year",
+            "car_number",
+            "description",
+            "preferred_date",
+            "preferred_time",
+        ]
+        widgets = {
+            "car_brand": forms.TextInput(
+                attrs={
+                    "class": "form-control form-control-lg",
+                    "placeholder": "Например: Toyota, BMW, Lada",
+                }
+            ),
+            "car_model": forms.TextInput(
+                attrs={
+                    "class": "form-control form-control-lg", 
+                    "placeholder": "Например: Camry, X5, Granta",
+                }
+            ),
+            "car_year": forms.NumberInput(
+                attrs={
+                    "class": "form-control form-control-lg",
+                    "placeholder": "2020",
+                    "min": "1980",
+                    "max": "2025",
+                }
+            ),
+            "car_number": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "А123БВ777 (необязательно)",
+                }
+            ),
+            "description": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": "Опишите проблему, особые пожелания или дополнительную информацию...",
+                }
+            ),
+            "preferred_date": forms.DateInput(
+                attrs={
+                    "class": "form-control form-control-lg",
+                    "type": "date",
+                    "min": "",  # Будет установлено в JavaScript
+                }
+            ),
+            "preferred_time": forms.TimeInput(
+                attrs={
+                    "class": "form-control form-control-lg", 
+                    "type": "time",
+                    "min": "08:00",
+                    "max": "20:00", 
+                }
+            ),
+        }
+        labels = {
+            "car_brand": "Марка автомобиля *",
+            "car_model": "Модель автомобиля *", 
+            "car_year": "Год выпуска *",
+            "car_number": "Государственный номер",
+            "description": "Описание проблемы",
+            "preferred_date": "Предпочтительная дата *",
+            "preferred_time": "Удобное время *",
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.service = kwargs.pop("service", None)
+        self.user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+
+        # Устанавливаем минимальную дату на завтра
+        from datetime import date, timedelta
+
+        tomorrow = date.today() + timedelta(days=1)
+        self.fields["preferred_date"].widget.attrs["min"] = tomorrow.strftime(
+            "%Y-%m-%d"
+        )
+
+        # Устанавливаем начальные значения
+        self.fields["preferred_time"].initial = "10:00"
+        
+        # Настраиваем queryset для сохраненных автомобилей пользователя
+        if self.user and self.user.is_authenticated:
+            self.fields["saved_car"].queryset = Car.objects.filter(owner=self.user).order_by('-is_default', '-created_at')
+            
+            # Если у пользователя есть основной автомобиль, выбираем его по умолчанию
+            default_car = Car.objects.filter(owner=self.user, is_default=True).first()
+            if default_car:
+                self.fields["saved_car"].initial = default_car
+                # Предзаполняем поля данными основного автомобиля
+                self.fields["car_brand"].initial = default_car.brand
+                self.fields["car_model"].initial = default_car.model  
+                self.fields["car_year"].initial = default_car.year
+                self.fields["car_number"].initial = default_car.number
+        else:
+            # Для неавторизованных пользователей скрываем поле выбора
+            self.fields.pop("saved_car")
+
+    def clean_car_year(self):
+        year = self.cleaned_data["car_year"]
+        from datetime import date
+
+        current_year = date.today().year
+        if year < 1980:
+            raise forms.ValidationError("Год выпуска не может быть раньше 1980")
+        if year > current_year + 1:
+            raise forms.ValidationError(
+                f"Год выпуска не может быть больше {current_year + 1}"
+            )
+
+        return year
+
+    def clean_preferred_date(self):
+        preferred_date = self.cleaned_data["preferred_date"]
+        from datetime import date
+
+        if preferred_date <= date.today():
+            raise forms.ValidationError("Выберите дату не раньше завтрашнего дня")
+
+        return preferred_date
+
+    def save(self, commit=True):
+        """Сохраняем заказ с привязкой к услуге и пользователю"""
+        order = super().save(commit=False)
+        order.service = self.service
+        order.client = self.user
+        
+        # Если выбран сохраненный автомобиль, связываем его с заказом
+        saved_car = self.cleaned_data.get('saved_car')
+        if saved_car:
+            order.car = saved_car
+
+        if commit:
+            order.save()
+
+        return order

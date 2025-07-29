@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Сообщение об успехе -->
+            <div class="card border-success">
+                <div class="card-header bg-success text-white text-center">
+                    <h3 class="mb-0">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Заказ успешно создан!
+                    </h3>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-clipboard-check text-success" style="font-size: 4rem;"></i>
+                    </div>
+                    
+                    <h4 class="text-success mb-3">Заказ №{{ order.id }}</h4>
+                    
+                    <p class="lead mb-4">
+                        Спасибо за ваш заказ! Мы получили вашу заявку и свяжемся с вами в ближайшее время.
+                    </p>
+                    
+                    <!-- Детали заказа -->
+                    <div class="row text-start">
+                        <div class="col-md-6">
+                            <div class="card bg-light mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-user me-1"></i>
+                                        Контактная информация
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-1"><strong>Имя:</strong> {{ order.get_client_name }}</p>
+                                    <p class="mb-1"><strong>Телефон:</strong> {{ order.get_client_phone }}</p>
+                                    <p class="mb-0"><strong>Email:</strong> {{ order.get_client_email }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card bg-light mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-car me-1"></i>
+                                        Автомобиль
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    {% if order.car %}
+                                        <p class="mb-1"><strong>Марка:</strong> {{ order.car.brand }}</p>
+                                        <p class="mb-1"><strong>Модель:</strong> {{ order.car.model }}</p>
+                                        <p class="mb-1"><strong>Год:</strong> {{ order.car.year }}</p>
+                                        {% if order.car.number %}
+                                            <p class="mb-0"><strong>Номер:</strong> {{ order.car.number }}</p>
+                                        {% elif order.car_number %}
+                                            <p class="mb-0"><strong>Номер:</strong> {{ order.car_number }}</p>
+                                        {% endif %}
+                                    {% else %}
+                                        <p class="mb-1"><strong>Марка:</strong> {{ order.car_brand }}</p>
+                                        <p class="mb-1"><strong>Модель:</strong> {{ order.car_model }}</p>
+                                        <p class="mb-1"><strong>Год:</strong> {{ order.car_year }}</p>
+                                        {% if order.car_number %}
+                                            <p class="mb-0"><strong>Номер:</strong> {{ order.car_number }}</p>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row text-start">
+                        <div class="col-md-6">
+                            <div class="card bg-light mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-tools me-1"></i>
+                                        Услуга
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-1"><strong>Автосервис:</strong> {{ order.autoservice.name }}</p>
+                                    <p class="mb-1"><strong>Услуга:</strong> {{ order.service.name }}</p>
+                                    {% if order.estimated_price %}
+                                        <p class="mb-1">
+                                            <strong>Ориентировочная стоимость:</strong> 
+                                            {{ order.estimated_price }} ₽
+                                        </p>
+                                    {% endif %}
+                                    {% if order.estimated_duration %}
+                                        <p class="mb-0">
+                                            <strong>Ориентировочное время:</strong> 
+                                            {{ order.estimated_duration }} мин
+                                        </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card bg-light mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-calendar-alt me-1"></i>
+                                        Предпочтительное время
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-1">
+                                        <strong>Дата:</strong> 
+                                        {{ order.preferred_date|date:"d.m.Y" }}
+                                    </p>
+                                    <p class="mb-1">
+                                        <strong>Время:</strong> 
+                                        {{ order.preferred_time|time:"H:i" }}
+                                    </p>
+                                    <p class="mb-0">
+                                        <strong>Статус:</strong> 
+                                        <span class="badge bg-warning">{{ order.get_status_display }}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if order.description %}
+                        <div class="card bg-light mb-4 text-start">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-comment me-1"></i>
+                                    Описание проблемы
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-0">{{ order.description }}</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Информация о следующих шагах -->
+                    <div class="alert alert-info text-start">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Что дальше?
+                        </h6>
+                        <ul class="mb-0">
+                            <li>Наш менеджер свяжется с вами в течение рабочего дня</li>
+                            <li>Мы подтвердим время визита и уточним детали</li>
+                            <li>В случае необходимости предложим альтернативное время</li>
+                            <li>За день до визита пришлем напоминание</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Контактная информация автосервиса -->
+                    <div class="card border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                Контакты автосервиса
+                            </h6>
+                        </div>
+                        <div class="card-body text-start">
+                            <p class="mb-1"><strong>Название:</strong> {{ order.autoservice.name }}</p>
+                            <p class="mb-1"><strong>Адрес:</strong> {{ order.autoservice.address }}</p>
+                            <p class="mb-1"><strong>Телефон:</strong> {{ order.autoservice.phone }}</p>
+                            {% if order.autoservice.email %}
+                                <p class="mb-0"><strong>Email:</strong> {{ order.autoservice.email }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Кнопки действий -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                        <a href="{% url 'core:autoservice_detail' order.autoservice.slug %}" 
+                           class="btn btn-outline-primary me-md-2">
+                            <i class="fas fa-arrow-left me-1"></i>
+                            Вернуться к автосервису
+                        </a>
+                        <a href="{% url 'core:landing' %}" class="btn btn-primary">
+                            <i class="fas fa-home me-1"></i>
+                            На главную
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Дополнительная информация -->
+            <div class="alert alert-light mt-4 text-center">
+                <p class="mb-2">
+                    <strong>Время создания заказа:</strong> 
+                    {{ order.created_at|date:"d.m.Y H:i" }}
+                </p>
+                <small class="text-muted">
+                    Сохраните номер заказа для обращения в службу поддержки
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

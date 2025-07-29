@@ -85,7 +85,7 @@ class User(AbstractUser):
         blank=True,
         verbose_name="Автосервис",
     )
-    # phone = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
+    phone = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
 
     # Указываем, что для логина будет использоваться поле email
     USERNAME_FIELD = "email"

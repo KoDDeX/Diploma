@@ -4,16 +4,18 @@ from django.db.models import Count
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import Region, AutoService, Service
+from .models import Region, AutoService, Service, Order, Car
 from .forms import (
     AutoServiceEditForm,
     AddManagerForm,
     AutoServiceRegistrationForm,
     ServiceCreateForm,
+    OrderCreateForm,
+    CarForm,
 )
 
 User = get_user_model()
@@ -799,3 +801,155 @@ Email: {user.email}
     except Exception as e:
         # Логируем ошибку, но не прерываем процесс регистрации
         print(f"Ошибка отправки email: {str(e)}")
+
+
+@login_required
+@login_required
+@require_http_methods(["GET", "POST"])
+def order_create(request, autoservice_id, service_id):
+    """Создание заказа клиентом (только для авторизованных пользователей)"""
+    autoservice = get_object_or_404(AutoService, id=autoservice_id)
+    service = get_object_or_404(Service, id=service_id, autoservice=autoservice)
+
+    if request.method == "POST":
+        form = OrderCreateForm(request.POST, service=service, user=request.user)
+        if form.is_valid():
+            order = form.save()
+            messages.success(
+                request,
+                f"Ваш заказ №{order.id} успешно создан! Мы свяжемся с вами в ближайшее время.",
+            )
+            return redirect("core:order_success", order_id=order.id)
+    else:
+        form = OrderCreateForm(service=service, user=request.user)
+
+    context = {
+        "form": form,
+        "autoservice": autoservice,
+        "service": service,
+        "title": f"Заказать услугу: {service.name}",
+    }
+
+    return render(request, "core/order_create.html", context)
+
+
+@require_http_methods(["GET"])
+def order_success(request, order_id):
+    """Страница успешного создания заказа"""
+    order = get_object_or_404(Order, id=order_id)
+
+    context = {
+        "order": order,
+        "title": "Заказ успешно создан",
+    }
+
+    return render(request, "core/order_success.html", context)
+
+
+# =============================================================================
+# УПРАВЛЕНИЕ АВТОМОБИЛЯМИ ПОЛЬЗОВАТЕЛЯ
+# =============================================================================
+
+@login_required
+def user_cars_list(request):
+    """Список автомобилей пользователя"""
+    cars = Car.objects.filter(owner=request.user).order_by('-is_default', '-created_at')
+    
+    context = {
+        'title': 'Мои автомобили',
+        'cars': cars,
+    }
+    
+    return render(request, 'core/user_cars_list.html', context)
+
+
+@login_required
+def user_car_add(request):
+    """Добавление автомобиля пользователем"""
+    if request.method == 'POST':
+        form = CarForm(request.POST, user=request.user)
+        if form.is_valid():
+            car = form.save()
+            messages.success(
+                request, 
+                f'Автомобиль "{car}" успешно добавлен!'
+            )
+            return redirect('core:user_cars_list')
+    else:
+        form = CarForm(user=request.user)
+    
+    context = {
+        'title': 'Добавить автомобиль',
+        'form': form,
+    }
+    
+    return render(request, 'core/user_car_add.html', context)
+
+
+@login_required
+def user_car_edit(request, car_id):
+    """Редактирование автомобиля пользователем"""
+    car = get_object_or_404(Car, id=car_id, owner=request.user)
+    
+    if request.method == 'POST':
+        form = CarForm(request.POST, instance=car, user=request.user)
+        if form.is_valid():
+            car = form.save()
+            messages.success(
+                request, 
+                f'Автомобиль "{car}" успешно обновлен!'
+            )
+            return redirect('core:user_cars_list')
+    else:
+        form = CarForm(instance=car, user=request.user)
+    
+    context = {
+        'title': f'Редактировать автомобиль: {car}',
+        'form': form,
+        'car': car,
+        'is_edit': True,
+    }
+    
+    return render(request, 'core/user_car_add.html', context)
+
+
+@login_required  
+@require_POST
+def user_car_delete(request, car_id):
+    """Удаление автомобиля пользователем"""
+    car = get_object_or_404(Car, id=car_id, owner=request.user)
+    
+    # Проверяем, есть ли активные заказы с этим автомобилем
+    active_orders = Order.objects.filter(
+        car=car, 
+        status__in=['pending', 'confirmed', 'in_progress']
+    ).count()
+    
+    if active_orders > 0:
+        messages.error(
+            request,
+            f'Нельзя удалить автомобиль "{car}". У вас есть {active_orders} активных заказов с этим автомобилем.'
+        )
+    else:
+        car_name = str(car)
+        car.delete()
+        messages.success(request, f'Автомобиль "{car_name}" удален.')
+    
+    return redirect('core:user_cars_list')
+
+
+@login_required
+@require_POST  
+def user_car_set_default(request, car_id):
+    """Установка автомобиля как основного"""
+    car = get_object_or_404(Car, id=car_id, owner=request.user)
+    
+    # Убираем флаг "основной" у всех других автомобилей пользователя
+    Car.objects.filter(owner=request.user).update(is_default=False)
+    
+    # Устанавливаем выбранный автомобиль как основной
+    car.is_default = True
+    car.save()
+    
+    messages.success(request, f'Автомобиль "{car}" установлен как основной.')
+    return redirect('core:user_cars_list')

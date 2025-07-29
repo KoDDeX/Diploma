@@ -137,6 +137,11 @@ class UserProfileDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context["title"] = f"Профиль {self.object.username}"
         context["is_own_profile"] = self.request.user == self.object
+        
+        # Получаем автомобили пользователя с правильной сортировкой (основной автомобиль первым)
+        user_cars = self.object.cars.all().order_by('-is_default', 'brand', 'model')
+        context["user_cars"] = user_cars
+        
         return context
 
 

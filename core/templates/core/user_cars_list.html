@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Заголовок -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-primary">
+                    <i class="fas fa-car me-2"></i>
+                    Мои автомобили
+                </h2>
+                <a href="{% url 'core:user_car_add' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>
+                    Добавить автомобиль
+                </a>
+            </div>
+
+            {% if cars %}
+                <!-- Статистика -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body text-center">
+                                <i class="fas fa-car display-4 mb-2"></i>
+                                <h4>{{ cars.count }}</h4>
+                                <p class="mb-0">Всего автомобилей</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <i class="fas fa-star display-4 mb-2"></i>
+                                <h4>{% for car in cars %}{% if car.is_default %}1{% endif %}{% endfor %}</h4>
+                                <p class="mb-0">Основной автомобиль</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center">
+                                <i class="fas fa-clipboard-list display-4 mb-2"></i>
+                                <h4>{{ user.orders.count }}</h4>
+                                <p class="mb-0">Заказов оформлено</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Список автомобилей -->
+                <div class="row">
+                    {% for car in cars %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100 {% if car.is_default %}border-success{% endif %}">
+                            {% if car.is_default %}
+                                <div class="card-header bg-success text-white text-center">
+                                    <i class="fas fa-star me-1"></i>
+                                    Основной автомобиль
+                                </div>
+                            {% endif %}
+                            <div class="card-body">
+                                <div class="text-center mb-3">
+                                    <i class="fas fa-car text-primary" style="font-size: 3rem;"></i>
+                                </div>
+                                
+                                <h5 class="card-title text-center">{{ car.brand }} {{ car.model }}</h5>
+                                
+                                <ul class="list-unstyled">
+                                    <li><strong>Год:</strong> {{ car.year }}</li>
+                                    {% if car.number %}
+                                        <li><strong>Номер:</strong> {{ car.number }}</li>
+                                    {% else %}
+                                        <li class="text-muted">Номер не указан</li>
+                                    {% endif %}
+                                    <li><strong>Добавлен:</strong> {{ car.created_at|date:"d.m.Y" }}</li>
+                                </ul>
+
+                                <!-- Статистика заказов для этого автомобиля -->
+                                {% with orders_count=car.orders.count %}
+                                    {% if orders_count > 0 %}
+                                        <div class="alert alert-info small">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Заказов с этим авто: {{ orders_count }}
+                                        </div>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                            
+                            <div class="card-footer">
+                                <div class="d-grid gap-2">
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'core:user_car_edit' car.id %}" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-edit me-1"></i>
+                                            Изменить
+                                        </a>
+                                        {% if not car.is_default %}
+                                            <button type="button" 
+                                                    class="btn btn-outline-success btn-sm"
+                                                    onclick="setDefaultCar({{ car.id }}, '{{ car.brand }} {{ car.model }}')">
+                                                <i class="fas fa-star me-1"></i>
+                                                Основной
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <button type="button" 
+                                            class="btn btn-outline-danger btn-sm"
+                                            onclick="deleteCar({{ car.id }}, '{{ car.brand }} {{ car.model }}', {{ car.orders.count }})">
+                                        <i class="fas fa-trash me-1"></i>
+                                        Удалить
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <!-- Пустое состояние -->
+                <div class="text-center py-5">
+                    <i class="fas fa-car text-muted" style="font-size: 5rem;"></i>
+                    <h3 class="text-muted mt-3">У вас пока нет автомобилей</h3>
+                    <p class="text-muted mb-4">
+                        Добавьте свои автомобили для быстрого оформления заказов в автосервисах
+                    </p>
+                    <a href="{% url 'core:user_car_add' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-plus me-2"></i>
+                        Добавить первый автомобиль
+                    </a>
+                </div>
+            {% endif %}
+
+            <!-- Информационная заметка -->
+            <div class="alert alert-info mt-4">
+                <h6 class="alert-heading">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    Полезная информация
+                </h6>
+                <ul class="mb-0">
+                    <li><strong>Основной автомобиль</strong> будет автоматически выбираться при создании новых заказов</li>
+                    <li>Вы можете добавить несколько автомобилей и переключаться между ними</li>
+                    <li>Автомобили с активными заказами нельзя удалить</li>
+                    <li>Государственный номер указывать необязательно</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальные окна для подтверждения действий -->
+<!-- Модальное окно для установки основного автомобиля -->
+<div class="modal fade" id="setDefaultModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Установить основной автомобиль</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Установить автомобиль <strong id="defaultCarName"></strong> как основной?</p>
+                <p class="text-muted small">Этот автомобиль будет автоматически выбираться при создании новых заказов.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <form id="setDefaultForm" method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-star me-1"></i>
+                        Установить основным
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для удаления автомобиля -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Удалить автомобиль</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Удалить автомобиль <strong id="deleteCarName"></strong>?</p>
+                <div id="ordersWarning" class="alert alert-warning" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    У этого автомобиля есть активные заказы. Удаление невозможно.
+                </div>
+                <p class="text-muted small">Это действие нельзя отменить.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger" id="deleteButton">
+                        <i class="fas fa-trash me-1"></i>
+                        Удалить
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function setDefaultCar(carId, carName) {
+    document.getElementById('defaultCarName').textContent = carName;
+    document.getElementById('setDefaultForm').action = '{% url "core:user_car_set_default" 0 %}'.replace('0', carId);
+    new bootstrap.Modal(document.getElementById('setDefaultModal')).show();
+}
+
+function deleteCar(carId, carName, ordersCount) {
+    document.getElementById('deleteCarName').textContent = carName;
+    document.getElementById('deleteForm').action = '{% url "core:user_car_delete" 0 %}'.replace('0', carId);
+    
+    const ordersWarning = document.getElementById('ordersWarning');
+    const deleteButton = document.getElementById('deleteButton');
+    
+    if (ordersCount > 0) {
+        ordersWarning.style.display = 'block';
+        deleteButton.disabled = true;
+        deleteButton.classList.add('disabled');
+    } else {
+        ordersWarning.style.display = 'none';
+        deleteButton.disabled = false;
+        deleteButton.classList.remove('disabled');
+    }
+    
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

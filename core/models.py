@@ -56,8 +56,8 @@ class StandardService(models.Model):
         services = self.autoservice_services.filter(is_active=True)
         if not services.exists():
             return None, None
-        
-        prices = services.values_list('price', flat=True)
+
+        prices = services.values_list("price", flat=True)
         return min(prices), max(prices)
 
     def get_duration_range(self):
@@ -65,8 +65,8 @@ class StandardService(models.Model):
         services = self.autoservice_services.filter(is_active=True)
         if not services.exists():
             return None, None
-        
-        durations = services.values_list('duration', flat=True)
+
+        durations = services.values_list("duration", flat=True)
         return min(durations), max(durations)
 
     def get_typical_duration_display(self):
@@ -74,7 +74,7 @@ class StandardService(models.Model):
         min_duration, max_duration = self.get_duration_range()
         if min_duration is None or max_duration is None:
             return "Время не указано"
-        
+
         if min_duration == max_duration:
             hours = min_duration // 60
             minutes = min_duration % 60
@@ -89,7 +89,7 @@ class StandardService(models.Model):
         min_price, max_price = self.get_price_range()
         if min_price is None or max_price is None:
             return "Цена не указана"
-        
+
         if min_price == max_price:
             return f"{min_price} руб."
         else:
@@ -189,6 +189,59 @@ class AutoService(models.Model):
         )
 
 
+class Car(models.Model):
+    """Автомобили пользователей"""
+    
+    owner = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name="cars",
+        verbose_name="Владелец",
+    )
+    brand = models.CharField(max_length=50, verbose_name="Марка")
+    model = models.CharField(max_length=50, verbose_name="Модель")
+    year = models.PositiveIntegerField(verbose_name="Год выпуска")
+    number = models.CharField(
+        max_length=15,
+        blank=True,
+        verbose_name="Госномер",
+        help_text="Государственный номер автомобиля (необязательно)",
+    )
+    is_default = models.BooleanField(
+        default=False,
+        verbose_name="Основной автомобиль",
+        help_text="Будет выбираться автоматически при создании заказов"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата добавления")
+    
+    class Meta:
+        verbose_name = "Автомобиль"
+        verbose_name_plural = "Автомобили"
+        ordering = ["-is_default", "-created_at"]
+        unique_together = [["owner", "brand", "model", "year"]]  # Уникальность для пользователя
+    
+    def __str__(self):
+        car_info = f"{self.brand} {self.model} ({self.year})"
+        if self.number:
+            car_info += f" - {self.number}"
+        return car_info
+    
+    def get_full_info(self):
+        """Возвращает полную информацию об автомобиле"""
+        return self.__str__()
+    
+    def save(self, *args, **kwargs):
+        # Если это первый автомобиль пользователя или явно указан как основной
+        if self.is_default:
+            # Убираем флаг "основной" у других автомобилей пользователя
+            Car.objects.filter(owner=self.owner, is_default=True).update(is_default=False)
+        elif not Car.objects.filter(owner=self.owner).exists():
+            # Если это первый автомобиль, делаем его основным
+            self.is_default = True
+            
+        super().save(*args, **kwargs)
+
+
 class Service(models.Model):
     """Услуги автосервиса"""
 
@@ -274,3 +327,173 @@ class Service(models.Model):
         unique_together = [
             ["autoservice", "name"]
         ]  # Уникальность названия в рамках автосервиса
+
+
+class Order(models.Model):
+    """Заказы клиентов"""
+
+    STATUS_CHOICES = [
+        ("pending", "Ожидает подтверждения"),
+        ("confirmed", "Подтверждён"),
+        ("in_progress", "В работе"),
+        ("completed", "Выполнен"),
+        ("cancelled", "Отменён"),
+    ]
+
+    # Основная информация
+    service = models.ForeignKey(
+        Service,
+        on_delete=models.CASCADE,
+        related_name="orders",
+        verbose_name="Услуга",
+    )
+    autoservice = models.ForeignKey(
+        AutoService,
+        on_delete=models.CASCADE,
+        related_name="orders",
+        verbose_name="Автосервис",
+    )
+    
+    # Связь с пользователем (клиентом)
+    client = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name="orders",
+        verbose_name="Клиент",
+        help_text="Пользователь, который сделал заказ",
+        null=True,
+        blank=True
+    )
+
+    # Информация об автомобиле - может быть связана с сохраненным автомобилем
+    car = models.ForeignKey(
+        Car,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+        verbose_name="Автомобиль из профиля",
+        help_text="Выберите из сохраненных автомобилей или оставьте пустым для ввода вручную"
+    )
+    
+    # Данные автомобиля (заполняются автоматически из Car или вручную)
+    car_brand = models.CharField(max_length=50, verbose_name="Марка автомобиля")
+    car_model = models.CharField(max_length=50, verbose_name="Модель автомобиля")
+    car_year = models.PositiveIntegerField(
+        verbose_name="Год выпуска", help_text="Год выпуска автомобиля"
+    )
+    car_number = models.CharField(
+        max_length=15,
+        blank=True,
+        verbose_name="Госномер",
+        help_text="Государственный номер автомобиля (необязательно)",
+    )
+
+    # Детали заказа
+    description = models.TextField(
+        blank=True,
+        verbose_name="Описание проблемы",
+        help_text="Опишите проблему или особые пожелания",
+    )
+    preferred_date = models.DateField(
+        verbose_name="Предпочтительная дата",
+        help_text="Когда вам удобно привезти автомобиль",
+    )
+    preferred_time = models.TimeField(
+        verbose_name="Предпочтительное время",
+        help_text="Во сколько вам удобно приехать",
+    )
+
+    # Статус и метаданные
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending",
+        verbose_name="Статус заказа",
+    )
+    total_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Итоговая цена",
+        help_text="Окончательная стоимость (может отличаться от базовой цены услуги)",
+    )
+    estimated_duration = models.PositiveIntegerField(
+        verbose_name="Оценочное время выполнения (мин)",
+        help_text="Время выполнения в минутах",
+    )
+
+    # Системные поля
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата изменения")
+
+    # Комментарии автосервиса
+    admin_notes = models.TextField(
+        blank=True,
+        verbose_name="Комментарии автосервиса",
+        help_text="Внутренние заметки для сотрудников",
+    )
+
+    def __str__(self):
+        return f"Заказ #{self.id} - {self.get_client_name()} ({self.service.name})"
+
+    def get_status_display_color(self):
+        """Возвращает CSS класс для отображения статуса"""
+        status_colors = {
+            "pending": "warning",
+            "confirmed": "info",
+            "in_progress": "primary",
+            "completed": "success",
+            "cancelled": "danger",
+        }
+        return status_colors.get(self.status, "secondary")
+
+    def get_car_info(self):
+        """Возвращает информацию об автомобиле в удобном формате"""
+        car_info = f"{self.car_brand} {self.car_model} ({self.car_year})"
+        if self.car_number:
+            car_info += f" - {self.car_number}"
+        return car_info
+    
+    def get_client_name(self):
+        """Возвращает имя клиента"""
+        if not self.client:
+            return "Неизвестный клиент"
+        if self.client.first_name or self.client.last_name:
+            return f"{self.client.first_name} {self.client.last_name}".strip()
+        return self.client.username
+    
+    def get_client_phone(self):
+        """Возвращает телефон клиента"""
+        if not self.client:
+            return "Не указан"
+        return self.client.phone if self.client.phone else "Не указан"
+    
+    def get_client_email(self):
+        """Возвращает email клиента"""
+        if not self.client:
+            return "Не указан"
+        return self.client.email
+
+    def save(self, *args, **kwargs):
+        # Автоматически устанавливаем автосервис и базовые цены при создании
+        if not self.pk:  # Только при создании
+            self.autoservice = self.service.autoservice
+            if not self.total_price:
+                self.total_price = self.service.price
+            if not self.estimated_duration:
+                self.estimated_duration = self.service.duration
+        
+        # Если выбран сохраненный автомобиль, копируем его данные
+        if self.car and not all([self.car_brand, self.car_model, self.car_year]):
+            self.car_brand = self.car.brand
+            self.car_model = self.car.model
+            self.car_year = self.car.year
+            if not self.car_number and self.car.number:
+                self.car_number = self.car.number
+
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Заказ"
+        verbose_name_plural = "Заказы"
+        ordering = ["-created_at"]

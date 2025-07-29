@@ -133,6 +133,10 @@
                                 <i class="bi bi-pencil-square me-2"></i>
                                 Редактировать профиль
                             </a>
+                            <a href="{% url 'core:user_cars_list' %}" class="btn btn-info btn-lg me-2">
+                                <i class="bi bi-car-front me-2"></i>
+                                Мои автомобили
+                            </a>
                         {% endif %}
                         
                         {% if profile_user.role == 'autoservice_admin' or profile_user.role == 'super_admin' %}
@@ -152,7 +156,7 @@
             <!-- Дополнительные блоки со статистикой и настройками -->
             {% if is_own_profile %}
             <div class="row mt-4">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="mt-4 p-3 border border-primary rounded text-light info-block-primary">
                         <h6 class="mb-3 text-primary">
                             <i class="bi bi-info-circle me-2 text-primary"></i>
@@ -177,18 +181,6 @@
                                 {% endif %}
                             </small>
                         </div>
-                        {% if profile_user.autoservice %}
-                        <div class="mt-2">
-                            <small class="text-light">
-                                <strong>Автосервис:</strong><br>
-                                {{ profile_user.autoservice.name }}<br>
-                                <span class="text-white-50" style="font-size: 0.8em;">{{ profile_user.autoservice.address }}</span>
-                                {% if profile_user.autoservice.phone %}
-                                    <br><span class="text-white-50" style="font-size: 0.8em;">{{ profile_user.autoservice.phone }}</span>
-                                {% endif %}
-                            </small>
-                        </div>
-                        {% endif %}
                         <div class="mt-2">
                             <small class="text-light">
                                 <strong>Дней с нами:</strong> {{ profile_user.date_joined|timesince }}
@@ -204,9 +196,52 @@
                                 {% endif %}
                             </small>
                         </div>
-                    </div>                </div>
+                    </div>
+                </div>
                 
-                <div class="col-md-6">
+                <div class="col-md-4">
+                    <div class="mt-4 p-3 border border-info rounded text-light info-block-primary">
+                        <h6 class="mb-3 text-info">
+                            <i class="bi bi-car-front me-2 text-info"></i>
+                            Мои автомобили
+                        </h6>
+                        {% if user_cars %}
+                        <div class="mb-2">
+                            <small class="text-light">
+                                <strong>Всего автомобилей:</strong> {{ user_cars.count }}
+                            </small>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-light">
+                                <strong>Основной автомобиль:</strong><br>
+                                {% if user_cars.0 %}
+                                    <span class="badge {% if user_cars.0.is_default %}bg-info{% else %}bg-secondary{% endif %}">
+                                        {{ user_cars.0.brand }} {{ user_cars.0.model }}
+                                    </span><br>
+                                    <span class="text-white-50" style="font-size: 0.7em;">
+                                        {{ user_cars.0.year }} г.
+                                        {% if user_cars.0.number %} • {{ user_cars.0.number }}{% endif %}
+                                    </span>
+                                {% endif %}
+                            </small>    
+                        </div>
+                        {% else %}
+                            <div class="mb-2">
+                                <small class="text-light">
+                                    <strong>Всего автомобилей:</strong> 0
+                                </small>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-white-50">
+                                    <i class="bi bi-plus-circle me-1"></i>
+                                    Добавьте первый автомобиль
+                                </small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
                     <div class="mt-4 p-3 border border-primary rounded text-light info-block-primary">
                         <h6 class="mb-3 text-primary">
                             <i class="bi bi-gear me-2 text-primary"></i>
@@ -220,6 +255,21 @@
                             <input class="form-check-input" type="checkbox" role="switch" id="isStaff" {% if profile_user.is_staff %}checked{% endif %} disabled>
                             <label class="form-check-label small text-light" for="isStaff">Доступ к админ-панели</label>
                         </div>
+                        {% if profile_user.autoservice %}
+                        <div class="mt-3">
+                            <h6 class="text-warning" style="font-size: 0.9em;">
+                                <i class="bi bi-building me-1"></i>
+                                Автосервис
+                            </h6>
+                            <small class="text-light">
+                                {{ profile_user.autoservice.name }}<br>
+                                <span class="text-white-50" style="font-size: 0.8em;">{{ profile_user.autoservice.address }}</span>
+                                {% if profile_user.autoservice.phone %}
+                                    <br><span class="text-white-50" style="font-size: 0.8em;">{{ profile_user.autoservice.phone }}</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
