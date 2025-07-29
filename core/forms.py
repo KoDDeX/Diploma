@@ -99,22 +99,31 @@ class AddManagerForm(forms.Form):
 
     role = forms.ChoiceField(
         label="Роль",
-        choices=[
-            ("manager", "Менеджер"),
-            ("autoservice_admin", "Администратор автосервиса"),
-        ],
+        choices=[],  # Будет установлено в __init__
         widget=forms.Select(
             attrs={
                 "class": "form-select",
             }
         ),
-        initial="manager",
         help_text="Выберите роль для нового сотрудника",
     )
 
     def __init__(self, *args, **kwargs):
         self.autoservice = kwargs.pop("autoservice", None)
+        self.current_user = kwargs.pop("current_user", None)
         super().__init__(*args, **kwargs)
+        
+        # Определяем доступные роли в зависимости от роли текущего пользователя
+        if self.current_user:
+            manageable_roles = self.current_user.can_manage_users()
+            role_choices = [(key, value) for key, value in User.ROLE_CHOICES if key in manageable_roles]
+            self.fields['role'].choices = role_choices
+            
+            # Устанавливаем начальное значение
+            if 'master' in manageable_roles:
+                self.fields['role'].initial = 'master'
+            elif 'manager' in manageable_roles:
+                self.fields['role'].initial = 'manager'
 
     def clean_email(self):
         email = self.cleaned_data["email"]

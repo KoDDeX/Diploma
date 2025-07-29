@@ -43,12 +43,12 @@
                     <a href="{% url 'core:autoservice_admin_dashboard' %}" class="nav-link" title="Панель управления автосервисом">
                         <i class="bi bi-speedometer2"></i> Панель автосервиса
                     </a>
-                {% elif user.is_staff %}
+                {% elif user.role == 'manager' %}
                     <a href="{% url 'users:profile_detail' username=user.username %}" class="nav-link" title="Личный кабинет">
                         <i class="bi bi-person-circle"></i> {{ user.username|capfirst }} (Профиль)
                     </a>
-                    <a href="{% url 'admin:index' %}" class="nav-link" title="Админпанель">
-                        <i class="bi bi-person-check-fill"></i> Панель администратора
+                    <a href="{% url 'core:autoservice_admin_dashboard' %}" class="nav-link" title="Панель управления автосервисом">
+                        <i class="bi bi-speedometer2"></i> Панель автосервиса
                     </a>
                 {% else %}
                     <a href="{% url 'users:profile_detail' username=user.username %}" class="nav-link" title="Личный кабинет">

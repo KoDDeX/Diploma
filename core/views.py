@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST, require_http_methods
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.conf import settings
+from django.core.exceptions import PermissionDenied
 from .models import Region, AutoService, Service, Order, Car
 from .forms import (
     AutoServiceEditForm,
@@ -340,12 +341,22 @@ def assign_manager(request, autoservice_id, user_id):
 
 
 def is_autoservice_admin(user):
-    """Проверка, является ли пользователь администратором автосервиса"""
+    """Проверка, является ли пользователь администратором автосервиса, менеджером или мастером"""
     return (
         user.is_authenticated
-        and user.role == "autoservice_admin"
+        and user.role in ["autoservice_admin", "manager", "master"]
         and user.autoservice is not None
         and user.autoservice.is_active  # Добавляем проверку активности автосервиса
+    )
+
+
+def can_manage_users(user):
+    """Проверка, может ли пользователь управлять другими пользователями"""
+    return (
+        user.is_authenticated
+        and user.role in ["autoservice_admin", "manager"]
+        and user.autoservice is not None
+        and user.autoservice.is_active
     )
 
 
@@ -354,31 +365,39 @@ def is_autoservice_admin(user):
 def autoservice_admin_dashboard(request):
     """Главная панель администратора автосервиса"""
     autoservice = request.user.autoservice
+    
+    # Получаем роли, которыми может управлять текущий пользователь
+    manageable_roles = request.user.can_manage_users()
 
-    # Получаем всех менеджеров данного автосервиса
-    all_managers = User.objects.filter(autoservice=autoservice, is_active=True).exclude(
-        role="super_admin"
-    )
+    # Получаем всех сотрудников, которыми может управлять пользователь
+    all_staff = User.objects.filter(
+        autoservice=autoservice, 
+        role__in=manageable_roles,
+        is_active=True
+    ).exclude(role="super_admin")
 
-    # Получаем только менеджеров (исключая администраторов автосервиса)
-    managers = all_managers.filter(role="manager").order_by(
-        "last_name", "first_name", "username"
-    )
-
-    # Статистика
-    total_managers = all_managers.count()
-    active_managers = all_managers.filter(is_active=True).count()
-    manager_count = managers.count()
-    admin_count = all_managers.filter(role="autoservice_admin").count()
+    # Статистика по ролям
+    stats = {}
+    total_staff = 0
+    
+    for role_key, role_name in User.ROLE_CHOICES:
+        if role_key in manageable_roles:
+            count = all_staff.filter(role=role_key).count()
+            stats[role_key] = {
+                'name': role_name,
+                'count': count
+            }
+            total_staff += count
 
     context = {
         "title": f"Панель управления - {autoservice.name}",
         "autoservice": autoservice,
-        "managers": managers,
-        "total_managers": total_managers,
-        "active_managers": active_managers,
-        "manager_count": manager_count,
-        "admin_count": admin_count,
+        "total_staff": total_staff,
+        "stats": stats,
+        "manageable_roles": manageable_roles,
+        "user_role": request.user.role,
+        # Для обратной совместимости со старыми шаблонами
+        "total_managers": total_staff,
     }
     return render(request, "core/autoservice_admin/dashboard.html", context)
 
@@ -407,54 +426,78 @@ def autoservice_edit_profile(request):
 
 
 @login_required
-@user_passes_test(is_autoservice_admin)
+@user_passes_test(can_manage_users)
 def autoservice_managers_list(request):
-    """Список менеджеров автосервиса"""
+    """Список сотрудников автосервиса"""
     autoservice = request.user.autoservice
-
-    # Получаем только менеджеров автосервиса (исключаем администраторов)
-    managers = (
-        User.objects.filter(autoservice=autoservice, role="manager", is_active=True)
+    
+    # Получаем роли, которыми может управлять текущий пользователь
+    manageable_roles = request.user.can_manage_users()
+    
+    # Получаем сотрудников, которыми может управлять текущий пользователь
+    staff = (
+        User.objects.filter(
+            autoservice=autoservice, 
+            role__in=manageable_roles,
+            is_active=True
+        )
         .exclude(role="super_admin")
-        .order_by("last_name", "first_name", "username")
+        .order_by("role", "last_name", "first_name", "username")
     )
 
-    # Статистика для шаблона
-    total_managers = managers.count()
-    active_managers = managers.filter(is_active=True).count()
+    # Фильтрация по роли
+    role_filter = request.GET.get('role')
+    if role_filter and role_filter in manageable_roles:
+        staff = staff.filter(role=role_filter)
 
-    # Дополнительная статистика для информации
-    all_staff = User.objects.filter(autoservice=autoservice).exclude(role="super_admin")
-    admin_count = all_staff.filter(role="autoservice_admin").count()
+    # Статистика для шаблона
+    total_staff = staff.count()
+    
+    # Статистика по ролям
+    stats = {}
+    for role_key, role_name in User.ROLE_CHOICES:
+        if role_key in manageable_roles:
+            count = staff.filter(role=role_key).count()
+            stats[role_key] = {
+                'name': role_name,
+                'count': count
+            }
 
     context = {
-        "title": f"Менеджеры - {autoservice.name}",
+        "title": f"Сотрудники - {autoservice.name}",
         "autoservice": autoservice,
-        "managers": managers,
-        "total_managers": total_managers,
-        "active_managers": active_managers,
-        "manager_count": total_managers,  # Все в списке - менеджеры
-        "admin_count": admin_count,  # Для информационной панели
+        "staff": staff,
+        "manageable_roles": manageable_roles,
+        "role_choices": User.ROLE_CHOICES,
+        "current_role_filter": role_filter,
+        "total_staff": total_staff,
+        "stats": stats,
+        "user_role": request.user.role,
     }
     return render(request, "core/autoservice_admin/managers_list.html", context)
 
 
 @login_required
-@user_passes_test(is_autoservice_admin)
+@user_passes_test(can_manage_users)
 def autoservice_add_manager(request):
-    """Добавление менеджера в автосервис"""
+    """Добавление сотрудника в автосервис (менеджера или мастера)"""
     autoservice = request.user.autoservice
 
     if request.method == "POST":
-        form = AddManagerForm(request.POST, autoservice=autoservice)
+        form = AddManagerForm(request.POST, autoservice=autoservice, current_user=request.user)
         if form.is_valid():
             user = form.get_user()
             role = form.cleaned_data["role"]
 
             if user:
+                # Проверяем права на назначение этой роли
+                if role not in request.user.can_manage_users():
+                    messages.error(request, "У вас нет прав для назначения этой роли")
+                    return redirect("core:autoservice_managers_list")
+
                 # Назначаем пользователя сотрудником автосервиса
                 user.autoservice = autoservice
-                user.role = role  # Администратор автосервиса назначает роль напрямую
+                user.role = role
                 user.save()
 
                 display_name = (
@@ -462,16 +505,21 @@ def autoservice_add_manager(request):
                     if (user.last_name or user.first_name)
                     else user.username
                 )
-                role_display = (
-                    "администратором" if role == "autoservice_admin" else "менеджером"
-                )
+                
+                role_display_map = {
+                    "autoservice_admin": "администратором",
+                    "manager": "менеджером", 
+                    "master": "мастером"
+                }
+                role_display = role_display_map.get(role, role)
+                
                 messages.success(
                     request,
                     f'Пользователь "{display_name}" назначен {role_display} автосервиса',
                 )
                 return redirect("core:autoservice_managers_list")
     else:
-        form = AddManagerForm(autoservice=autoservice)
+        form = AddManagerForm(autoservice=autoservice, current_user=request.user)
 
     context = {
         "title": f"Добавить сотрудника - {autoservice.name}",
@@ -482,16 +530,25 @@ def autoservice_add_manager(request):
 
 
 @login_required
-@user_passes_test(is_autoservice_admin)
+@user_passes_test(can_manage_users)
 @require_POST
 def autoservice_remove_manager(request, user_id):
-    """Удаление менеджера из автосервиса"""
+    """Удаление сотрудника из автосервиса"""
     autoservice = request.user.autoservice
+    manageable_roles = request.user.can_manage_users()
 
     try:
         user = get_object_or_404(
-            User, id=user_id, autoservice=autoservice, role="manager"
+            User, 
+            id=user_id, 
+            autoservice=autoservice, 
+            role__in=manageable_roles
         )
+
+        # Проверяем права на удаление этого пользователя
+        if not request.user.can_manage_user(user):
+            messages.error(request, "У вас нет прав для удаления этого сотрудника")
+            return redirect("core:autoservice_managers_list")
 
         display_name = (
             f"{user.last_name} {user.first_name}".strip()
@@ -499,15 +556,17 @@ def autoservice_remove_manager(request, user_id):
             else user.username
         )
 
+        role_display = user.get_role_display()
+
         # Убираем пользователя из автосервиса
         user.autoservice = None
         user.role = "client"  # Возвращаем роль клиента
         user.save()
 
-        messages.success(request, f'Менеджер "{display_name}" удален из автосервиса')
+        messages.success(request, f'{role_display} "{display_name}" удален из автосервиса')
 
     except Exception as e:
-        messages.error(request, f"Ошибка при удалении менеджера: {str(e)}")
+        messages.error(request, f"Ошибка при удалении сотрудника: {str(e)}")
 
     return redirect("core:autoservice_managers_list")
 

@@ -36,8 +36,16 @@
                     <div class="card bg-primary text-white h-100">
                         <div class="card-body text-center">
                             <i class="bi bi-people-fill display-4 mb-3"></i>
-                            <h3 class="fw-bold">{{ total_managers }}</h3>
-                            <p class="mb-0">Менеджеров</p>
+                            <h3 class="fw-bold">{{ total_staff }}</h3>
+                            <p class="mb-0">
+                                {% if user.role == 'autoservice_admin' %}
+                                    Сотрудников
+                                {% elif user.role == 'manager' %}
+                                    Мастеров
+                                {% else %}
+                                    Сотрудников
+                                {% endif %}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -84,12 +92,33 @@
                     <div class="card h-100 shadow-sm">
                         <div class="card-body text-center">
                             <i class="bi bi-people text-success display-5 mb-3"></i>
-                            <h5 class="card-title">Управление менеджерами</h5>
+                            <h5 class="card-title">
+                                {% if user.role == 'autoservice_admin' %}
+                                    Управление сотрудниками
+                                {% elif user.role == 'manager' %}
+                                    Управление мастерами
+                                {% else %}
+                                    Управление персоналом
+                                {% endif %}
+                            </h5>
                             <p class="card-text text-muted">
-                                Добавляйте и управляйте менеджерами вашего автосервиса
+                                {% if user.role == 'autoservice_admin' %}
+                                    Добавляйте и управляйте менеджерами и мастерами вашего автосервиса
+                                {% elif user.role == 'manager' %}
+                                    Добавляйте и управляйте мастерами вашего автосервиса
+                                {% else %}
+                                    Управляйте сотрудниками вашего автосервиса
+                                {% endif %}
                             </p>
                             <a href="{% url 'core:autoservice_managers_list' %}" class="btn btn-success" style="background-color: #198754 !important; border-color: #198754 !important; color: #ffffff !important; font-weight: 600 !important; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;">
-                                <i class="bi bi-people me-2"></i>Менеджеры
+                                <i class="bi bi-people me-2"></i>
+                                {% if user.role == 'autoservice_admin' %}
+                                    Сотрудники
+                                {% elif user.role == 'manager' %}
+                                    Мастера
+                                {% else %}
+                                    Персонал
+                                {% endif %}
                             </a>
                         </div>
                     </div>

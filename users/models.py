@@ -49,6 +49,7 @@ class User(AbstractUser):
         ("super_admin", "Главный администратор"),
         ("autoservice_admin", "Администратор автосервиса"),
         ("manager", "Менеджер"),
+        ("master", "Мастер"),
         ("client", "Клиент"),
     ]
 
@@ -108,9 +109,33 @@ class User(AbstractUser):
         """Может ли управлять автосервисом"""
         if self.role == "super_admin":
             return True
-        if self.role in ["autoservice_admin", "manager"]:
+        if self.role in ["autoservice_admin", "manager", "master"]:
             return self.autoservice == autoservice
         return False
+
+    def can_manage_users(self):
+        """Возвращает список ролей пользователей, которыми может управлять текущий пользователь"""
+        if self.role == "super_admin":
+            return ["autoservice_admin", "manager", "master", "client"]
+        elif self.role == "autoservice_admin":
+            return ["manager", "master"]
+        elif self.role == "manager":
+            return ["master"]
+        return []
+
+    def can_manage_user(self, target_user):
+        """Может ли управлять конкретным пользователем"""
+        manageable_roles = self.can_manage_users()
+        
+        # Проверяем роль
+        if target_user.role not in manageable_roles:
+            return False
+            
+        # Если не суперадмин, проверяем принадлежность к одному автосервису
+        if self.role != "super_admin":
+            return self.autoservice == target_user.autoservice
+            
+        return True
 
     def __str__(self):
         return self.email  # Или self.username
@@ -121,11 +146,10 @@ class User(AbstractUser):
 
     def save(self, *args, **kwargs):
         """Автоматически управляем флагом is_staff в зависимости от роли"""
-        if self.role in ["super_admin", "autoservice_admin", "manager"]:
+        # Только суперадминистратор имеет доступ к Django админке
+        if self.role == "super_admin":
             self.is_staff = True
-        elif self.role == "client":
+        else:
             self.is_staff = False
-            # Не убираем автосервис у клиента - может быть деактивированный сотрудник
-            # self.autoservice = None  # У клиента не может быть автосервиса
 
         super().save(*args, **kwargs)

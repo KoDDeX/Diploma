@@ -16,59 +16,93 @@
                     <div>
                         <h1 class="text-primary mb-2">
                             <i class="bi bi-people me-2"></i>
-                            Управление менеджерами
+                            {% if user_role == 'autoservice_admin' %}
+                                Управление сотрудниками
+                            {% elif user_role == 'manager' %}
+                                Управление мастерами
+                            {% else %}
+                                Управление персоналом
+                            {% endif %}
                         </h1>
                         <p class="text-muted mb-0">
-                            Менеджеры автосервиса "{{ autoservice.name }}"
+                            {% if user_role == 'autoservice_admin' %}
+                                Сотрудники автосервиса "{{ autoservice.name }}"
+                            {% elif user_role == 'manager' %}
+                                Мастера автосервиса "{{ autoservice.name }}"
+                            {% else %}
+                                Персонал автосервиса "{{ autoservice.name }}"
+                            {% endif %}
                         </p>
                     </div>
                 </div>
                 <a href="{% url 'core:autoservice_add_manager' %}" class="btn btn-success">
                     <i class="bi bi-person-plus me-2"></i>
-                    Добавить менеджера
+                    {% if user_role == 'autoservice_admin' %}
+                        Добавить сотрудника
+                    {% elif user_role == 'manager' %}
+                        Добавить мастера
+                    {% else %}
+                        Добавить сотрудника
+                    {% endif %}
                 </a>
             </div>
 
             <!-- Статистика -->
             <div class="row g-3 mb-4">
-                <div class="col-md-6 col-lg-4">
-                    <div class="card bg-primary text-white">
-                        <div class="card-body text-center">
-                            <i class="bi bi-people-fill fs-1 mb-2"></i>
-                            <h3 class="fw-bold">{{ total_managers }}</h3>
-                            <p class="mb-0">Всего менеджеров</p>
+                {% for role_key, role_data in stats.items %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card 
+                            {% if role_key == 'autoservice_admin' %}bg-primary
+                            {% elif role_key == 'manager' %}bg-success
+                            {% elif role_key == 'master' %}bg-info
+                            {% else %}bg-secondary
+                            {% endif %} text-white">
+                            <div class="card-body text-center">
+                                <i class="bi bi-
+                                    {% if role_key == 'autoservice_admin' %}person-gear
+                                    {% elif role_key == 'manager' %}people-fill
+                                    {% elif role_key == 'master' %}tools
+                                    {% else %}person
+                                    {% endif %} fs-1 mb-2"></i>
+                                <h3 class="fw-bold">{{ role_data.count }}</h3>
+                                <p class="mb-0">{{ role_data.name|title }}</p>
+                            </div>
                         </div>
                     </div>
-                </div>
+                {% endfor %}
                 
                 <div class="col-md-6 col-lg-4">
-                    <div class="card bg-success text-white">
+                    <div class="card bg-dark text-white">
                         <div class="card-body text-center">
-                            <i class="bi bi-person-check-fill fs-1 mb-2"></i>
-                            <h3 class="fw-bold">{{ active_managers }}</h3>
-                            <p class="mb-0">Активных менеджеров</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-4">
-                    <div class="card bg-info text-white">
-                        <div class="card-body text-center">
-                            <i class="bi bi-person-gear fs-1 mb-2"></i>
-                            <h3 class="fw-bold">{{ admin_count }}</h3>
-                            <p class="mb-0">Администраторов</p>
+                            <i class="bi bi-person-lines-fill fs-1 mb-2"></i>
+                            <h3 class="fw-bold">{{ total_staff }}</h3>
+                            <p class="mb-0">
+                                {% if user_role == 'autoservice_admin' %}
+                                    Всего сотрудников
+                                {% elif user_role == 'manager' %}
+                                    Всего мастеров
+                                {% else %}
+                                    Всего сотрудников
+                                {% endif %}
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Список менеджеров -->
-            {% if managers %}
+            <!-- Список сотрудников -->
+            {% if staff %}
             <div class="card shadow-sm text-light">
                 <div class="card-header">
                     <h5 class="card-title mb-0 text-light">
                         <i class="bi bi-list-ul me-2"></i>
-                        Список менеджеров ({{ total_managers }})
+                        {% if user_role == 'autoservice_admin' %}
+                            Список сотрудников ({{ total_staff }})
+                        {% elif user_role == 'manager' %}
+                            Список мастеров ({{ total_staff }})
+                        {% else %}
+                            Список сотрудников ({{ total_staff }})
+                        {% endif %}
                     </h5>
                 </div>
                 <div class="card-body p-0">
@@ -78,7 +112,7 @@
                                 <tr>
                                     <th class="text-light">
                                         <i class="bi bi-person me-1"></i>
-                                        Менеджер
+                                        Сотрудник
                                     </th>
                                     <th class="text-light">
                                         <i class="bi bi-envelope me-1"></i>
@@ -103,26 +137,26 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for manager in managers %}
+                                {% for staff_member in staff %}
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="avatar-circle bg-primary text-white me-3">
-                                                {% if manager.first_name %}
-                                                    {{ manager.first_name|first }}{{ manager.last_name|first }}
+                                                {% if staff_member.first_name %}
+                                                    {{ staff_member.first_name|first }}{{ staff_member.last_name|first }}
                                                 {% else %}
-                                                    {{ manager.username|first|upper }}
+                                                    {{ staff_member.username|first|upper }}
                                                 {% endif %}
                                             </div>
                                             <div>
                                                 <h6 class="mb-1 text-light">
-                                                    {% if manager.last_name or manager.first_name %}
-                                                        {{ manager.last_name }} {{ manager.first_name }}
+                                                    {% if staff_member.last_name or staff_member.first_name %}
+                                                        {{ staff_member.last_name }} {{ staff_member.first_name }}
                                                     {% else %}
-                                                        {{ manager.username }}
+                                                        {{ staff_member.username }}
                                                     {% endif %}
                                                 </h6>
-                                                <small class="text-white-50">@{{ manager.username }}</small>
+                                                <small class="text-white-50">@{{ staff_member.username }}</small>
                                             </div>
                                         </div>
                                     </td>
@@ -130,43 +164,52 @@
                                         <div>
                                             <div class="mb-1">
                                                 <i class="bi bi-envelope-fill text-primary me-1"></i>
-                                                <small class="text-light">{{ manager.email }}</small>
+                                                <small class="text-light">{{ staff_member.email }}</small>
                                             </div>
-                                            {% if manager.phone %}
+                                            {% if staff_member.phone %}
                                             <div>
                                                 <i class="bi bi-telephone-fill text-success me-1"></i>
-                                                <small class="text-light">{{ manager.phone }}</small>
+                                                <small class="text-light">{{ staff_member.phone }}</small>
                                             </div>
                                             {% endif %}
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="badge bg-{% if manager.role == 'autoservice_admin' %}warning{% else %}info{% endif %}">
-                                            <i class="bi bi-{% if manager.role == 'autoservice_admin' %}shield-fill-check{% else %}person-badge{% endif %} me-1"></i>
-                                            {{ manager.get_role_display }}
-                                        </span>
+                                        <span class="badge 
+                                            {% if staff_member.role == 'autoservice_admin' %}bg-warning
+                                            {% elif staff_member.role == 'manager' %}bg-info
+                                            {% elif staff_member.role == 'master' %}bg-success
+                                            {% else %}bg-secondary
+                                            {% endif %}">
+                                            <i class="bi bi-
+                                                {% if staff_member.role == 'autoservice_admin' %}shield-fill-check
+                                                {% elif staff_member.role == 'manager' %}person-badge
+                                                {% elif staff_member.role == 'master' %}tools
+                                                {% else %}person
+                                                {% endif %} me-1"></i>
+                                            {{ staff_member.get_role_display }}
                                     </td>
                                     <td>
-                                        <span class="badge bg-{% if manager.is_active %}success{% else %}danger{% endif %}">
-                                            <i class="bi bi-{% if manager.is_active %}check-circle{% else %}x-circle{% endif %} me-1"></i>
-                                            {% if manager.is_active %}Активен{% else %}Неактивен{% endif %}
+                                        <span class="badge bg-{% if staff_member.is_active %}success{% else %}danger{% endif %}">
+                                            <i class="bi bi-{% if staff_member.is_active %}check-circle{% else %}x-circle{% endif %} me-1"></i>
+                                            {% if staff_member.is_active %}Активен{% else %}Неактивен{% endif %}
                                         </span>
                                     </td>
                                     <td>
                                         <small class="text-white-50">
                                             <i class="bi bi-calendar3 me-1"></i>
-                                            {{ manager.date_joined|date:"d.m.Y" }}
+                                            {{ staff_member.date_joined|date:"d.m.Y" }}
                                         </small>
                                     </td>
                                     <td>
                                         <div class="d-flex gap-1">
                                             <!-- Кнопка удаления -->
-                                            <form method="post" action="{% url 'core:autoservice_remove_manager' manager.id %}" class="d-inline">
+                                            <form method="post" action="{% url 'core:autoservice_remove_manager' staff_member.id %}" class="d-inline">
                                                 {% csrf_token %}
                                                 <button type="submit" 
                                                         class="btn btn-sm btn-outline-danger"
-                                                        onclick="return confirm('Вы уверены, что хотите удалить менеджера {{ manager.last_name|default:manager.username }}?\n\nЭто действие нельзя отменить.')"
-                                                        title="Удалить менеджера">
+                                                        onclick="return confirm('Вы уверены, что хотите удалить сотрудника {{ staff_member.last_name|default:staff_member.username }}?\n\nЭто действие нельзя отменить.')"
+                                                        title="Удалить сотрудника">
                                                     <i class="bi bi-person-dash"></i>
                                                 </button>
                                             </form>
@@ -184,14 +227,36 @@
             <div class="card shadow-sm text-light">
                 <div class="card-body text-center py-5">
                     <i class="bi bi-people text-white-50 display-1 mb-4"></i>
-                    <h4 class="text-light mb-3">Нет менеджеров</h4>
+                    <h4 class="text-light mb-3">
+                        {% if user_role == 'autoservice_admin' %}
+                            Нет сотрудников
+                        {% elif user_role == 'manager' %}
+                            Нет мастеров
+                        {% else %}
+                            Нет сотрудников
+                        {% endif %}
+                    </h4>
                     <p class="text-white-50 mb-4">
-                        У вашего автосервиса пока нет менеджеров.<br>
-                        Добавьте первого менеджера для начала работы.
+                        {% if user_role == 'autoservice_admin' %}
+                            У вашего автосервиса пока нет сотрудников.<br>
+                            Добавьте первого сотрудника для начала работы.
+                        {% elif user_role == 'manager' %}
+                            У вашего автосервиса пока нет мастеров.<br>
+                            Добавьте первого мастера для начала работы.
+                        {% else %}
+                            У вашего автосервиса пока нет сотрудников.<br>
+                            Добавьте первого сотрудника для начала работы.
+                        {% endif %}
                     </p>
                     <a href="{% url 'core:autoservice_add_manager' %}" class="btn btn-primary btn-lg">
                         <i class="bi bi-person-plus me-2"></i>
-                        Добавить первого менеджера
+                        {% if user_role == 'autoservice_admin' %}
+                            Добавить первого сотрудника
+                        {% elif user_role == 'manager' %}
+                            Добавить первого мастера
+                        {% else %}
+                            Добавить первого сотрудника
+                        {% endif %}
                     </a>
                 </div>
             </div>
@@ -202,28 +267,59 @@
                 <div class="card-body">
                     <h6 class="card-title text-primary">
                         <i class="bi bi-info-circle me-2"></i>
-                        Информация о менеджерах
+                        Информация о ролях сотрудников
                     </h6>
                     <div class="row g-3">
-                        <div class="col-md-12">
+                        {% if 'autoservice_admin' in manageable_roles %}
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-warning me-2 mt-1">
+                                    <i class="bi bi-shield-fill-check"></i>
+                                </span>
+                                <div>
+                                    <strong>Администратор автосервиса</strong>
+                                    <p class="small text-muted mb-0">
+                                        Полный доступ ко всем функциям управления автосервисом. 
+                                        Может управлять менеджерами и мастерами.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if 'manager' in manageable_roles %}
+                        <div class="col-md-6">
                             <div class="d-flex align-items-start">
                                 <span class="badge bg-info me-2 mt-1">
                                     <i class="bi bi-person-badge"></i>
                                 </span>
                                 <div>
-                                    <strong>Менеджер автосервиса</strong>
+                                    <strong>Менеджер</strong>
                                     <p class="small text-muted mb-0">
-                                        Доступ к основным функциям управления записями и клиентами. 
-                                        Менеджеры работают под руководством администратора автосервиса 
-                                        и помогают в обслуживании клиентов.
+                                        Управляет мастерами и контролирует выполнение работ. 
+                                        Может назначать задачи мастерам.
                                     </p>
-                                    <small class="text-muted">
-                                        <strong>Примечание:</strong> Администраторы автосервиса управляют 
-                                        менеджерами через отдельную систему и не отображаются в этом списке.
-                                    </small>
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
+                        
+                        {% if 'master' in manageable_roles %}
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-success me-2 mt-1">
+                                    <i class="bi bi-tools"></i>
+                                </span>
+                                <div>
+                                    <strong>Мастер</strong>
+                                    <p class="small text-muted mb-0">
+                                        Выполняет ремонтные работы и обслуживание автомобилей. 
+                                        Работает под руководством менеджера.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
