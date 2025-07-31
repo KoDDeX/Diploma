@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
-from .models import Region, AutoService, Service, Order, Car
+from .models import Region, AutoService, Service, Order, Car, Notification
 from .forms import (
     AutoServiceEditForm,
     AddManagerForm,
@@ -20,6 +20,28 @@ from .forms import (
 )
 
 User = get_user_model()
+
+
+# ============== HELPER ФУНКЦИИ ДЛЯ УВЕДОМЛЕНИЙ ==============
+
+def add_notification(user, title, message, level='info'):
+    """
+    Создать уведомление для пользователя.
+    
+    Args:
+        user: Пользователь для которого создается уведомление
+        title: Заголовок уведомления
+        message: Текст уведомления
+        level: Уровень ('info', 'success', 'warning', 'error')
+    """
+    if user and user.is_authenticated:
+        return Notification.create_notification(
+            user=user,
+            title=title,
+            message=message,
+            level=level
+        )
+    return None
 
 
 class LandingPageView(TemplateView):
@@ -178,6 +200,19 @@ def toggle_autoservice_status(request, autoservice_id):
         if autoservice.is_active and not old_status:
             # Автосервис активируется - восстанавливаем роли
             activated_users = activate_autoservice_users(autoservice)
+            
+            # Уведомляем администратора автосервиса об активации
+            autoservice_admin = autoservice.user_set.filter(
+                role='autoservice_admin'
+            ).first()
+            if autoservice_admin:
+                add_notification(
+                    user=autoservice_admin,
+                    title="Автосервис активирован",
+                    message=f"Ваш автосервис '{autoservice.name}' был активирован администратором системы. Теперь вы можете полноценно управлять автосервисом.",
+                    level="success"
+                )
+            
             if activated_users > 0:
                 messages.success(
                     request,
@@ -191,6 +226,19 @@ def toggle_autoservice_status(request, autoservice_id):
         elif not autoservice.is_active and old_status:
             # Автосервис деактивируется - сохраняем роли и переводим в клиенты
             deactivated_users = deactivate_autoservice_users(autoservice)
+            
+            # Уведомляем администратора автосервиса о деактивации
+            autoservice_admin = autoservice.user_set.filter(
+                role='autoservice_admin'
+            ).first()
+            if autoservice_admin:
+                add_notification(
+                    user=autoservice_admin,
+                    title="Автосервис деактивирован",
+                    message=f"Ваш автосервис '{autoservice.name}' был временно деактивирован администратором системы. Обратитесь к администратору для получения информации.",
+                    level="warning"
+                )
+            
             if deactivated_users > 0:
                 messages.info(
                     request,
@@ -298,9 +346,22 @@ def assign_manager(request, autoservice_id, user_id):
         # Если автосервис активен, назначаем роль менеджера сразу
         if autoservice.is_active:
             user.role = "manager"
+            # Создаем уведомление о назначении
+            add_notification(
+                user=user,
+                title="Назначение менеджером",
+                message=f"Вы назначены менеджером автосервиса '{autoservice.name}' администратором системы. Добро пожаловать в команду!",
+                level="success"
+            )
         else:
             # Если автосервис неактивен, оставляем пользователя клиентом
             # Роль будет назначена администратором автосервиса позже
+            add_notification(
+                user=user,
+                title="Добавление к автосервису",
+                message=f"Вы добавлены к автосервису '{autoservice.name}'. Роль менеджера будет назначена при активации автосервиса.",
+                level="info"
+            )
             pass
 
         user.save()
@@ -513,6 +574,14 @@ def autoservice_add_manager(request):
                 }
                 role_display = role_display_map.get(role, role)
                 
+                # Создаем уведомление для назначенного пользователя
+                add_notification(
+                    user=user,
+                    title="Назначение в автосервис",
+                    message=f"Вы назначены {role_display} автосервиса '{autoservice.name}'. Добро пожаловать в команду!",
+                    level="success"
+                )
+                
                 messages.success(
                     request,
                     f'Пользователь "{display_name}" назначен {role_display} автосервиса',
@@ -558,6 +627,14 @@ def autoservice_remove_manager(request, user_id):
 
         role_display = user.get_role_display()
 
+        # Создаем уведомление для удаляемого сотрудника
+        add_notification(
+            user=user,
+            title="Удаление из автосервиса",
+            message=f"Вы были удалены из автосервиса '{autoservice.name}'. Ваша роль изменена на 'Клиент'.",
+            level="info"
+        )
+
         # Убираем пользователя из автосервиса
         user.autoservice = None
         user.role = "client"  # Возвращаем роль клиента
@@ -578,6 +655,14 @@ def activate_autoservice_users(autoservice):
 
     activated_count = 0
     for user in users:
+        # Создаем уведомление об активации автосервиса
+        add_notification(
+            user=user,
+            title="Автосервис активирован",
+            message=f"Ваш автосервис '{autoservice.name}' был активирован администратором. Ваша роль '{user.get_role_display()}' восстановлена.",
+            level="success"
+        )
+        
         # Восстанавливаем роль из previous_role
         user.role = user.previous_role
         user.previous_role = None  # Очищаем поле предыдущей роли
@@ -596,6 +681,14 @@ def deactivate_autoservice_users(autoservice):
 
     deactivated_count = 0
     for user in users:
+        # Создаем уведомление о деактивации автосервиса
+        add_notification(
+            user=user,
+            title="Автосервис деактивирован",
+            message=f"Ваш автосервис '{autoservice.name}' был временно деактивирован администратором. Обратитесь к администратору для получения дополнительной информации.",
+            level="warning"
+        )
+        
         # Сохраняем текущую роль в поле previous_role
         user.previous_role = user.role
         # Переводим в клиенты
@@ -616,6 +709,25 @@ def autoservice_service_create(request):
         form = ServiceCreateForm(request.POST, request.FILES, autoservice=autoservice)
         if form.is_valid():
             service = form.save()
+            
+            # Создаем уведомление для администратора автосервиса
+            add_notification(
+                user=request.user,
+                title="Услуга создана",
+                message=f"Услуга '{service.name}' успешно создана в автосервисе '{autoservice.name}'. Цена: {service.price} руб.",
+                level="success"
+            )
+            
+            # Уведомляем менеджеров автосервиса о новой услуге
+            managers = autoservice.user_set.filter(role='manager', is_active=True)
+            for manager in managers:
+                add_notification(
+                    user=manager,
+                    title="Новая услуга добавлена",
+                    message=f"В автосервисе '{autoservice.name}' добавлена новая услуга '{service.name}' (цена: {service.price} руб.).",
+                    level="info"
+                )
+            
             messages.success(request, f'Услуга "{service.name}" успешно создана!')
             return redirect("core:autoservice_services_list")
         else:
@@ -710,7 +822,32 @@ def autoservice_service_edit(request, service_id):
             request.POST, request.FILES, instance=service, autoservice=autoservice
         )
         if form.is_valid():
+            old_price = service.price
             service = form.save()
+            
+            # Создаем уведомление об изменении услуги
+            price_change = ""
+            if old_price != service.price:
+                price_change = f" Цена изменена с {old_price} на {service.price} руб."
+            
+            add_notification(
+                user=request.user,
+                title="Услуга обновлена",
+                message=f"Услуга '{service.name}' в автосервисе '{autoservice.name}' успешно обновлена.{price_change}",
+                level="success"
+            )
+            
+            # Если цена изменилась, уведомляем менеджеров
+            if old_price != service.price:
+                managers = autoservice.user_set.filter(role='manager', is_active=True)
+                for manager in managers:
+                    add_notification(
+                        user=manager,
+                        title="Изменена цена услуги",
+                        message=f"Цена услуги '{service.name}' изменена с {old_price} на {service.price} руб.",
+                        level="info"
+                    )
+            
             messages.success(request, f'Услуга "{service.name}" успешно обновлена!')
             return redirect("core:autoservice_services_list")
         else:
@@ -740,6 +877,25 @@ def autoservice_service_toggle(request, service_id):
     service.save()
 
     status = "активирована" if service.is_active else "деактивирована"
+    
+    # Создаем уведомление об изменении статуса услуги
+    add_notification(
+        user=request.user,
+        title=f"Услуга {status}",
+        message=f"Услуга '{service.name}' в автосервисе '{autoservice.name}' {status}.",
+        level="info"
+    )
+    
+    # Уведомляем менеджеров об изменении статуса услуги
+    managers = autoservice.user_set.filter(role='manager', is_active=True)
+    for manager in managers:
+        add_notification(
+            user=manager,
+            title=f"Услуга {status}",
+            message=f"Услуга '{service.name}' {status} администратором.",
+            level="info"
+        )
+
     messages.success(request, f'Услуга "{service.name}" {status}.')
 
     return redirect("core:autoservice_services_list")
@@ -754,6 +910,26 @@ def autoservice_service_delete(request, service_id):
     service = get_object_or_404(Service, id=service_id, autoservice=autoservice)
 
     service_name = service.name
+    service_price = service.price
+    
+    # Создаем уведомление об удалении услуги
+    add_notification(
+        user=request.user,
+        title="Услуга удалена",
+        message=f"Услуга '{service_name}' (цена: {service_price} руб.) удалена из автосервиса '{autoservice.name}'.",
+        level="warning"
+    )
+    
+    # Уведомляем менеджеров об удалении услуги
+    managers = autoservice.user_set.filter(role='manager', is_active=True)
+    for manager in managers:
+        add_notification(
+            user=manager,
+            title="Услуга удалена",
+            message=f"Услуга '{service_name}' удалена из автосервиса администратором.",
+            level="warning"
+        )
+    
     service.delete()
 
     messages.success(request, f'Услуга "{service_name}" удалена.')
@@ -795,6 +971,24 @@ def autoservice_register_view(request):
 
                 # Отправляем уведомление суперадминистратору
                 send_autoservice_registration_notification(autoservice, request.user)
+                
+                # Создаем уведомления для всех суперадминистраторов в системе
+                superadmins = User.objects.filter(role="super_admin", is_active=True)
+                for superadmin in superadmins:
+                    add_notification(
+                        user=superadmin,
+                        title="Новый автосервис зарегистрирован",
+                        message=f"Зарегистрирован новый автосервис '{autoservice.name}' в регионе '{autoservice.region.name}'. Требуется модерация.",
+                        level="info"
+                    )
+                
+                # Создаем уведомление для регистрирующегося пользователя
+                add_notification(
+                    user=request.user,
+                    title="Автосервис зарегистрирован",
+                    message=f"Ваш автосервис '{autoservice.name}' успешно зарегистрирован и ожидает активации модератором. Вы получите уведомление после активации.",
+                    level="success"
+                )
 
                 messages.success(
                     request,
@@ -874,10 +1068,34 @@ def order_create(request, autoservice_id, service_id):
         form = OrderCreateForm(request.POST, service=service, user=request.user)
         if form.is_valid():
             order = form.save()
+            
+            # Создаем уведомление для пользователя
+            add_notification(
+                user=request.user,
+                title="Заказ успешно создан",
+                message=f"Ваш заказ №{order.id} на услугу '{order.service.name}' в автосервисе '{order.autoservice.name}' успешно создан. Мы свяжемся с вами для подтверждения.",
+                level="success"
+            )
+            
+            # Создаем уведомления для сотрудников автосервиса
+            autoservice_staff = order.autoservice.user_set.filter(
+                role__in=['autoservice_admin', 'manager'],
+                is_active=True
+            )
+            
+            for staff_member in autoservice_staff:
+                add_notification(
+                    user=staff_member,
+                    title="Новый заказ",
+                    message=f"Получен новый заказ №{order.id} в автосервис '{order.autoservice.name}' на услугу '{order.service.name}' от клиента {order.get_client_name()}. Требуется обработка.",
+                    level="info"
+                )
+            
             messages.success(
                 request,
                 f"Ваш заказ №{order.id} успешно создан! Мы свяжемся с вами в ближайшее время.",
             )
+            
             return redirect("core:order_success", order_id=order.id)
     else:
         form = OrderCreateForm(service=service, user=request.user)
@@ -929,6 +1147,15 @@ def user_car_add(request):
         form = CarForm(request.POST, user=request.user)
         if form.is_valid():
             car = form.save()
+            
+            # Создаем уведомление о добавлении автомобиля
+            add_notification(
+                user=request.user,
+                title="Автомобиль добавлен",
+                message=f"Автомобиль '{car}' успешно добавлен в ваш гараж. Теперь вы можете использовать его при оформлении заказов.",
+                level="success"
+            )
+            
             messages.success(
                 request, 
                 f'Автомобиль "{car}" успешно добавлен!'
@@ -954,6 +1181,15 @@ def user_car_edit(request, car_id):
         form = CarForm(request.POST, instance=car, user=request.user)
         if form.is_valid():
             car = form.save()
+            
+            # Создаем уведомление об обновлении автомобиля
+            add_notification(
+                user=request.user,
+                title="Автомобиль обновлен",
+                message=f"Информация об автомобиле '{car}' успешно обновлена.",
+                level="success"
+            )
+            
             messages.success(
                 request, 
                 f'Автомобиль "{car}" успешно обновлен!'
@@ -991,6 +1227,15 @@ def user_car_delete(request, car_id):
         )
     else:
         car_name = str(car)
+        
+        # Создаем уведомление об удалении автомобиля
+        add_notification(
+            user=request.user,
+            title="Автомобиль удален",
+            message=f"Автомобиль '{car_name}' удален из вашего гаража.",
+            level="info"
+        )
+        
         car.delete()
         messages.success(request, f'Автомобиль "{car_name}" удален.')
     
@@ -1009,6 +1254,14 @@ def user_car_set_default(request, car_id):
     # Устанавливаем выбранный автомобиль как основной
     car.is_default = True
     car.save()
+    
+    # Создаем уведомление об установке автомобиля как основного
+    add_notification(
+        user=request.user,
+        title="Основной автомобиль изменен",
+        message=f"Автомобиль '{car}' установлен как основной. Он будет автоматически выбираться при создании заказов.",
+        level="info"
+    )
     
     messages.success(request, f'Автомобиль "{car}" установлен как основной.')
     return redirect('core:user_cars_list')
@@ -1110,6 +1363,28 @@ def user_order_cancel(request, order_id):
         order.status = 'cancelled'
         order.save()
         
+        # Создаем уведомление для пользователя
+        add_notification(
+            user=request.user,
+            title="Заказ отменен",
+            message=f"Ваш заказ №{order.id} на услугу '{order.service.name}' в автосервисе '{order.autoservice.name}' успешно отменен.",
+            level="info"
+        )
+        
+        # Создаем уведомления для сотрудников автосервиса об отмене
+        autoservice_staff = order.autoservice.user_set.filter(
+            role__in=['autoservice_admin', 'manager'],
+            is_active=True
+        )
+        
+        for staff_member in autoservice_staff:
+            add_notification(
+                user=staff_member,
+                title="Заказ отменен клиентом",
+                message=f"Клиент {order.get_client_name()} отменил заказ №{order.id} на услугу '{order.service.name}'.",
+                level="warning"
+            )
+        
         messages.success(
             request,
             f'Заказ №{order.id} успешно отменен.'
@@ -1128,3 +1403,97 @@ def user_order_cancel(request, order_id):
             pass  # Не прерываем работу, если email не отправился
     
     return redirect('core:user_order_detail', order_id=order.id)
+
+
+# ============== VIEWS ДЛЯ УВЕДОМЛЕНИЙ ==============
+
+@login_required
+def notifications_list(request):
+    """Список уведомлений пользователя"""
+    notifications = Notification.get_user_notifications(
+        user=request.user,
+        include_read=True
+    )
+    
+    # Отмечаем все непрочитанные как прочитанные при просмотре списка
+    unread_notifications = notifications.filter(is_read=False)
+    for notification in unread_notifications:
+        notification.mark_as_read()
+    
+    context = {
+        'notifications': notifications,
+        'title': 'Уведомления'
+    }
+    
+    return render(request, 'core/notifications_list.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def notification_mark_read(request, notification_id):
+    """Отметить уведомление как прочитанное"""
+    notification = get_object_or_404(
+        Notification,
+        id=notification_id,
+        user=request.user,
+        is_deleted=False
+    )
+    
+    notification.mark_as_read()
+    
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_http_methods(["POST"])
+def notification_delete(request, notification_id):
+    """Удалить уведомление (мягкое удаление)"""
+    try:
+        notification = get_object_or_404(
+            Notification,
+            id=notification_id,
+            user=request.user
+        )
+        
+        notification.mark_as_deleted()
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False, 
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def notification_get_count(request):
+    """Получить количество непрочитанных уведомлений (AJAX)"""
+    count = Notification.get_unread_count(request.user)
+    return JsonResponse({'count': count})
+
+
+@login_required
+def notification_get_recent(request):
+    """Получить последние уведомления для dropdown (AJAX)"""
+    notifications = Notification.get_user_notifications(
+        user=request.user,
+        include_read=True,
+        limit=5
+    )
+    
+    notifications_data = []
+    for notification in notifications:
+        notifications_data.append({
+            'id': notification.id,
+            'title': notification.title,
+            'message': notification.message,
+            'level': notification.level,
+            'is_read': notification.is_read,
+            'created_at': notification.created_at.strftime('%d.%m.%Y %H:%M'),
+        })
+    
+    return JsonResponse({
+        'notifications': notifications_data,
+        'count': len(notifications_data)
+    })

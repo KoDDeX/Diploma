@@ -26,6 +26,24 @@
         <!-- Блок авторизации пользователя (справа) -->
         <div class="navbar-nav ms-auto"> {# ms-auto для выравнивания по правому краю #}
             {% if user.is_authenticated %}
+                <!-- Уведомления -->
+                <div class="nav-item dropdown">
+                    <a class="nav-link position-relative" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Уведомления">
+                        <i class="bi bi-bell"></i>
+                        <span id="notification-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">
+                            <span id="notification-count">0</span>
+                        </span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown" style="width: 300px;">
+                        <li><h6 class="dropdown-header">Уведомления</h6></li>
+                        <li id="notifications-loading"><div class="dropdown-item-text text-center"><i class="bi bi-arrow-clockwise spin"></i> Загрузка...</div></li>
+                        <li id="notifications-empty" style="display: none;"><div class="dropdown-item-text text-center text-muted">Нет новых уведомлений</div></li>
+                        <div id="notifications-list"></div>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-center" href="{% url 'core:notifications_list' %}">Все уведомления</a></li>
+                    </ul>
+                </div>
+                
                 {% if user.role == 'super_admin' %}
                     <a href="{% url 'users:profile_detail' username=user.username %}" class="nav-link" title="Личный кабинет">
                         <i class="bi bi-person-circle"></i> {{ user.username|capfirst }} (Профиль)

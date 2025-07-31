@@ -33,6 +33,12 @@ from .views import (
     user_orders_list,
     user_order_detail,
     user_order_cancel,
+    # Уведомления
+    notifications_list,
+    notification_mark_read,
+    notification_delete,
+    notification_get_count,
+    notification_get_recent,
 )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -156,6 +162,28 @@ urlpatterns = [
         "my-orders/<int:order_id>/cancel/",
         user_order_cancel,
         name="user_order_cancel",
+    ),
+    # Уведомления
+    path("notifications/", notifications_list, name="notifications_list"),
+    path(
+        "notifications/<int:notification_id>/mark-read/",
+        notification_mark_read,
+        name="notification_mark_read",
+    ),
+    path(
+        "notifications/<int:notification_id>/delete/",
+        notification_delete,
+        name="notification_delete",
+    ),
+    path(
+        "api/notifications/count/",
+        notification_get_count,
+        name="notification_get_count",
+    ),
+    path(
+        "api/notifications/recent/",
+        notification_get_recent,
+        name="notification_get_recent",
     ),
     # Детальная страница автосервиса (должна быть последней среди обычных маршрутов)
     path(

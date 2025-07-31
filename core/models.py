@@ -497,3 +497,111 @@ class Order(models.Model):
         verbose_name = "Заказ"
         verbose_name_plural = "Заказы"
         ordering = ["-created_at"]
+
+
+class Notification(models.Model):
+    """Модель уведомлений для пользователей"""
+    
+    LEVEL_CHOICES = [
+        ('info', 'Информация'),
+        ('success', 'Успех'),
+        ('warning', 'Предупреждение'),
+        ('error', 'Ошибка'),
+    ]
+    
+    user = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        verbose_name='Пользователь'
+    )
+    title = models.CharField(
+        max_length=200,
+        verbose_name='Заголовок'
+    )
+    message = models.TextField(
+        verbose_name='Сообщение'
+    )
+    level = models.CharField(
+        max_length=10,
+        choices=LEVEL_CHOICES,
+        default='info',
+        verbose_name='Уровень'
+    )
+    is_read = models.BooleanField(
+        default=False,
+        verbose_name='Прочитано'
+    )
+    is_deleted = models.BooleanField(
+        default=False,
+        verbose_name='Удалено'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания'
+    )
+    read_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата прочтения'
+    )
+    
+    class Meta:
+        verbose_name = 'Уведомление'
+        verbose_name_plural = 'Уведомления'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read', 'is_deleted']),
+            models.Index(fields=['user', 'created_at']),
+        ]
+    
+    def __str__(self):
+        return f'{self.user.email}: {self.title}'
+    
+    def mark_as_read(self):
+        """Отметить уведомление как прочитанное"""
+        if not self.is_read:
+            self.is_read = True
+            from django.utils import timezone
+            self.read_at = timezone.now()
+            self.save(update_fields=['is_read', 'read_at'])
+    
+    def mark_as_deleted(self):
+        """Отметить уведомление как удаленное"""
+        self.is_deleted = True
+        self.save(update_fields=['is_deleted'])
+    
+    @classmethod
+    def create_notification(cls, user, title, message, level='info'):
+        """Создать новое уведомление"""
+        return cls.objects.create(
+            user=user,
+            title=title,
+            message=message,
+            level=level
+        )
+    
+    @classmethod
+    def get_unread_count(cls, user):
+        """Получить количество непрочитанных уведомлений пользователя"""
+        return cls.objects.filter(
+            user=user,
+            is_read=False,
+            is_deleted=False
+        ).count()
+    
+    @classmethod
+    def get_user_notifications(cls, user, include_read=True, limit=None):
+        """Получить уведомления пользователя"""
+        queryset = cls.objects.filter(
+            user=user,
+            is_deleted=False
+        )
+        
+        if not include_read:
+            queryset = queryset.filter(is_read=False)
+        
+        if limit:
+            queryset = queryset[:limit]
+            
+        return queryset
