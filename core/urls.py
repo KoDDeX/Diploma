@@ -17,6 +17,14 @@ from .views import (
     autoservice_service_edit,
     autoservice_service_toggle,
     autoservice_service_delete,
+    # Управление заказами автосервиса
+    autoservice_orders_list,
+    autoservice_order_detail,
+    autoservice_order_assign_master,
+    autoservice_order_confirm,
+    autoservice_order_cancel,
+    autoservice_order_start,
+    autoservice_order_complete,
     # Регистрация автосервиса
     autoservice_register_view,
     # Система заказов
@@ -120,6 +128,42 @@ urlpatterns = [
         "autoservice-admin/services/delete/<int:service_id>/",
         autoservice_service_delete,
         name="autoservice_service_delete",
+    ),
+    # Управление заказами автосервиса
+    path(
+        "autoservice-admin/orders/",
+        autoservice_orders_list,
+        name="autoservice_orders_list",
+    ),
+    path(
+        "autoservice-admin/orders/<int:order_id>/",
+        autoservice_order_detail,
+        name="autoservice_order_detail",
+    ),
+    path(
+        "autoservice-admin/orders/<int:order_id>/assign-master/",
+        autoservice_order_assign_master,
+        name="autoservice_order_assign_master",
+    ),
+    path(
+        "autoservice-admin/orders/<int:order_id>/confirm/",
+        autoservice_order_confirm,
+        name="autoservice_order_confirm",
+    ),
+    path(
+        "autoservice-admin/orders/<int:order_id>/cancel/",
+        autoservice_order_cancel,
+        name="autoservice_order_cancel",
+    ),
+    path(
+        "autoservice-admin/orders/<int:order_id>/start/",
+        autoservice_order_start,
+        name="autoservice_order_start",
+    ),
+    path(
+        "autoservice-admin/orders/<int:order_id>/complete/",
+        autoservice_order_complete,
+        name="autoservice_order_complete",
     ),
     # Управление автомобилями пользователя
     path(

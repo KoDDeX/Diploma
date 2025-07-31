@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Заголовок -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="bi bi-file-text"></i> {{ title }}</h1>
+                <div>
+                    <a href="{% url 'core:autoservice_orders_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> К списку заказов
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Основная информация -->
+                <div class="col-md-8">
+                    <div class="card bg-dark border-secondary mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0 text-light">
+                                <i class="bi bi-info-circle"></i> Информация о заказе
+                                {% if order.status == 'pending' %}
+                                    <span class="badge bg-warning ms-2">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'confirmed' %}
+                                    <span class="badge bg-success ms-2">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'in_progress' %}
+                                    <span class="badge bg-primary ms-2">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'completed' %}
+                                    <span class="badge bg-info ms-2">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'cancelled' %}
+                                    <span class="badge bg-danger ms-2">{{ order.get_status_display }}</span>
+                                {% endif %}
+                            </h5>
+                        </div>
+                        <div class="card-body text-light">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Номер заказа:</strong> #{{ order.id }}</p>
+                                    <p><strong>Дата создания:</strong> {{ order.created_at|date:"d.m.Y H:i" }}</p>
+                                    <p><strong>Дата выполнения:</strong> {{ order.preferred_date|date:"d.m.Y" }}</p>
+                                    <p><strong>Время выполнения:</strong> {{ order.preferred_time|time:"H:i" }}</p>
+                                    <p><strong>Услуга:</strong> {{ order.service.name }}</p>
+                                    <p><strong>Стоимость:</strong> <span class="fs-5 fw-bold text-primary">{{ order.service.price }} ₽</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Клиент:</strong> {{ order.get_client_name }}</p>
+                                    {% if order.client_phone %}
+                                    <p><strong>Телефон:</strong> {{ order.client_phone }}</p>
+                                    {% endif %}
+                                    {% if order.client_email %}
+                                    <p><strong>Email:</strong> {{ order.client_email }}</p>
+                                    {% endif %}
+                                    <p><strong>Автомобиль:</strong> 
+                                        {% if order.car %}
+                                            {{ order.car }}
+                                        {% else %}
+                                            <span class="text-muted">Не указан</span>
+                                        {% endif %}
+                                    </p>
+                                    <p><strong>Длительность работ:</strong> 
+                                        {% if order.estimated_duration %}
+                                            {{ order.estimated_duration|format_duration }}
+                                            <br><small class="text-muted">
+                                                Ориентировочное время завершения: 
+                                                {{ order.preferred_time|add_minutes:order.estimated_duration|time:"H:i" }}
+                                            </small>
+                                        {% else %}
+                                            <span class="text-muted">Не указано</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            {% if order.notes %}
+                            <div class="mt-3">
+                                <strong>Комментарий клиента:</strong>
+                                <p class="mt-2 p-3 bg-secondary text-light rounded">{{ order.notes }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Назначение мастера -->
+                    <div class="card bg-dark border-secondary mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0 text-light"><i class="bi bi-person-gear"></i> Назначение мастера</h5>
+                        </div>
+                        <div class="card-body text-light">
+                            {% if order.assigned_master %}
+                            <div class="alert alert-info">
+                                <i class="bi bi-person-check"></i>
+                                <strong>Назначен мастер:</strong> {{ order.assigned_master.get_full_name|default:order.assigned_master.username }}
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <strong>Мастер не назначен</strong>
+                            </div>
+                            {% endif %}
+
+                            {% if order.status in 'pending,confirmed' %}
+                            <form method="post" action="{% url 'core:autoservice_order_assign_master' order.id %}">
+                                {% csrf_token %}
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <select name="master_id" class="form-select bg-secondary text-light border-secondary" required>
+                                            <option value="">Выберите мастера</option>
+                                            {% for master in available_masters %}
+                                            <option value="{{ master.id }}" 
+                                                {% if order.assigned_master and order.assigned_master.id == master.id %}selected{% endif %}>
+                                                {{ master.get_full_name|default:master.username }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-person-plus"></i> 
+                                            {% if order.assigned_master %}Изменить мастера{% else %}Назначить мастера{% endif %}
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Боковая панель с действиями -->
+                <div class="col-md-4">
+                    <div class="card bg-dark border-secondary">
+                        <div class="card-header">
+                            <h5 class="mb-0 text-light"><i class="bi bi-gear"></i> Управление заказом</h5>
+                        </div>
+                        <div class="card-body text-light">
+                            <!-- Подтверждение заказа -->
+                            {% if can_confirm %}
+                            <form method="post" action="{% url 'core:autoservice_order_confirm' order.id %}" class="mb-3">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="bi bi-check-circle"></i> Подтвердить заказ
+                                </button>
+                            </form>
+                            {% endif %}
+
+                            <!-- Начать выполнение -->
+                            {% if can_start %}
+                            <form method="post" action="{% url 'core:autoservice_order_start' order.id %}" class="mb-3">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-play-circle"></i> Начать выполнение
+                                </button>
+                            </form>
+                            {% endif %}
+
+                            <!-- Завершить заказ -->
+                            {% if can_complete %}
+                            <div class="mb-3">
+                                <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#completeModal">
+                                    <i class="bi bi-check-circle-fill"></i> Завершить заказ
+                                </button>
+                            </div>
+                            {% endif %}
+
+                            <!-- Отменить заказ -->
+                            {% if can_cancel %}
+                            <div class="mb-3">
+                                <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                                    <i class="bi bi-x-circle"></i> Отменить заказ
+                                </button>
+                            </div>
+                            {% endif %}
+
+                            <!-- Информация о статусе -->
+                            <div class="mt-4">
+                                <h6 class="text-light">Текущий статус:</h6>
+                                <div class="progress bg-secondary" style="height: 25px;">
+                                    {% if order.status == 'pending' %}
+                                        <div class="progress-bar bg-warning text-dark" style="width: 25%">Ожидает</div>
+                                    {% elif order.status == 'confirmed' %}
+                                        <div class="progress-bar bg-success" style="width: 50%">Подтвержден</div>
+                                    {% elif order.status == 'in_progress' %}
+                                        <div class="progress-bar bg-primary" style="width: 75%">В работе</div>
+                                    {% elif order.status == 'completed' %}
+                                        <div class="progress-bar bg-info" style="width: 100%">Выполнен</div>
+                                    {% elif order.status == 'cancelled' %}
+                                        <div class="progress-bar bg-danger" style="width: 100%">Отменен</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно завершения заказа -->
+<div class="modal fade" id="completeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light">
+            <form method="post" action="{% url 'core:autoservice_order_complete' order.id %}">
+                {% csrf_token %}
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title">Завершение заказа №{{ order.id }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="completion_notes" class="form-label">Комментарий о выполненной работе (необязательно):</label>
+                        <textarea name="completion_notes" id="completion_notes" class="form-control bg-secondary text-light border-secondary" rows="3" 
+                            placeholder="Опишите выполненные работы..."></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        Клиент получит уведомление о завершении заказа.
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-info">
+                        <i class="bi bi-check-circle-fill"></i> Завершить заказ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно отмены заказа -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light">
+            <form method="post" action="{% url 'core:autoservice_order_cancel' order.id %}">
+                {% csrf_token %}
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title">Отмена заказа №{{ order.id }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="cancel_reason" class="form-label">Причина отмены:</label>
+                        <textarea name="cancel_reason" id="cancel_reason" class="form-control bg-secondary text-light border-secondary" rows="3" 
+                            placeholder="Укажите причину отмены заказа..." required></textarea>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Клиент получит уведомление об отмене заказа с указанной причиной.
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle"></i> Отменить заказ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

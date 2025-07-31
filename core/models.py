@@ -422,6 +422,18 @@ class Order(models.Model):
         help_text="Время выполнения в минутах",
     )
 
+    # Назначение мастера
+    assigned_master = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_orders",
+        verbose_name="Назначенный мастер",
+        help_text="Мастер, назначенный на выполнение заказа",
+        limit_choices_to={'role': 'master'}
+    )
+
     # Системные поля
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата изменения")

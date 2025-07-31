@@ -1497,3 +1497,350 @@ def notification_get_recent(request):
         'notifications': notifications_data,
         'count': len(notifications_data)
     })
+
+
+# ============== УПРАВЛЕНИЕ ЗАКАЗАМИ АВТОСЕРВИСА ==============
+
+@login_required
+@user_passes_test(is_autoservice_admin)
+def autoservice_orders_list(request):
+    """Список заказов автосервиса с фильтрами"""
+    autoservice = request.user.autoservice
+    
+    # Получаем все заказы автосервиса
+    orders = Order.objects.filter(autoservice=autoservice).select_related(
+        'client', 'service', 'car', 'assigned_master'
+    ).order_by('-created_at')
+    
+    # Фильтры
+    status_filter = request.GET.get('status')
+    master_filter = request.GET.get('master')
+    service_filter = request.GET.get('service')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    # Применяем фильтры
+    if status_filter:
+        orders = orders.filter(status=status_filter)
+    
+    if master_filter:
+        if master_filter == 'unassigned':
+            orders = orders.filter(assigned_master__isnull=True)
+        else:
+            orders = orders.filter(assigned_master_id=master_filter)
+    
+    if service_filter:
+        orders = orders.filter(service_id=service_filter)
+    
+    if date_from:
+        orders = orders.filter(preferred_date__gte=date_from)
+        
+    if date_to:
+        orders = orders.filter(preferred_date__lte=date_to)
+    
+    # Получаем данные для фильтров
+    masters = User.objects.filter(
+        autoservice=autoservice,
+        role='master',
+        is_active=True
+    ).order_by('last_name', 'first_name', 'username')
+    
+    services = Service.objects.filter(
+        autoservice=autoservice,
+        is_active=True
+    ).order_by('name')
+    
+    # Статистика заказов
+    orders_stats = {
+        'total': orders.count(),
+        'pending': orders.filter(status='pending').count(),
+        'confirmed': orders.filter(status='confirmed').count(),
+        'in_progress': orders.filter(status='in_progress').count(),
+        'completed': orders.filter(status='completed').count(),
+        'cancelled': orders.filter(status='cancelled').count(),
+        'unassigned': orders.filter(assigned_master__isnull=True).count(),
+    }
+    
+    context = {
+        'title': f'Заказы - {autoservice.name}',
+        'autoservice': autoservice,
+        'orders': orders,
+        'orders_stats': orders_stats,
+        'masters': masters,
+        'services': services,
+        'status_choices': Order.STATUS_CHOICES,
+        # Передаем текущие фильтры обратно в шаблон
+        'current_filters': {
+            'status': status_filter,
+            'master': master_filter,
+            'service': int(service_filter) if service_filter else None,
+            'date_from': date_from,
+            'date_to': date_to,
+        }
+    }
+    
+    return render(request, 'core/autoservice_admin/orders_list.html', context)
+
+
+@login_required
+@user_passes_test(is_autoservice_admin)
+def autoservice_order_detail(request, order_id):
+    """Детальная информация о заказе автосервиса"""
+    autoservice = request.user.autoservice
+    order = get_object_or_404(
+        Order.objects.select_related('client', 'service', 'car', 'assigned_master'),
+        id=order_id,
+        autoservice=autoservice
+    )
+    
+    # Получаем доступных мастеров
+    available_masters = User.objects.filter(
+        autoservice=autoservice,
+        role='master',
+        is_active=True
+    ).order_by('last_name', 'first_name', 'username')
+    
+    context = {
+        'title': f'Заказ №{order.id} - {autoservice.name}',
+        'autoservice': autoservice,
+        'order': order,
+        'available_masters': available_masters,
+        'can_confirm': order.status == 'pending',
+        'can_cancel': order.status in ['pending', 'confirmed'],
+        'can_start': order.status == 'confirmed' and order.assigned_master,
+        'can_complete': order.status == 'in_progress',
+    }
+    
+    return render(request, 'core/autoservice_admin/order_detail.html', context)
+
+
+@login_required
+@user_passes_test(is_autoservice_admin)
+@require_POST
+def autoservice_order_assign_master(request, order_id):
+    """Назначение мастера на заказ"""
+    autoservice = request.user.autoservice
+    order = get_object_or_404(Order, id=order_id, autoservice=autoservice)
+    
+    master_id = request.POST.get('master_id')
+    
+    if not master_id:
+        messages.error(request, "Выберите мастера")
+        return redirect('core:autoservice_order_detail', order_id=order.id)
+    
+    try:
+        master = get_object_or_404(
+            User,
+            id=master_id,
+            autoservice=autoservice,
+            role='master',
+            is_active=True
+        )
+        
+        # Проверяем, не занят ли мастер в это время
+        conflicting_orders = Order.objects.filter(
+            assigned_master=master,
+            preferred_date=order.preferred_date,
+            status__in=['confirmed', 'in_progress']
+        ).exclude(id=order.id)
+        
+        if conflicting_orders.exists():
+            messages.error(
+                request,
+                f"Мастер {master.get_full_name() or master.username} уже занят в это время другим заказом"
+            )
+            return redirect('core:autoservice_order_detail', order_id=order.id)
+        
+        # Назначаем мастера
+        order.assigned_master = master
+        order.save()
+        
+        # Создаем уведомления
+        add_notification(
+            user=master,
+            title="Новое назначение",
+            message=f"Вам назначен заказ №{order.id} на услугу '{order.service.name}' в автосервисе '{autoservice.name}' на {order.preferred_date.strftime('%d.%m.%Y')}.",
+            level="info"
+        )
+        
+        # Уведомляем администратора автосервиса о назначении
+        if autoservice.admin != request.user:  # Если назначение делает не сам администратор
+            add_notification(
+                user=autoservice.admin,
+                title="Назначен мастер",
+                message=f"Заказ №{order.id} назначен мастеру {master.get_full_name() or master.username}. Клиент: {order.get_client_name()}.",
+                level="info"
+            )
+        
+        messages.success(
+            request,
+            f"Заказ №{order.id} назначен мастеру {master.get_full_name() or master.username}"
+        )
+        
+    except Exception as e:
+        messages.error(request, f"Ошибка при назначении мастера: {str(e)}")
+    
+    return redirect('core:autoservice_order_detail', order_id=order.id)
+
+
+@login_required
+@user_passes_test(is_autoservice_admin)
+@require_POST
+def autoservice_order_confirm(request, order_id):
+    """Подтверждение заказа"""
+    autoservice = request.user.autoservice
+    order = get_object_or_404(Order, id=order_id, autoservice=autoservice)
+    
+    if order.status != 'pending':
+        messages.error(request, f"Заказ №{order.id} нельзя подтвердить. Текущий статус: {order.get_status_display()}")
+        return redirect('core:autoservice_order_detail', order_id=order.id)
+    
+    order.status = 'confirmed'
+    order.save()
+    
+    # Формируем сообщение для клиента
+    client_message = f"Ваш заказ №{order.id} на услугу '{order.service.name}' подтвержден автосервисом '{autoservice.name}'. Дата: {order.preferred_date.strftime('%d.%m.%Y')}."
+    
+    if order.assigned_master:
+        client_message += f" Назначенный мастер: {order.assigned_master.get_full_name() or order.assigned_master.username}."
+    else:
+        client_message += " Мастер будет назначен позднее."
+    
+    # Создаем уведомления
+    add_notification(
+        user=order.client,
+        title="Заказ подтвержден",
+        message=client_message,
+        level="success"
+    )
+    
+    if order.assigned_master:
+        add_notification(
+            user=order.assigned_master,
+            title="Заказ подтвержден",
+            message=f"Заказ №{order.id} на услугу '{order.service.name}' в автосервисе '{autoservice.name}', назначенный на вас, подтвержден.",
+            level="success"
+        )
+    
+    messages.success(request, f"Заказ №{order.id} подтвержден")
+    
+    return redirect('core:autoservice_order_detail', order_id=order.id)
+
+
+@login_required
+@user_passes_test(is_autoservice_admin)
+@require_POST
+def autoservice_order_cancel(request, order_id):
+    """Отмена заказа автосервисом"""
+    autoservice = request.user.autoservice
+    order = get_object_or_404(Order, id=order_id, autoservice=autoservice)
+    
+    if order.status not in ['pending', 'confirmed']:
+        messages.error(request, f"Заказ №{order.id} нельзя отменить. Текущий статус: {order.get_status_display()}")
+        return redirect('core:autoservice_order_detail', order_id=order.id)
+    
+    cancel_reason = request.POST.get('cancel_reason', '')
+    
+    order.status = 'cancelled'
+    order.save()
+    
+    # Создаем уведомления
+    cancel_message = f"Ваш заказ №{order.id} на услугу '{order.service.name}' отменен автосервисом '{autoservice.name}'."
+    if cancel_reason:
+        cancel_message += f" Причина: {cancel_reason}"
+    
+    add_notification(
+        user=order.client,
+        title="Заказ отменен",
+        message=cancel_message,
+        level="warning"
+    )
+    
+    if order.assigned_master:
+        add_notification(
+            user=order.assigned_master,
+            title="Заказ отменен",
+            message=f"Заказ №{order.id} на услугу '{order.service.name}', назначенный на вас, отменен автосервисом.",
+            level="warning"
+        )
+    
+    messages.success(request, f"Заказ №{order.id} отменен")
+    
+    return redirect('core:autoservice_order_detail', order_id=order.id)
+
+
+@login_required
+@user_passes_test(is_autoservice_admin)
+@require_POST
+def autoservice_order_start(request, order_id):
+    """Начать выполнение заказа"""
+    autoservice = request.user.autoservice
+    order = get_object_or_404(Order, id=order_id, autoservice=autoservice)
+    
+    if order.status != 'confirmed' or not order.assigned_master:
+        messages.error(request, f"Заказ №{order.id} нельзя начать. Проверьте статус и назначение мастера.")
+        return redirect('core:autoservice_order_detail', order_id=order.id)
+    
+    order.status = 'in_progress'
+    order.save()
+    
+    # Создаем уведомления
+    add_notification(
+        user=order.client,
+        title="Работа начата",
+        message=f"Мастер {order.assigned_master.get_full_name() or order.assigned_master.username} начал выполнение заказа №{order.id}.",
+        level="info"
+    )
+    
+    add_notification(
+        user=order.assigned_master,
+        title="Работа начата",
+        message=f"Заказ №{order.id} на услугу '{order.service.name}' переведен в статус 'В работе'.",
+        level="info"
+    )
+    
+    messages.success(request, f"Заказ №{order.id} переведен в работу")
+    
+    return redirect('core:autoservice_order_detail', order_id=order.id)
+
+
+@login_required
+@user_passes_test(is_autoservice_admin)
+@require_POST
+def autoservice_order_complete(request, order_id):
+    """Завершить заказ"""
+    autoservice = request.user.autoservice
+    order = get_object_or_404(Order, id=order_id, autoservice=autoservice)
+    
+    if order.status != 'in_progress':
+        messages.error(request, f"Заказ №{order.id} нельзя завершить. Текущий статус: {order.get_status_display()}")
+        return redirect('core:autoservice_order_detail', order_id=order.id)
+    
+    completion_notes = request.POST.get('completion_notes', '')
+    
+    order.status = 'completed'
+    order.save()
+    
+    # Создаем уведомления
+    completion_message = f"Ваш заказ №{order.id} на услугу '{order.service.name}' успешно выполнен!"
+    if completion_notes:
+        completion_message += f" Комментарий мастера: {completion_notes}"
+    
+    add_notification(
+        user=order.client,
+        title="Заказ выполнен",
+        message=completion_message,
+        level="success"
+    )
+    
+    if order.assigned_master:
+        add_notification(
+            user=order.assigned_master,
+            title="Заказ завершен",
+            message=f"Заказ №{order.id} на услугу '{order.service.name}' успешно завершен.",
+            level="success"
+        )
+    
+    messages.success(request, f"Заказ №{order.id} завершен")
+    
+    return redirect('core:autoservice_order_detail', order_id=order.id)

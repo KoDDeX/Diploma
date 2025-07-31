@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Заголовок и статистика -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="bi bi-list-task"></i> {{ title }}</h1>
+                <div class="text-end">
+                    <small class="text-muted">Всего заказов: {{ orders_stats.total }}</small>
+                </div>
+            </div>
+
+            <!-- Статистика -->
+            <div class="row mb-4">
+                <div class="col-md-2">
+                    <div class="card bg-dark border-secondary text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-warning">{{ orders_stats.pending }}</h5>
+                            <p class="card-text small text-light">Ожидают</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-dark border-secondary text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-success">{{ orders_stats.confirmed }}</h5>
+                            <p class="card-text small text-light">Подтверждены</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-dark border-secondary text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">{{ orders_stats.in_progress }}</h5>
+                            <p class="card-text small text-light">В работе</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-dark border-secondary text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-info">{{ orders_stats.completed }}</h5>
+                            <p class="card-text small text-light">Выполнены</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-dark border-secondary text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-danger">{{ orders_stats.cancelled }}</h5>
+                            <p class="card-text small text-light">Отменены</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-dark border-secondary text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-muted">{{ orders_stats.unassigned }}</h5>
+                            <p class="card-text small text-light">Без мастера</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Фильтры -->
+            <div class="card bg-dark border-secondary mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-2">
+                            <label for="status" class="form-label">Статус</label>
+                            <select name="status" id="status" class="form-select">
+                                <option value="">Все статусы</option>
+                                {% for status_key, status_name in status_choices %}
+                                <option value="{{ status_key }}" 
+                                    {% if current_filters.status == status_key %}selected{% endif %}>
+                                    {{ status_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label for="master" class="form-label">Мастер</label>
+                            <select name="master" id="master" class="form-select">
+                                <option value="">Все мастера</option>
+                                <option value="unassigned" 
+                                    {% if current_filters.master == 'unassigned' %}selected{% endif %}>
+                                    Без назначения
+                                </option>
+                                {% for master in masters %}
+                                <option value="{{ master.id }}" 
+                                    {% if current_filters.master == master.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ master.get_full_name|default:master.username }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label for="service" class="form-label">Услуга</label>
+                            <select name="service" id="service" class="form-select">
+                                <option value="">Все услуги</option>
+                                {% for service in services %}
+                                <option value="{{ service.id }}" 
+                                    {% if current_filters.service == service.id %}selected{% endif %}>
+                                    {{ service.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label for="date_from" class="form-label">Дата с</label>
+                            <input type="date" name="date_from" id="date_from" class="form-control" 
+                                value="{{ current_filters.date_from|default:'' }}">
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label for="date_to" class="form-label">Дата по</label>
+                            <input type="date" name="date_to" id="date_to" class="form-control" 
+                                value="{{ current_filters.date_to|default:'' }}">
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-search"></i> Фильтр
+                                </button>
+                                <a href="{% url 'core:autoservice_orders_list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-lg"></i> Сброс
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Таблица заказов -->
+            {% if orders %}
+            <div class="card bg-dark border-secondary">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                            <thead>
+                                <tr>
+                                    <th>№</th>
+                                    <th>Дата создания</th>
+                                    <th>Клиент</th>
+                                    <th>Услуга</th>
+                                    <th>Автомобиль</th>
+                                    <th>Мастер</th>
+                                    <th>Дата и время работ</th>
+                                    <th>Длительность</th>
+                                    <th>Статус</th>
+                                    <th>Сумма</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ order.id }}</strong>
+                                    </td>
+                                    <td>{{ order.created_at|date:"d.m.Y H:i" }}</td>
+                                    <td>
+                                        {{ order.get_client_name }}
+                                        {% if order.client_phone %}
+                                        <br><small class="text-muted">{{ order.client_phone }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ order.service.name }}</td>
+                                    <td>
+                                        {% if order.car %}
+                                            {{ order.car }}
+                                        {% else %}
+                                            <span class="text-muted">Не указан</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if order.assigned_master %}
+                                            <span class="badge bg-info">
+                                                {{ order.assigned_master.get_full_name|default:order.assigned_master.username }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Не назначен</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ order.preferred_date|date:"d.m.Y" }}<br>
+                                        <small class="text-muted">{{ order.preferred_time|time:"H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        {{ order.estimated_duration|format_duration }}
+                                    </td>
+                                    <td>
+                                        {% if order.status == 'pending' %}
+                                            <span class="badge bg-warning">{{ order.get_status_display }}</span>
+                                        {% elif order.status == 'confirmed' %}
+                                            <span class="badge bg-success">{{ order.get_status_display }}</span>
+                                        {% elif order.status == 'in_progress' %}
+                                            <span class="badge bg-primary">{{ order.get_status_display }}</span>
+                                        {% elif order.status == 'completed' %}
+                                            <span class="badge bg-info">{{ order.get_status_display }}</span>
+                                        {% elif order.status == 'cancelled' %}
+                                            <span class="badge bg-danger">{{ order.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ order.service.price }} ₽</strong>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'core:autoservice_order_detail' order.id %}" 
+                                           class="btn btn-sm btn-outline-primary" title="Подробнее">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-list-task display-1 text-muted"></i>
+                <h3 class="mt-3 text-muted">Заказы не найдены</h3>
+                <p class="text-muted">Измените фильтры или дождитесь новых заказов</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
