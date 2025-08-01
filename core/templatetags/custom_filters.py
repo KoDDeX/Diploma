@@ -17,6 +17,18 @@ def add_minutes(time_obj, minutes):
     return dt.time()
 
 @register.filter
+def add_days(date_obj, days):
+    """Добавляет дни к дате"""
+    if not date_obj:
+        return date_obj
+    return date_obj + timedelta(days=int(days))
+
+@register.filter
+def get_item(dictionary, key):
+    """Получает элемент из словаря по ключу"""
+    return dictionary.get(key)
+
+@register.filter
 def format_duration(minutes):
     """Форматирует длительность в часы и минуты"""
     if not minutes:

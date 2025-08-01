@@ -25,6 +25,8 @@ from .views import (
     autoservice_order_cancel,
     autoservice_order_start,
     autoservice_order_complete,
+    # Панель загрузки мастеров
+    autoservice_workload_view,
     # Регистрация автосервиса
     autoservice_register_view,
     # Система заказов
@@ -164,6 +166,12 @@ urlpatterns = [
         "autoservice-admin/orders/<int:order_id>/complete/",
         autoservice_order_complete,
         name="autoservice_order_complete",
+    ),
+    # Панель загрузки мастеров
+    path(
+        "autoservice-admin/workload/",
+        autoservice_workload_view,
+        name="autoservice_workload",
     ),
     # Управление автомобилями пользователя
     path(

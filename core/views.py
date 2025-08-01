@@ -1664,13 +1664,22 @@ def autoservice_order_assign_master(request, order_id):
         )
         
         # Уведомляем администратора автосервиса о назначении
-        if autoservice.admin != request.user:  # Если назначение делает не сам администратор
-            add_notification(
-                user=autoservice.admin,
-                title="Назначен мастер",
-                message=f"Заказ №{order.id} назначен мастеру {master.get_full_name() or master.username}. Клиент: {order.get_client_name()}.",
-                level="info"
-            )
+        try:
+            autoservice_admin = User.objects.filter(
+                autoservice=autoservice,
+                role='autoservice_admin',
+                is_active=True
+            ).first()
+            
+            if autoservice_admin and autoservice_admin != request.user:  # Если назначение делает не сам администратор
+                add_notification(
+                    user=autoservice_admin,
+                    title="Назначен мастер",
+                    message=f"Заказ №{order.id} назначен мастеру {master.get_full_name() or master.username}. Клиент: {order.get_client_name()}.",
+                    level="info"
+                )
+        except Exception:
+            pass  # Игнорируем ошибки уведомлений, чтобы не прерывать основной процесс
         
         messages.success(
             request,
@@ -1844,3 +1853,132 @@ def autoservice_order_complete(request, order_id):
     messages.success(request, f"Заказ №{order.id} завершен")
     
     return redirect('core:autoservice_order_detail', order_id=order.id)
+
+
+@login_required
+@user_passes_test(is_autoservice_admin)
+def autoservice_workload_view(request):
+    """Панель загрузки мастеров автосервиса"""
+    from datetime import datetime, timedelta, time
+    from django.utils import timezone
+    
+    autoservice = request.user.autoservice
+    
+    # Получаем дату из параметров запроса или используем сегодня
+    selected_date_str = request.GET.get('date')
+    if selected_date_str:
+        try:
+            selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            selected_date = timezone.now().date()
+    else:
+        selected_date = timezone.now().date()
+    
+    # Получаем режим отображения (день/неделя)
+    view_mode = request.GET.get('mode', 'day')  # day или week
+    
+    if view_mode == 'week':
+        # Начало недели (понедельник)
+        start_date = selected_date - timedelta(days=selected_date.weekday())
+        end_date = start_date + timedelta(days=6)
+        dates_range = [start_date + timedelta(days=i) for i in range(7)]
+    else:
+        # Один день
+        start_date = end_date = selected_date
+        dates_range = [selected_date]
+    
+    # Получаем всех мастеров автосервиса
+    masters = User.objects.filter(
+        autoservice=autoservice,
+        role='master',
+        is_active=True
+    ).order_by('first_name', 'last_name', 'username')
+    
+    # Рабочие часы (можно сделать настраиваемыми)
+    work_start = time(8, 0)  # 08:00
+    work_end = time(20, 0)   # 20:00
+    
+    # Генерируем временные интервалы (каждые 30 минут)
+    time_slots = []
+    current_time = datetime.combine(selected_date, work_start)
+    end_time = datetime.combine(selected_date, work_end)
+    
+    while current_time < end_time:
+        time_slots.append(current_time.time())
+        current_time += timedelta(minutes=30)
+    
+    # Получаем заказы в выбранном диапазоне дат
+    orders = Order.objects.filter(
+        autoservice=autoservice,
+        preferred_date__range=[start_date, end_date],
+        status__in=['confirmed', 'in_progress']
+    ).select_related('assigned_master', 'service', 'client').order_by('preferred_date', 'preferred_time')
+    
+    # Группируем заказы по мастерам и датам
+    workload_data = {}
+    for master in masters:
+        workload_data[master.id] = {
+            'master': master,
+            'dates': {}
+        }
+        
+        for date in dates_range:
+            workload_data[master.id]['dates'][date] = {
+                'orders': [],
+                'time_slots': {}
+            }
+            
+            # Инициализируем все временные слоты как свободные
+            for slot in time_slots:
+                workload_data[master.id]['dates'][date]['time_slots'][slot] = {
+                    'status': 'free',
+                    'order': None
+                }
+    
+    # Заполняем данные о занятости
+    for order in orders:
+        if order.assigned_master and order.assigned_master.id in workload_data:
+            date = order.preferred_date
+            master_id = order.assigned_master.id
+            
+            if date in workload_data[master_id]['dates']:
+                workload_data[master_id]['dates'][date]['orders'].append(order)
+                
+                # Отмечаем занятые временные слоты
+                order_start_time = order.preferred_time
+                order_duration = order.estimated_duration or 60  # По умолчанию 60 минут
+                
+                order_start = datetime.combine(date, order_start_time)
+                order_end = order_start + timedelta(minutes=order_duration)
+                
+                for slot in time_slots:
+                    slot_datetime = datetime.combine(date, slot)
+                    slot_end = slot_datetime + timedelta(minutes=30)
+                    
+                    # Проверяем пересечение времени заказа со слотом
+                    if (slot_datetime < order_end and slot_end > order_start):
+                        workload_data[master_id]['dates'][date]['time_slots'][slot] = {
+                            'status': 'busy',
+                            'order': order
+                        }
+    
+    # Заказы без назначенного мастера
+    unassigned_orders = orders.filter(assigned_master__isnull=True)
+    
+    context = {
+        'title': f'Панель загрузки - {autoservice.name}',
+        'autoservice': autoservice,
+        'selected_date': selected_date,
+        'view_mode': view_mode,
+        'dates_range': dates_range,
+        'start_date': start_date,
+        'end_date': end_date,
+        'masters': masters,
+        'workload_data': workload_data,
+        'time_slots': time_slots,
+        'unassigned_orders': unassigned_orders,
+        'work_start': work_start,
+        'work_end': work_end,
+    }
+    
+    return render(request, 'core/autoservice_admin/workload.html', context)
