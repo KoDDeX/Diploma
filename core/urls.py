@@ -27,6 +27,11 @@ from .views import (
     autoservice_order_complete,
     # Панель загрузки мастеров
     autoservice_workload_view,
+    # Управление графиками работы
+    work_schedule_list,
+    work_schedule_create,
+    work_schedule_edit,
+    work_schedule_delete,
     # Регистрация автосервиса
     autoservice_register_view,
     # Система заказов
@@ -236,6 +241,27 @@ urlpatterns = [
         "api/notifications/recent/",
         notification_get_recent,
         name="notification_get_recent",
+    ),
+    # Управление графиками работы
+    path(
+        "autoservice-admin/work-schedule/",
+        work_schedule_list,
+        name="work_schedule_list",
+    ),
+    path(
+        "autoservice-admin/work-schedule/create/",
+        work_schedule_create,
+        name="work_schedule_create",
+    ),
+    path(
+        "autoservice-admin/work-schedule/edit/<int:schedule_id>/",
+        work_schedule_edit,
+        name="work_schedule_edit",
+    ),
+    path(
+        "autoservice-admin/work-schedule/delete/<int:schedule_id>/",
+        work_schedule_delete,
+        name="work_schedule_delete",
     ),
     # Детальная страница автосервиса (должна быть последней среди обычных маршрутов)
     path(

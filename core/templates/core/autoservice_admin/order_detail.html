@@ -110,13 +110,27 @@
                                     <div class="col-md-8">
                                         <select name="master_id" class="form-select bg-secondary text-light border-secondary" required>
                                             <option value="">Выберите мастера</option>
-                                            {% for master in available_masters %}
+                                            {% for master_info in masters_with_schedule %}
+                                            {% with master=master_info.master %}
                                             <option value="{{ master.id }}" 
-                                                {% if order.assigned_master and order.assigned_master.id == master.id %}selected{% endif %}>
+                                                {% if order.assigned_master and order.assigned_master.id == master.id %}selected{% endif %}
+                                                {% if not master_info.is_working %}class="text-warning"{% endif %}>
                                                 {{ master.get_full_name|default:master.username }}
+                                                {% if not master_info.is_working %}
+                                                    - ⚠️ {{ master_info.unavailable_reason }}
+                                                {% elif master_info.schedule %}
+                                                    - ✓ Работает ({{ master_info.schedule.start_time|time:"H:i" }}-{{ master_info.schedule.end_time|time:"H:i" }})
+                                                {% endif %}
                                             </option>
+                                            {% endwith %}
                                             {% endfor %}
                                         </select>
+                                        {% if order.preferred_date %}
+                                        <small class="text-muted d-block mt-1">
+                                            <i class="bi bi-info-circle"></i> 
+                                            Проверка графика на {{ order.preferred_date|date:"d.m.Y" }} в {{ order.preferred_time|time:"H:i" }}
+                                        </small>
+                                        {% endif %}
                                     </div>
                                     <div class="col-md-4">
                                         <button type="submit" class="btn btn-primary">

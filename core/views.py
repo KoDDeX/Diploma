@@ -9,7 +9,8 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
-from .models import Region, AutoService, Service, Order, Car, Notification
+from datetime import timedelta
+from .models import Region, AutoService, Service, Order, Car, Notification, WorkSchedule, get_master_schedule_for_date, is_master_working_at_datetime
 from .forms import (
     AutoServiceEditForm,
     AddManagerForm,
@@ -1593,18 +1594,53 @@ def autoservice_order_detail(request, order_id):
         autoservice=autoservice
     )
     
-    # Получаем доступных мастеров
+    # Получаем доступных мастеров с информацией о графиках
     available_masters = User.objects.filter(
         autoservice=autoservice,
         role='master',
         is_active=True
     ).order_by('last_name', 'first_name', 'username')
     
+    # Добавляем информацию о графиках мастеров для даты заказа
+    masters_with_schedule = []
+    if order.preferred_date:
+        from datetime import datetime
+        order_datetime = datetime.combine(order.preferred_date, order.preferred_time)
+        
+        for master in available_masters:
+            is_working = is_master_working_at_datetime(master, order_datetime)
+            schedule = get_master_schedule_for_date(master, order.preferred_date)
+            
+            master_info = {
+                'master': master,
+                'is_working': is_working,
+                'schedule': schedule,
+            }
+            
+            if not is_working and schedule:
+                if not schedule.is_working_day(order.preferred_date):
+                    master_info['unavailable_reason'] = 'Не рабочий день'
+                else:
+                    master_info['unavailable_reason'] = f'Время работы: {schedule.start_time.strftime("%H:%M")}-{schedule.end_time.strftime("%H:%M")}'
+            elif not schedule:
+                master_info['unavailable_reason'] = 'Нет активного графика'
+            
+            masters_with_schedule.append(master_info)
+    else:
+        # Если дата не указана, просто добавляем мастеров без проверки графика
+        for master in available_masters:
+            masters_with_schedule.append({
+                'master': master,
+                'is_working': True,  # Предполагаем доступность
+                'schedule': None,
+            })
+    
     context = {
         'title': f'Заказ №{order.id} - {autoservice.name}',
         'autoservice': autoservice,
         'order': order,
         'available_masters': available_masters,
+        'masters_with_schedule': masters_with_schedule,
         'can_confirm': order.status == 'pending',
         'can_cancel': order.status in ['pending', 'confirmed'],
         'can_start': order.status == 'confirmed' and order.assigned_master,
@@ -1618,7 +1654,7 @@ def autoservice_order_detail(request, order_id):
 @user_passes_test(is_autoservice_admin)
 @require_POST
 def autoservice_order_assign_master(request, order_id):
-    """Назначение мастера на заказ"""
+    """Назначение мастера на заказ с проверкой графика работы"""
     autoservice = request.user.autoservice
     order = get_object_or_404(Order, id=order_id, autoservice=autoservice)
     
@@ -1637,19 +1673,53 @@ def autoservice_order_assign_master(request, order_id):
             is_active=True
         )
         
-        # Проверяем, не занят ли мастер в это время
+        # Проверяем график работы мастера на дату заказа
+        from datetime import datetime
+        order_datetime = datetime.combine(order.preferred_date, order.preferred_time)
+        
+        if not is_master_working_at_datetime(master, order_datetime):
+            schedule = get_master_schedule_for_date(master, order.preferred_date)
+            if not schedule:
+                messages.error(
+                    request,
+                    f"У мастера {master.get_full_name() or master.username} нет активного графика работы на {order.preferred_date.strftime('%d.%m.%Y')}"
+                )
+            elif not schedule.is_working_day(order.preferred_date):
+                messages.error(
+                    request,
+                    f"Мастер {master.get_full_name() or master.username} не работает {order.preferred_date.strftime('%d.%m.%Y')} согласно графику"
+                )
+            else:
+                messages.error(
+                    request,
+                    f"Мастер {master.get_full_name() or master.username} не работает в {order.preferred_time.strftime('%H:%M')} согласно графику ({schedule.start_time.strftime('%H:%M')}-{schedule.end_time.strftime('%H:%M')})"
+                )
+            return redirect('core:autoservice_order_detail', order_id=order.id)
+        
+        # Проверяем, не занят ли мастер в это время другими заказами
         conflicting_orders = Order.objects.filter(
             assigned_master=master,
             preferred_date=order.preferred_date,
             status__in=['confirmed', 'in_progress']
         ).exclude(id=order.id)
         
-        if conflicting_orders.exists():
-            messages.error(
-                request,
-                f"Мастер {master.get_full_name() or master.username} уже занят в это время другим заказом"
-            )
-            return redirect('core:autoservice_order_detail', order_id=order.id)
+        # Проверяем пересечение по времени
+        order_duration = order.estimated_duration or 60  # По умолчанию 60 минут
+        order_start = datetime.combine(order.preferred_date, order.preferred_time)
+        order_end = order_start + timedelta(minutes=order_duration)
+        
+        for conflicting_order in conflicting_orders:
+            conflict_duration = conflicting_order.estimated_duration or 60
+            conflict_start = datetime.combine(conflicting_order.preferred_date, conflicting_order.preferred_time)
+            conflict_end = conflict_start + timedelta(minutes=conflict_duration)
+            
+            # Проверяем пересечение времени
+            if (order_start < conflict_end and order_end > conflict_start):
+                messages.error(
+                    request,
+                    f"Мастер {master.get_full_name() or master.username} уже занят в это время заказом №{conflicting_order.id} ({conflicting_order.preferred_time.strftime('%H:%M')}-{conflict_end.strftime('%H:%M')})"
+                )
+                return redirect('core:autoservice_order_detail', order_id=order.id)
         
         # Назначаем мастера
         order.assigned_master = master
@@ -1659,7 +1729,7 @@ def autoservice_order_assign_master(request, order_id):
         add_notification(
             user=master,
             title="Новое назначение",
-            message=f"Вам назначен заказ №{order.id} на услугу '{order.service.name}' в автосервисе '{autoservice.name}' на {order.preferred_date.strftime('%d.%m.%Y')}.",
+            message=f"Вам назначен заказ №{order.id} на услугу '{order.service.name}' в автосервисе '{autoservice.name}' на {order.preferred_date.strftime('%d.%m.%Y')} в {order.preferred_time.strftime('%H:%M')}.",
             level="info"
         )
         
@@ -1857,8 +1927,10 @@ def autoservice_order_complete(request, order_id):
 
 @login_required
 @user_passes_test(is_autoservice_admin)
+@login_required
+@user_passes_test(is_autoservice_admin)
 def autoservice_workload_view(request):
-    """Панель загрузки мастеров автосервиса"""
+    """Панель загрузки мастеров автосервиса с учетом графиков работы"""
     from datetime import datetime, timedelta, time
     from django.utils import timezone
     
@@ -1894,19 +1966,6 @@ def autoservice_workload_view(request):
         is_active=True
     ).order_by('first_name', 'last_name', 'username')
     
-    # Рабочие часы (можно сделать настраиваемыми)
-    work_start = time(8, 0)  # 08:00
-    work_end = time(20, 0)   # 20:00
-    
-    # Генерируем временные интервалы (каждые 30 минут)
-    time_slots = []
-    current_time = datetime.combine(selected_date, work_start)
-    end_time = datetime.combine(selected_date, work_end)
-    
-    while current_time < end_time:
-        time_slots.append(current_time.time())
-        current_time += timedelta(minutes=30)
-    
     # Получаем заказы в выбранном диапазоне дат
     orders = Order.objects.filter(
         autoservice=autoservice,
@@ -1923,16 +1982,47 @@ def autoservice_workload_view(request):
         }
         
         for date in dates_range:
-            workload_data[master.id]['dates'][date] = {
-                'orders': [],
-                'time_slots': {}
-            }
+            # Получаем график работы мастера на эту дату
+            schedule = get_master_schedule_for_date(master, date)
             
-            # Инициализируем все временные слоты как свободные
-            for slot in time_slots:
-                workload_data[master.id]['dates'][date]['time_slots'][slot] = {
-                    'status': 'free',
-                    'order': None
+            if schedule and schedule.is_working_day(date):
+                # Мастер работает в этот день
+                work_start = schedule.start_time
+                work_end = schedule.end_time
+                
+                # Генерируем временные интервалы для рабочего дня мастера
+                time_slots = []
+                current_time = datetime.combine(date, work_start)
+                end_time = datetime.combine(date, work_end)
+                
+                while current_time < end_time:
+                    time_slots.append(current_time.time())
+                    current_time += timedelta(minutes=30)
+                
+                workload_data[master.id]['dates'][date] = {
+                    'is_working': True,
+                    'work_start': work_start,
+                    'work_end': work_end,
+                    'schedule': schedule,
+                    'orders': [],
+                    'time_slots': {}
+                }
+                
+                # Инициализируем все временные слоты как свободные
+                for slot in time_slots:
+                    workload_data[master.id]['dates'][date]['time_slots'][slot] = {
+                        'status': 'free',
+                        'order': None
+                    }
+            else:
+                # Мастер не работает в этот день или график не задан
+                workload_data[master.id]['dates'][date] = {
+                    'is_working': False,
+                    'work_start': None,
+                    'work_end': None,
+                    'schedule': schedule,
+                    'orders': [],
+                    'time_slots': {}
                 }
     
     # Заполняем данные о занятости
@@ -1941,7 +2031,7 @@ def autoservice_workload_view(request):
             date = order.preferred_date
             master_id = order.assigned_master.id
             
-            if date in workload_data[master_id]['dates']:
+            if date in workload_data[master_id]['dates'] and workload_data[master_id]['dates'][date]['is_working']:
                 workload_data[master_id]['dates'][date]['orders'].append(order)
                 
                 # Отмечаем занятые временные слоты
@@ -1951,7 +2041,9 @@ def autoservice_workload_view(request):
                 order_start = datetime.combine(date, order_start_time)
                 order_end = order_start + timedelta(minutes=order_duration)
                 
-                for slot in time_slots:
+                time_slots = workload_data[master_id]['dates'][date]['time_slots']
+                
+                for slot in time_slots.keys():
                     slot_datetime = datetime.combine(date, slot)
                     slot_end = slot_datetime + timedelta(minutes=30)
                     
@@ -1965,6 +2057,18 @@ def autoservice_workload_view(request):
     # Заказы без назначенного мастера
     unassigned_orders = orders.filter(assigned_master__isnull=True)
     
+    # Общие временные слоты для отображения (максимальный диапазон)
+    default_work_start = time(8, 0)
+    default_work_end = time(20, 0)
+    
+    all_time_slots = []
+    current_time = datetime.combine(selected_date, default_work_start)
+    end_time = datetime.combine(selected_date, default_work_end)
+    
+    while current_time < end_time:
+        all_time_slots.append(current_time.time())
+        current_time += timedelta(minutes=30)
+    
     context = {
         'title': f'Панель загрузки - {autoservice.name}',
         'autoservice': autoservice,
@@ -1975,10 +2079,151 @@ def autoservice_workload_view(request):
         'end_date': end_date,
         'masters': masters,
         'workload_data': workload_data,
-        'time_slots': time_slots,
+        'all_time_slots': all_time_slots,
         'unassigned_orders': unassigned_orders,
-        'work_start': work_start,
-        'work_end': work_end,
+        'default_work_start': default_work_start,
+        'default_work_end': default_work_end,
     }
     
     return render(request, 'core/autoservice_admin/workload.html', context)
+
+
+@login_required
+@login_required
+@user_passes_test(is_autoservice_admin)
+def work_schedule_list(request):
+    """Список графиков работы мастеров"""
+    autoservice = request.user.autoservice
+    
+    # Получаем всех мастеров автосервиса
+    masters = User.objects.filter(
+        autoservice=autoservice,
+        role='master',
+        is_active=True
+    ).order_by('first_name', 'last_name', 'username')
+    
+    # Получаем графики работы с фильтрацией
+    schedules_qs = WorkSchedule.objects.filter(
+        master__autoservice=autoservice
+    ).select_related('master').order_by('master__first_name', 'master__last_name', 'start_date')
+    
+    # Применяем фильтры
+    master_filter = request.GET.get('master')
+    schedule_type_filter = request.GET.get('schedule_type')
+    is_active_filter = request.GET.get('is_active')
+    
+    if master_filter:
+        schedules_qs = schedules_qs.filter(master_id=master_filter)
+    
+    if schedule_type_filter:
+        schedules_qs = schedules_qs.filter(schedule_type=schedule_type_filter)
+    
+    if is_active_filter in ['true', 'false']:
+        schedules_qs = schedules_qs.filter(is_active=is_active_filter == 'true')
+    
+    schedules = schedules_qs
+    
+    # Статистика
+    masters_count = masters.count()
+    active_schedules_count = WorkSchedule.objects.filter(
+        master__autoservice=autoservice,
+        is_active=True
+    ).count()
+    weekly_schedules_count = WorkSchedule.objects.filter(
+        master__autoservice=autoservice,
+        schedule_type='weekly'
+    ).count()
+    custom_schedules_count = WorkSchedule.objects.filter(
+        master__autoservice=autoservice,
+        schedule_type='custom'
+    ).count()
+    
+    context = {
+        'title': f'Графики работы - {autoservice.name}',
+        'autoservice': autoservice,
+        'masters': masters,
+        'schedules': schedules,
+        'masters_count': masters_count,
+        'active_schedules_count': active_schedules_count,
+        'weekly_schedules_count': weekly_schedules_count,
+        'custom_schedules_count': custom_schedules_count,
+    }
+    
+    return render(request, 'core/autoservice_admin/work_schedule_list.html', context)
+
+
+@login_required
+@user_passes_test(is_autoservice_admin)
+def work_schedule_create(request):
+    """Создание графика работы"""
+    from .forms import WorkScheduleForm
+    autoservice = request.user.autoservice
+    
+    if request.method == 'POST':
+        form = WorkScheduleForm(request.POST, autoservice=autoservice)
+        if form.is_valid():
+            schedule = form.save()
+            messages.success(request, f'График работы для {schedule.master.get_full_name() or schedule.master.username} создан')
+            return redirect('core:work_schedule_list')
+    else:
+        form = WorkScheduleForm(autoservice=autoservice)
+    
+    context = {
+        'title': f'Создание графика работы - {autoservice.name}',
+        'form': form,
+        'autoservice': autoservice,
+    }
+    
+    return render(request, 'core/autoservice_admin/work_schedule_form.html', context)
+
+
+@login_required
+@user_passes_test(is_autoservice_admin)
+def work_schedule_edit(request, schedule_id):
+    """Редактирование графика работы"""
+    from .forms import WorkScheduleForm
+    autoservice = request.user.autoservice
+    
+    schedule = get_object_or_404(
+        WorkSchedule,
+        id=schedule_id,
+        master__autoservice=autoservice
+    )
+    
+    if request.method == 'POST':
+        form = WorkScheduleForm(request.POST, instance=schedule, autoservice=autoservice)
+        if form.is_valid():
+            schedule = form.save()
+            messages.success(request, f'График работы для {schedule.master.get_full_name() or schedule.master.username} обновлен')
+            return redirect('core:work_schedule_list')
+    else:
+        form = WorkScheduleForm(instance=schedule, autoservice=autoservice)
+    
+    context = {
+        'title': f'Редактирование графика работы - {autoservice.name}',
+        'form': form,
+        'schedule': schedule,
+        'autoservice': autoservice,
+    }
+    
+    return render(request, 'core/autoservice_admin/work_schedule_form.html', context)
+
+
+@login_required
+@user_passes_test(is_autoservice_admin)
+@require_POST
+def work_schedule_delete(request, schedule_id):
+    """Удаление графика работы"""
+    autoservice = request.user.autoservice
+    
+    schedule = get_object_or_404(
+        WorkSchedule,
+        id=schedule_id,
+        master__autoservice=autoservice
+    )
+    
+    master_name = schedule.master.get_full_name() or schedule.master.username
+    schedule.delete()
+    
+    messages.success(request, f'График работы для {master_name} удален')
+    return redirect('core:work_schedule_list')

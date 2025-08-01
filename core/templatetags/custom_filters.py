@@ -44,3 +44,10 @@ def format_duration(minutes):
             return f"{hours} ч"
     else:
         return f"{minutes} мин"
+
+@register.filter
+def split(value, delimiter):
+    """Разделяет строку по разделителю"""
+    if not value:
+        return []
+    return value.split(delimiter)

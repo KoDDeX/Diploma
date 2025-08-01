@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+    {% if schedule %}Редактирование графика{% else %}Создание графика{% endif %} - {{ autoservice.name }}
+{% endblock title %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Заголовок -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="text-primary mb-2">
+                        <i class="bi bi-{% if schedule %}pencil{% else %}plus-circle{% endif %} me-2"></i>
+                        {% if schedule %}Редактирование графика{% else %}Создание графика работы{% endif %}
+                    </h1>
+                    <p class="text-muted mb-0">
+                        <i class="bi bi-building me-1"></i>
+                        {{ autoservice.name }}
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'core:work_schedule_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Назад к списку
+                    </a>
+                </div>
+            </div>
+
+            <!-- Форма -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock me-2"></i>
+                        {% if schedule %}Изменить параметры графика{% else %}Параметры нового графика{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Основные поля -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.master.id_for_label }}" class="form-label">
+                                    {{ form.master.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.master }}
+                                {% if form.master.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.master.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">{{ form.master.help_text }}</div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.schedule_type.id_for_label }}" class="form-label">
+                                    {{ form.schedule_type.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.schedule_type }}
+                                {% if form.schedule_type.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.schedule_type.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Выберите тип графика работы</div>
+                            </div>
+                        </div>
+
+                        <!-- Период действия -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.start_date.id_for_label }}" class="form-label">
+                                    {{ form.start_date.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.start_date }}
+                                {% if form.start_date.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.start_date.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">{{ form.start_date.help_text }}</div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.end_date.id_for_label }}" class="form-label">
+                                    {{ form.end_date.label }}
+                                </label>
+                                {{ form.end_date }}
+                                {% if form.end_date.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.end_date.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">{{ form.end_date.help_text }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Настройка дней (только для кастомного графика) -->
+                        <div class="mb-4" id="custom-days-section" style="{% if form.schedule_type.value != 'custom' %}display: none;{% endif %}">
+                            <label for="{{ form.custom_days.id_for_label }}" class="form-label">
+                                {{ form.custom_days.label }}
+                            </label>
+                            {{ form.custom_days }}
+                            {% if form.custom_days.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.custom_days.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">{{ form.custom_days.help_text }}</div>
+                            
+                            <!-- Быстрые кнопки для выбора дней -->
+                            <div class="mt-2">
+                                <small class="text-muted d-block mb-2">Быстрый выбор:</small>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="setDays('1,2,3,4,5')">
+                                        Пн-Пт
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="setDays('6,7')">
+                                        Сб-Вс
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="setDays('1,3,5')">
+                                        Пн,Ср,Пт
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="setDays('2,4,6')">
+                                        Вт,Чт,Сб
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Время работы -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.start_time.id_for_label }}" class="form-label">
+                                    {{ form.start_time.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.start_time }}
+                                {% if form.start_time.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.start_time.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">{{ form.start_time.help_text }}</div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.end_time.id_for_label }}" class="form-label">
+                                    {{ form.end_time.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.end_time }}
+                                {% if form.end_time.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.end_time.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">{{ form.end_time.help_text }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Статус активности -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    {{ form.is_active.label }}
+                                </label>
+                                {% if form.is_active.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.is_active.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="form-text">{{ form.is_active.help_text }}</div>
+                        </div>
+
+                        <!-- Примечания -->
+                        {% if form.notes %}
+                        <div class="mb-4">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                Примечания
+                            </label>
+                            <textarea class="form-control" name="notes" rows="3" placeholder="Дополнительная информация о графике работы">{{ form.notes.value|default_if_none:"" }}</textarea>
+                            <div class="form-text">Необязательное поле для дополнительной информации</div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Общие ошибки формы -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger mb-4">
+                                <h6 class="alert-heading mb-2">Ошибка валидации:</h6>
+                                {% for error in form.non_field_errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Кнопки действий -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'core:work_schedule_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle me-1"></i>Отмена
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-{% if schedule %}check-circle{% else %}plus-circle{% endif %} me-1"></i>
+                                {% if schedule %}Сохранить изменения{% else %}Создать график{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Дополнительная информация -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Справочная информация
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <h6 class="text-primary">Еженедельный график</h6>
+                            <p class="small text-muted mb-0">
+                                Повторяется каждую неделю с понедельника по пятницу
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-success">Месячный график</h6>
+                            <p class="small text-muted mb-0">
+                                Повторяется каждый месяц в указанные даты
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-info">Индивидуальный график</h6>
+                            <p class="small text-muted mb-0">
+                                Настраиваемые дни недели через запятую
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const scheduleTypeSelect = document.getElementById('{{ form.schedule_type.id_for_label }}');
+    const customDaysSection = document.getElementById('custom-days-section');
+    
+    // Функция для показа/скрытия секции кастомных дней
+    function toggleCustomDaysSection() {
+        if (scheduleTypeSelect.value === 'custom') {
+            customDaysSection.style.display = 'block';
+        } else {
+            customDaysSection.style.display = 'none';
+        }
+    }
+    
+    // Обработчик изменения типа графика
+    scheduleTypeSelect.addEventListener('change', toggleCustomDaysSection);
+    
+    // Инициализация при загрузке
+    toggleCustomDaysSection();
+});
+
+// Функция для быстрого выбора дней
+function setDays(days) {
+    document.getElementById('{{ form.custom_days.id_for_label }}').value = days;
+}
+</script>
+
+<style>
+.form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-radius: 12px 12px 0 0 !important;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.alert {
+    border-radius: 8px;
+}
+</style>
+{% endblock content %}

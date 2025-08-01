@@ -118,7 +118,7 @@
                                         </th>
                                         {% endfor %}
                                     {% else %}
-                                        {% for slot in time_slots %}
+                                        {% for slot in all_time_slots %}
                                         <th class="text-center time-slot">
                                             {{ slot|time:"H:i" }}
                                         </th>
@@ -137,8 +137,18 @@
                                         <td class="text-center p-1">
                                             {% with day_data=master_data.dates|get_item:date %}
                                             <div class="day-summary">
-                                                {% if day_data.orders %}
+                                                {% if not day_data.is_working %}
+                                                    <div class="bg-secondary text-white p-2 rounded">
+                                                        <small>Выходной</small>
+                                                        {% if day_data.schedule %}
+                                                            <br><small class="text-muted">График не активен</small>
+                                                        {% else %}
+                                                            <br><small class="text-muted">График не задан</small>
+                                                        {% endif %}
+                                                    </div>
+                                                {% elif day_data.orders %}
                                                     <small class="text-info">{{ day_data.orders|length }} заказ{{ day_data.orders|length|pluralize:"а,ов" }}</small>
+                                                    <br><small class="text-muted">{{ day_data.work_start|time:"H:i" }} - {{ day_data.work_end|time:"H:i" }}</small>
                                                     {% for order in day_data.orders %}
                                                     <div class="order-preview bg-primary text-white p-1 rounded mb-1" 
                                                          title="Заказ №{{ order.id }} - {{ order.service.name }} ({{ order.preferred_time|time:'H:i' }})">
@@ -150,6 +160,7 @@
                                                     {% endfor %}
                                                 {% else %}
                                                     <small class="text-success">Свободен</small>
+                                                    <br><small class="text-muted">{{ day_data.work_start|time:"H:i" }} - {{ day_data.work_end|time:"H:i" }}</small>
                                                 {% endif %}
                                             </div>
                                             {% endwith %}
@@ -157,25 +168,37 @@
                                         {% endfor %}
                                     {% else %}
                                         {% with day_data=master_data.dates|get_item:selected_date %}
-                                        {% for slot in time_slots %}
-                                        {% with slot_data=day_data.time_slots|get_item:slot %}
+                                        {% for slot in all_time_slots %}
                                         <td class="text-center p-1 time-cell" 
                                             data-master="{{ master_data.master.id }}" 
                                             data-time="{{ slot|time:'H:i' }}">
-                                            {% if slot_data.status == 'busy' %}
-                                                <div class="bg-danger text-white p-1 rounded order-cell" 
-                                                     title="Заказ №{{ slot_data.order.id }} - {{ slot_data.order.service.name }}">
-                                                    <small>
-                                                        №{{ slot_data.order.id }}<br>
-                                                        {{ slot_data.order.service.name|truncatechars:10 }}
-                                                    </small>
+                                            {% if not day_data.is_working %}
+                                                <!-- Мастер не работает в этот день -->
+                                                <div class="bg-secondary p-1 rounded" title="Не работает">
+                                                    <small class="text-white">—</small>
+                                                </div>
+                                            {% elif slot < day_data.work_start or slot > day_data.work_end %}
+                                                <!-- Вне рабочих часов мастера -->
+                                                <div class="bg-dark p-1 rounded" title="Вне рабочих часов">
+                                                    <small class="text-muted">—</small>
                                                 </div>
                                             {% else %}
-                                                <div class="bg-success p-1 rounded free-cell" title="Свободно">
-                                                    <small class="text-white">Свободно</small>
-                                                </div>
+                                                {% with slot_data=day_data.time_slots|get_item:slot %}
+                                                {% if slot_data.status == 'busy' %}
+                                                    <div class="bg-danger text-white p-1 rounded order-cell" 
+                                                         title="Заказ №{{ slot_data.order.id }} - {{ slot_data.order.service.name }}">
+                                                        <small>
+                                                            №{{ slot_data.order.id }}<br>
+                                                            {{ slot_data.order.service.name|truncatechars:10 }}
+                                                        </small>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="bg-success p-1 rounded free-cell" title="Свободно">
+                                                        <small class="text-white">Свободно</small>
+                                                    </div>
+                                                {% endif %}
+                                                {% endwith %}
                                             {% endif %}
-                                        {% endwith %}
                                         </td>
                                         {% endfor %}
                                         {% endwith %}
@@ -190,6 +213,39 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Легенда -->
+            <div class="card bg-dark border-secondary mt-4">
+                <div class="card-body">
+                    <h6 class="text-light mb-3">Обозначения:</h6>
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-success p-2 rounded me-2" style="width: 20px; height: 20px;"></div>
+                                <small class="text-light">Свободное время</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-danger p-2 rounded me-2" style="width: 20px; height: 20px;"></div>
+                                <small class="text-light">Занято заказом</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-secondary p-2 rounded me-2" style="width: 20px; height: 20px;"></div>
+                                <small class="text-light">Выходной день</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-dark border p-2 rounded me-2" style="width: 20px; height: 20px;"></div>
+                                <small class="text-light">Вне рабочих часов</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

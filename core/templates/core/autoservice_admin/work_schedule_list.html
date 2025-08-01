@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Графики работы мастеров - {{ autoservice.name }}{% endblock title %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Заголовок -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="text-primary mb-2">
+                        <i class="bi bi-clock me-2"></i>
+                        Графики работы мастеров
+                    </h1>
+                    <p class="text-muted mb-0">
+                        <i class="bi bi-building me-1"></i>
+                        {{ autoservice.name }}
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'core:autoservice_admin_dashboard' %}" class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-arrow-left me-1"></i>Назад
+                    </a>
+                    <a href="{% url 'core:work_schedule_create' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-1"></i>Добавить график
+                    </a>
+                </div>
+            </div>
+
+            <!-- Статистика -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <i class="bi bi-people-fill display-6 mb-2"></i>
+                            <h4>{{ masters_count }}</h4>
+                            <small>Всего мастеров</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <i class="bi bi-check-circle-fill display-6 mb-2"></i>
+                            <h4>{{ active_schedules_count }}</h4>
+                            <small>Активных графиков</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-dark">
+                        <div class="card-body text-center">
+                            <i class="bi bi-calendar-week-fill display-6 mb-2"></i>
+                            <h4>{{ weekly_schedules_count }}</h4>
+                            <small>Еженедельных</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-dark">
+                        <div class="card-body text-center">
+                            <i class="bi bi-calendar-day-fill display-6 mb-2"></i>
+                            <h4>{{ custom_schedules_count }}</h4>
+                            <small>Индивидуальных</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Фильтры -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="master" class="form-label">Мастер</label>
+                            <select name="master" id="master" class="form-select">
+                                <option value="">Все мастера</option>
+                                {% for master in masters %}
+                                    <option value="{{ master.id }}" 
+                                        {% if request.GET.master == master.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ master.get_full_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="schedule_type" class="form-label">Тип графика</label>
+                            <select name="schedule_type" id="schedule_type" class="form-select">
+                                <option value="">Все типы</option>
+                                <option value="weekly" 
+                                    {% if request.GET.schedule_type == "weekly" %}selected{% endif %}>
+                                    Еженедельный
+                                </option>
+                                <option value="monthly" 
+                                    {% if request.GET.schedule_type == "monthly" %}selected{% endif %}>
+                                    Месячный
+                                </option>
+                                <option value="custom" 
+                                    {% if request.GET.schedule_type == "custom" %}selected{% endif %}>
+                                    Индивидуальный
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="is_active" class="form-label">Статус</label>
+                            <select name="is_active" id="is_active" class="form-select">
+                                <option value="">Все</option>
+                                <option value="true" 
+                                    {% if request.GET.is_active == "true" %}selected{% endif %}>
+                                    Активные
+                                </option>
+                                <option value="false" 
+                                    {% if request.GET.is_active == "false" %}selected{% endif %}>
+                                    Неактивные
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="bi bi-funnel me-1"></i>Фильтр
+                                </button>
+                                <a href="{% url 'core:work_schedule_list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Сбросить
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Список графиков -->
+            {% if schedules %}
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-list me-2"></i>
+                            Графики работы ({{ schedules|length }})
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Мастер</th>
+                                        <th>Тип графика</th>
+                                        <th>Период действия</th>
+                                        <th>Рабочие дни</th>
+                                        <th>Время работы</th>
+                                        <th>Статус</th>
+                                        <th class="text-center">Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for schedule in schedules %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 14px;">
+                                                        {{ schedule.master.first_name|first }}{{ schedule.master.last_name|first }}
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">{{ schedule.master.get_full_name }}</div>
+                                                        <small class="text-muted">{{ schedule.master.email }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if schedule.schedule_type == 'weekly' %}bg-primary
+                                                    {% elif schedule.schedule_type == 'monthly' %}bg-success
+                                                    {% else %}bg-info{% endif %}">
+                                                    {{ schedule.get_schedule_type_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <strong>С:</strong> {{ schedule.start_date|date:"d.m.Y" }}
+                                                </div>
+                                                {% if schedule.end_date %}
+                                                    <div>
+                                                        <strong>До:</strong> {{ schedule.end_date|date:"d.m.Y" }}
+                                                    </div>
+                                                {% else %}
+                                                    <small class="text-muted">Бессрочно</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if schedule.schedule_type == 'weekly' %}
+                                                    <small class="text-muted">Пн-Пт</small>
+                                                {% elif schedule.schedule_type == 'custom' and schedule.custom_days %}
+                                                    <small class="text-muted">
+                                                        {% for day in schedule.custom_days|split:"," %}
+                                                            {% if day == "1" %}Пн{% elif day == "2" %}Вт{% elif day == "3" %}Ср{% elif day == "4" %}Чт{% elif day == "5" %}Пт{% elif day == "6" %}Сб{% elif day == "7" %}Вс{% endif %}{% if not forloop.last %}, {% endif %}
+                                                        {% endfor %}
+                                                    </small>
+                                                {% else %}
+                                                    <small class="text-muted">Все дни</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="fw-medium">
+                                                    {{ schedule.start_time|time:"H:i" }} - {{ schedule.end_time|time:"H:i" }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if schedule.is_active %}
+                                                    <span class="badge bg-success">
+                                                        <i class="bi bi-check-circle me-1"></i>Активен
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">
+                                                        <i class="bi bi-pause-circle me-1"></i>Неактивен
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group" role="group">
+                                                    <a href="{% url 'core:work_schedule_edit' schedule.id %}" 
+                                                       class="btn btn-sm btn-outline-primary" 
+                                                       title="Редактировать">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </a>
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-outline-danger" 
+                                                            title="Удалить"
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#deleteModal{{ schedule.id }}">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Модальное окно для удаления -->
+                                        <div class="modal fade" id="deleteModal{{ schedule.id }}" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Удалить график работы</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p>Вы уверены, что хотите удалить график работы для мастера 
+                                                           <strong>{{ schedule.master.get_full_name }}</strong>?</p>
+                                                        <p class="text-muted small">Это действие нельзя отменить.</p>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                            Отмена
+                                                        </button>
+                                                        <a href="{% url 'core:work_schedule_delete' schedule.id %}" 
+                                                           class="btn btn-danger">
+                                                            <i class="bi bi-trash me-1"></i>Удалить
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-clock text-muted display-1 mb-3"></i>
+                        <h4 class="text-muted">Нет графиков работы</h4>
+                        <p class="text-muted mb-4">
+                            {% if request.GET %}
+                                По вашим критериям поиска графики не найдены.
+                            {% else %}
+                                Создайте первый график работы для ваших мастеров.
+                            {% endif %}
+                        </p>
+                        {% if not request.GET %}
+                            <a href="{% url 'core:work_schedule_create' %}" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-1"></i>Создать график
+                            </a>
+                        {% else %}
+                            <a href="{% url 'core:work_schedule_list' %}" class="btn btn-outline-primary">
+                                <i class="bi bi-arrow-left me-1"></i>Показать все
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar {
+    font-weight: 600;
+}
+
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.btn-group .btn {
+    margin: 0 1px;
+}
+</style>
+{% endblock content %}

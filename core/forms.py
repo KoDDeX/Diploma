@@ -9,6 +9,7 @@ from .models import (
     StandardService,
     Order,
     Car,
+    WorkSchedule,
 )
 
 User = get_user_model()
@@ -704,3 +705,112 @@ class OrderCreateForm(forms.ModelForm):
             order.save()
 
         return order
+
+
+class WorkScheduleForm(forms.ModelForm):
+    """Форма для создания и редактирования графика работы мастера"""
+    
+    class Meta:
+        model = WorkSchedule
+        fields = ['master', 'schedule_type', 'start_date', 'end_date', 
+                 'custom_days', 'start_time', 'end_time', 'is_active']
+        widgets = {
+            'master': forms.Select(attrs={
+                'class': 'form-control',
+                'required': True
+            }),
+            'schedule_type': forms.Select(attrs={
+                'class': 'form-control',
+                'required': True
+            }),
+            'start_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control',
+                'required': True
+            }),
+            'end_date': forms.DateInput(attrs={
+                'type': 'date', 
+                'class': 'form-control'
+            }),
+            'custom_days': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Например: 1,3,5 (Пн, Ср, Пт)',
+                'help_text': 'Дни недели через запятую: 1-Пн, 2-Вт, 3-Ср, 4-Чт, 5-Пт, 6-Сб, 7-Вс'
+            }),
+            'start_time': forms.TimeInput(attrs={
+                'type': 'time',
+                'class': 'form-control',
+                'required': True
+            }),
+            'end_time': forms.TimeInput(attrs={
+                'type': 'time',
+                'class': 'form-control', 
+                'required': True
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            })
+        }
+        labels = {
+            'master': 'Мастер',
+            'schedule_type': 'Тип графика',
+            'start_date': 'Дата начала',
+            'end_date': 'Дата окончания',
+            'custom_days': 'Дни недели',
+            'start_time': 'Время начала работы',
+            'end_time': 'Время окончания работы',
+            'is_active': 'Активный график'
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.autoservice = kwargs.pop('autoservice', None)
+        super().__init__(*args, **kwargs)
+        
+        # Фильтруем мастеров только текущего автосервиса
+        if self.autoservice:
+            from users.models import User
+            self.fields['master'].queryset = User.objects.filter(
+                role='master',
+                autoservice=self.autoservice
+            )
+        
+        # Устанавливаем начальные значения
+        self.fields['start_time'].initial = '09:00'
+        self.fields['end_time'].initial = '18:00'
+        self.fields['is_active'].initial = True
+        
+    def clean(self):
+        cleaned_data = super().clean()
+        schedule_type = cleaned_data.get('schedule_type')
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        start_time = cleaned_data.get('start_time')
+        end_time = cleaned_data.get('end_time')
+        custom_days = cleaned_data.get('custom_days')
+        
+        # Проверяем время
+        if start_time and end_time:
+            if start_time >= end_time:
+                raise forms.ValidationError(
+                    'Время начала работы должно быть раньше времени окончания'
+                )
+        
+        # Проверяем даты
+        if start_date and end_date:
+            if start_date > end_date:
+                raise forms.ValidationError(
+                    'Дата начала должна быть раньше даты окончания'
+                )
+        
+        # Для кастомного графика проверяем дни недели
+        if schedule_type == 'custom' and custom_days:
+            try:
+                days = [int(day.strip()) for day in custom_days.split(',')]
+                if not all(1 <= day <= 7 for day in days):
+                    raise ValueError()
+            except (ValueError, AttributeError):
+                raise forms.ValidationError(
+                    'Дни недели должны быть числами от 1 до 7, разделенными запятыми'
+                )
+        
+        return cleaned_data

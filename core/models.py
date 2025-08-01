@@ -617,3 +617,225 @@ class Notification(models.Model):
             queryset = queryset[:limit]
             
         return queryset
+
+
+class WorkSchedule(models.Model):
+    """Модель для графика работы мастеров"""
+    
+    SCHEDULE_TYPE_CHOICES = [
+        ('weekly', 'Еженедельный'),
+        ('monthly', 'Месячный'),
+        ('custom', 'Индивидуальный'),
+    ]
+    
+    # Основные поля
+    master = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        limit_choices_to={'role': 'master'},
+        verbose_name='Мастер',
+        help_text='Мастер, для которого создается график'
+    )
+    
+    schedule_type = models.CharField(
+        max_length=20,
+        choices=SCHEDULE_TYPE_CHOICES,
+        default='weekly',
+        verbose_name='Тип графика'
+    )
+    
+    # Период действия графика
+    start_date = models.DateField(
+        verbose_name='Дата начала действия',
+        help_text='С какой даты действует график'
+    )
+    end_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name='Дата окончания действия',
+        help_text='До какой даты действует график (пустое поле = бессрочно)'
+    )
+    
+    # Для кастомного графика - дни недели через запятую (1,3,5 = Пн,Ср,Пт)
+    custom_days = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='Дни недели',
+        help_text='Дни недели через запятую: 1-Пн, 2-Вт, 3-Ср, 4-Чт, 5-Пт, 6-Сб, 7-Вс'
+    )
+    
+    # Рабочие часы
+    start_time = models.TimeField(
+        verbose_name='Время начала работы',
+        help_text='Во сколько начинается рабочий день'
+    )
+    
+    end_time = models.TimeField(
+        verbose_name='Время окончания работы',
+        help_text='Во сколько заканчивается рабочий день'
+    )
+    
+    # Активность графика
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Активный график',
+        help_text='Активные графики используются для расчета загрузки'
+    )
+    
+    # Комментарии
+    notes = models.TextField(
+        blank=True,
+        verbose_name='Примечания',
+        help_text='Дополнительная информация о графике'
+    )
+    
+    # Системные поля
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата изменения')
+    
+    class Meta:
+        verbose_name = 'График работы'
+        verbose_name_plural = 'Графики работы'
+        ordering = ['master__first_name', 'master__last_name', 'start_date']
+        unique_together = ['master', 'schedule_type', 'start_date', 'custom_days']
+    
+    def __str__(self):
+        master_name = self.master.get_full_name() or self.master.username
+        return f"{master_name} - {self.get_schedule_type_display()} ({self.start_date})"
+    
+    def get_working_days(self):
+        """Возвращает список рабочих дней недели"""
+        if self.schedule_type == 'weekly':
+            return [1, 2, 3, 4, 5]  # Пн-Пт по умолчанию
+        elif self.schedule_type == 'custom' and self.custom_days:
+            try:
+                return [int(day.strip()) for day in self.custom_days.split(',')]
+            except ValueError:
+                return []
+        else:
+            return list(range(1, 8))  # Все дни недели
+    
+    def is_working_day(self, date):
+        """Проверяет, является ли указанная дата рабочим днем"""
+        if not self.is_active:
+            return False
+        
+        # Проверяем период действия
+        if date < self.start_date:
+            return False
+        if self.end_date and date > self.end_date:
+            return False
+        
+        # Проверяем день недели (1=Понедельник, 7=Воскресенье)
+        weekday = date.isoweekday()
+        working_days = self.get_working_days()
+        
+        return weekday in working_days
+    
+    def is_working_at_time(self, datetime_obj):
+        """Проверяет, работает ли мастер в указанную дату и время"""
+        if not self.is_working_day(datetime_obj.date()):
+            return False
+        
+        return self.start_time <= datetime_obj.time() <= self.end_time
+    
+    def get_conflicts(self):
+        """Возвращает конфликтующие графики того же мастера"""
+        conflicts = []
+        
+        # Ищем пересекающиеся по времени графики
+        overlapping = WorkSchedule.objects.filter(
+            master=self.master,
+            is_active=True
+        ).exclude(pk=self.pk)
+        
+        for schedule in overlapping:
+            # Проверяем пересечение периодов
+            if self._periods_overlap(schedule):
+                # Проверяем пересечение дней недели
+                if self._days_overlap(schedule):
+                    # Проверяем пересечение времени
+                    if self._time_overlap(schedule):
+                        conflicts.append(schedule)
+        
+        return conflicts
+    
+    def _periods_overlap(self, other):
+        """Проверяет пересечение периодов действия"""
+        # Если у нас нет конечной даты, а у другого есть начальная
+        if not self.end_date:
+            return other.start_date >= self.start_date
+        
+        # Если у другого нет конечной даты
+        if not other.end_date:
+            return self.start_date <= other.start_date
+        
+        # Оба имеют конечные даты
+        return not (self.end_date < other.start_date or other.end_date < self.start_date)
+    
+    def _days_overlap(self, other):
+        """Проверяет пересечение рабочих дней"""
+        our_days = set(self.get_working_days())
+        other_days = set(other.get_working_days())
+        return bool(our_days.intersection(other_days))
+    
+    def _time_overlap(self, other):
+        """Проверяет пересечение времени работы"""
+        return not (self.end_time <= other.start_time or other.end_time <= self.start_time)
+    
+    def clean(self):
+        """Валидация модели"""
+        from django.core.exceptions import ValidationError
+        
+        # Проверяем время
+        if self.start_time >= self.end_time:
+            raise ValidationError('Время начала работы должно быть раньше времени окончания')
+        
+        # Проверяем даты
+        if self.end_date and self.start_date > self.end_date:
+            raise ValidationError('Дата начала должна быть раньше даты окончания')
+        
+        # Для кастомного графика проверяем дни недели
+        if self.schedule_type == 'custom' and self.custom_days:
+            try:
+                days = [int(day.strip()) for day in self.custom_days.split(',')]
+                if not all(1 <= day <= 7 for day in days):
+                    raise ValidationError('Дни недели должны быть числами от 1 до 7')
+            except ValueError:
+                raise ValidationError('Дни недели должны быть числами, разделенными запятыми')
+        
+        # Проверяем конфликты с другими графиками
+        if self.pk:  # Только для существующих объектов
+            conflicts = self.get_conflicts()
+            if conflicts:
+                conflict_names = ', '.join([str(c) for c in conflicts])
+                raise ValidationError(f'График конфликтует с существующими: {conflict_names}')
+
+
+# Вспомогательные функции для работы с графиком
+def get_master_schedule_for_date(master, date):
+    """Получает активный график работы мастера на конкретную дату"""
+    schedules = WorkSchedule.objects.filter(
+        master=master,
+        is_active=True,  # Только активные графики
+        start_date__lte=date
+    ).filter(
+        models.Q(end_date__isnull=True) | models.Q(end_date__gte=date)
+    )
+    
+    # Ищем график, который покрывает эту дату
+    for schedule in schedules:
+        if schedule.is_working_day(date):
+            return schedule
+    
+    return None
+
+
+def is_master_working_at_datetime(master, datetime_obj):
+    """Проверяет, работает ли мастер в указанную дату и время"""
+    schedule = get_master_schedule_for_date(master, datetime_obj.date())
+    
+    if not schedule:
+        return False  # Если нет активного графика, мастер не работает
+    
+    return schedule.is_working_at_time(datetime_obj)
