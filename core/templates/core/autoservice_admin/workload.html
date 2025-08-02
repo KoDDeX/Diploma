@@ -130,7 +130,7 @@
                                 {% for master_id, master_data in workload_data.items %}
                                 <tr>
                                     <td class="sticky-left">
-                                        <strong class="text-light">{{ master_data.master.get_full_name|default:master_data.master.username }}</strong>
+                                        <strong class="text-light">{{ master_data.master.get_full_name }}</strong>
                                     </td>
                                     {% if view_mode == 'week' %}
                                         {% for date in dates_range %}

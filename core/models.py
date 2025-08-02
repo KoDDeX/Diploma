@@ -433,6 +433,18 @@ class Order(models.Model):
         help_text="Мастер, назначенный на выполнение заказа",
         limit_choices_to={'role': 'master'}
     )
+    
+    # Предпочитаемый мастер (выбор клиента)
+    preferred_master = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="preferred_orders",
+        verbose_name="Предпочитаемый мастер",
+        help_text="Мастер, которого предпочел клиент",
+        limit_choices_to={'role': 'master'}
+    )
 
     # Системные поля
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")

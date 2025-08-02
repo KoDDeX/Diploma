@@ -94,12 +94,24 @@
                             {% if order.assigned_master %}
                             <div class="alert alert-info">
                                 <i class="bi bi-person-check"></i>
-                                <strong>Назначен мастер:</strong> {{ order.assigned_master.get_full_name|default:order.assigned_master.username }}
+                                <strong>Назначен мастер:</strong> {{ order.assigned_master.get_full_name }}
                             </div>
                             {% else %}
                             <div class="alert alert-warning">
                                 <i class="bi bi-exclamation-triangle"></i>
                                 <strong>Мастер не назначен</strong>
+                            </div>
+                            {% endif %}
+
+                            {% if order.preferred_master %}
+                            <div class="alert alert-light text-dark">
+                                <i class="bi bi-heart"></i>
+                                <strong>Клиент предпочитает мастера:</strong> {{ order.preferred_master.get_full_name }}
+                                {% if not order.assigned_master %}
+                                    <br><small class="text-muted">Рекомендуется назначить предпочитаемого мастера</small>
+                                {% elif order.assigned_master.id != order.preferred_master.id %}
+                                    <br><small class="text-warning">⚠️ Назначен другой мастер</small>
+                                {% endif %}
                             </div>
                             {% endif %}
 
@@ -115,7 +127,7 @@
                                             <option value="{{ master.id }}" 
                                                 {% if order.assigned_master and order.assigned_master.id == master.id %}selected{% endif %}
                                                 {% if not master_info.is_working %}class="text-warning"{% endif %}>
-                                                {{ master.get_full_name|default:master.username }}
+                                                {{ master.get_full_name }}
                                                 {% if not master_info.is_working %}
                                                     - ⚠️ {{ master_info.unavailable_reason }}
                                                 {% elif master_info.schedule %}

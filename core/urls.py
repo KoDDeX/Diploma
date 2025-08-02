@@ -37,6 +37,8 @@ from .views import (
     # Система заказов
     order_create,
     order_success,
+    check_masters_availability,
+    get_available_time_slots,
     # Управление автомобилями пользователя
     user_cars_list,
     # Управление автомобилями пользователя
@@ -277,6 +279,18 @@ urlpatterns = [
         "order/<int:order_id>/success/",
         order_success,
         name="order_success",
+    ),
+    # API для проверки доступности мастеров
+    path(
+        "api/autoservice/<int:autoservice_id>/check-masters-availability/",
+        check_masters_availability,
+        name="check_masters_availability",
+    ),
+    # API для получения доступных временных слотов
+    path(
+        "api/autoservice/<int:autoservice_id>/available-time-slots/",
+        get_available_time_slots,
+        name="get_available_time_slots",
     ),
 ]
 

@@ -8,46 +8,35 @@
     <div class="row">
         <div class="col-12">
             <!-- Заголовок -->
-            <div class="d-flex align-items-center justify-content-between mb-4">
-                <div class="d-flex align-items-center">
-                    <a href="{% url 'core:autoservice_admin_dashboard' %}" class="btn btn-link text-decoration-none p-0 me-3">
-                        <i class="bi bi-arrow-left fs-4"></i>
-                    </a>
-                    <div>
-                        <h1 class="text-primary mb-2">
-                            <i class="bi bi-people me-2"></i>
-                            {% if user_role == 'autoservice_admin' %}
-                                Управление сотрудниками
-                            {% elif user_role == 'manager' %}
-                                Управление мастерами
-                            {% else %}
-                                Управление персоналом
-                            {% endif %}
-                        </h1>
-                        <p class="text-muted mb-0">
-                            {% if user_role == 'autoservice_admin' %}
-                                Сотрудники автосервиса "{{ autoservice.name }}"
-                            {% elif user_role == 'manager' %}
-                                Мастера автосервиса "{{ autoservice.name }}"
-                            {% else %}
-                                Персонал автосервиса "{{ autoservice.name }}"
-                            {% endif %}
-                        </p>
-                    </div>
-                </div>
-                <a href="{% url 'core:autoservice_add_manager' %}" class="btn btn-success">
-                    <i class="bi bi-person-plus me-2"></i>
-                    {% if user_role == 'autoservice_admin' %}
-                        Добавить сотрудника
-                    {% elif user_role == 'manager' %}
-                        Добавить мастера
-                    {% else %}
-                        Добавить сотрудника
-                    {% endif %}
+            <div class="d-flex align-items-center mb-4">
+                <a href="{% url 'core:autoservice_admin_dashboard' %}" class="btn btn-link text-decoration-none p-0 me-3">
+                    <i class="bi bi-arrow-left fs-4"></i>
                 </a>
+                <div>
+                    <h1 class="text-primary mb-2">
+                        <i class="bi bi-people me-2"></i>
+                        {% if user_role == 'autoservice_admin' %}
+                            Управление сотрудниками
+                        {% elif user_role == 'manager' %}
+                            Управление мастерами
+                        {% else %}
+                            Управление персоналом
+                        {% endif %}
+                    </h1>
+                    <p class="text-muted mb-0">
+                        {% if user_role == 'autoservice_admin' %}
+                            Сотрудники автосервиса "{{ autoservice.name }}"
+                        {% elif user_role == 'manager' %}
+                            Мастера автосервиса "{{ autoservice.name }}"
+                        {% else %}
+                            Персонал автосервиса "{{ autoservice.name }}"
+                        {% endif %}
+                    </p>
+                </div>
             </div>
 
             <!-- Статистика -->
+            {% if user_role == 'autoservice_admin' and stats|length > 1 %}
             <div class="row g-3 mb-4">
                 {% for role_key, role_data in stats.items %}
                     <div class="col-md-6 col-lg-4">
@@ -70,41 +59,36 @@
                         </div>
                     </div>
                 {% endfor %}
-                
-                <div class="col-md-6 col-lg-4">
-                    <div class="card bg-dark text-white">
-                        <div class="card-body text-center">
-                            <i class="bi bi-person-lines-fill fs-1 mb-2"></i>
-                            <h3 class="fw-bold">{{ total_staff }}</h3>
-                            <p class="mb-0">
-                                {% if user_role == 'autoservice_admin' %}
-                                    Всего сотрудников
-                                {% elif user_role == 'manager' %}
-                                    Всего мастеров
-                                {% else %}
-                                    Всего сотрудников
-                                {% endif %}
-                            </p>
-                        </div>
-                    </div>
-                </div>
             </div>
+            {% endif %}
 
             <!-- Список сотрудников -->
             {% if staff %}
+            <!-- Кнопка добавления над таблицей -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="text-light mb-0">
+                    <i class="bi bi-list-ul me-2"></i>
+                    {% if user_role == 'autoservice_admin' %}
+                        Список сотрудников ({{ total_staff }})
+                    {% elif user_role == 'manager' %}
+                        Список мастеров ({{ total_staff }})
+                    {% else %}
+                        Список сотрудников ({{ total_staff }})
+                    {% endif %}
+                </h5>
+                <a href="{% url 'core:autoservice_add_manager' %}" class="btn btn-success">
+                    <i class="bi bi-person-plus me-2"></i>
+                    {% if user_role == 'autoservice_admin' %}
+                        Добавить сотрудника
+                    {% elif user_role == 'manager' %}
+                        Добавить мастера
+                    {% else %}
+                        Добавить сотрудника
+                    {% endif %}
+                </a>
+            </div>
+            
             <div class="card shadow-sm text-light">
-                <div class="card-header">
-                    <h5 class="card-title mb-0 text-light">
-                        <i class="bi bi-list-ul me-2"></i>
-                        {% if user_role == 'autoservice_admin' %}
-                            Список сотрудников ({{ total_staff }})
-                        {% elif user_role == 'manager' %}
-                            Список мастеров ({{ total_staff }})
-                        {% else %}
-                            Список сотрудников ({{ total_staff }})
-                        {% endif %}
-                    </h5>
-                </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-dark table-hover mb-0">

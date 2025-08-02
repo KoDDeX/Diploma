@@ -240,16 +240,38 @@
                             </div>
                             
                             <div class="col-md-6 mb-3">
-                                <label for="{{ form.preferred_time.id_for_label }}" class="form-label">
-                                    {{ form.preferred_time.label }}
+                                <label for="time_slot_select" class="form-label">
+                                    Доступное время *
                                 </label>
-                                {{ form.preferred_time }}
+                                <select id="time_slot_select" name="preferred_time" class="form-select form-select-lg" required>
+                                    <option value="">Сначала выберите дату</option>
+                                </select>
+                                <div id="time_loading" class="form-text text-muted" style="display: none;">
+                                    <i class="fas fa-spinner fa-spin me-1"></i>
+                                    Загружаем доступное время...
+                                </div>
+                                <div id="time_slots_info" class="form-text"></div>
                                 {% if form.preferred_time.errors %}
                                     <div class="invalid-feedback d-block">
                                         {{ form.preferred_time.errors.0 }}
                                     </div>
                                 {% endif %}
-                                <div class="form-text">Время работы: 08:00 - 20:00</div>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.preferred_master.id_for_label }}" class="form-label">
+                                    {{ form.preferred_master.label }}
+                                </label>
+                                {{ form.preferred_master }}
+                                {% if form.preferred_master.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.preferred_master.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Если мастер не выбран, он будет назначен менеджером при обработке заказа с учётом графика работы и загруженности.
+                                </div>
                             </div>
                             
                             <div class="col-12 mb-3">
@@ -294,7 +316,9 @@
             
             <div class="alert alert-info mt-4">
                 <i class="fas fa-info-circle me-2"></i>
-                <strong>Обратите внимание:</strong>
+                <strong>Умная система записи:</strong>
+                Выберите дату, и система автоматически покажет только свободные временные слоты с учетом графиков работы мастеров и их загруженности.
+                Если выберете конкретного мастера, будут показаны только те часы, когда он свободен.
                 После отправки заказа с вами свяжутся в течение рабочего дня для подтверждения времени и уточнения деталей.
                 Поля, отмеченные звездочкой (*), являются обязательными для заполнения.
             </div>
@@ -371,6 +395,184 @@ document.addEventListener('DOMContentLoaded', function() {
         // Инициализируем, если уже выбран автомобиль
         if (savedCarSelect.value) {
             savedCarSelect.dispatchEvent(new Event('change'));
+        }
+    }
+    
+    // === ФУНКЦИОНАЛ ДИНАМИЧЕСКИХ ВРЕМЕННЫХ СЛОТОВ ===
+    const dateField = document.getElementById('{{ form.preferred_date.id_for_label }}');
+    const timeSlotSelect = document.getElementById('time_slot_select');
+    const masterField = document.getElementById('{{ form.preferred_master.id_for_label }}');
+    const timeLoading = document.getElementById('time_loading');
+    const timeSlotsInfo = document.getElementById('time_slots_info');
+    
+    function updateTimeSlots() {
+        const date = dateField.value;
+        const selectedMasterId = masterField.value;
+        const currentSelectedTime = timeSlotSelect.value; // Сохраняем текущий выбор времени
+        
+        if (!date) {
+            timeSlotSelect.innerHTML = '<option value="">Сначала выберите дату</option>';
+            timeSlotSelect.disabled = true;
+            timeSlotsInfo.innerHTML = '';
+            return;
+        }
+        
+        // Показываем индикатор загрузки
+        timeLoading.style.display = 'block';
+        timeSlotSelect.disabled = true;
+        timeSlotSelect.innerHTML = '<option value="">Загружаем доступное время...</option>';
+        timeSlotsInfo.innerHTML = '';
+        
+        // Формируем URL с параметрами
+        let url = `{% url 'core:get_available_time_slots' autoservice.id %}?date=${date}`;
+        if (selectedMasterId) {
+            url += `&master_id=${selectedMasterId}`;
+        }
+        
+        // Делаем запрос к API
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                timeLoading.style.display = 'none';
+                
+                if (data.error) {
+                    console.error('Ошибка:', data.error);
+                    timeSlotSelect.innerHTML = '<option value="">Ошибка загрузки времени</option>';
+                    timeSlotsInfo.innerHTML = '<span class="text-danger">Ошибка при загрузке доступного времени</span>';
+                    return;
+                }
+                
+                // Обновляем список времени
+                let options = '<option value="">Выберите удобное время</option>';
+                let currentTimeAvailable = false; // Флаг для проверки доступности текущего времени
+                
+                if (data.available_slots.length === 0) {
+                    options = '<option value="">На эту дату нет свободного времени</option>';
+                    timeSlotsInfo.innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>На выбранную дату все мастера заняты. Попробуйте выбрать другую дату.</span>';
+                } else {
+                    data.available_slots.forEach(slot => {
+                        let slotText = slot.time;
+                        
+                        // Проверяем, совпадает ли этот слот с ранее выбранным временем
+                        if (currentSelectedTime === slot.time) {
+                            currentTimeAvailable = true;
+                        }
+                        
+                        if (selectedMasterId) {
+                            // Если выбран конкретный мастер
+                            slotText += ` - ${slot.available_masters_count > 0 ? 'Доступно' : 'Занято'}`;
+                        } else {
+                            // Показываем количество доступных мастеров
+                            if (slot.available_masters_count > 0) {
+                                slotText += ` (${slot.available_masters_count} мастер${slot.available_masters_count > 1 ? 'а' : ''})`;
+                                
+                                // Добавляем имена первых мастеров
+                                if (slot.available_masters.length > 0) {
+                                    const masterNames = slot.available_masters.map(m => m.name).join(', ');
+                                    slotText += ` - ${masterNames}${slot.available_masters_count > 3 ? ' и др.' : ''}`;
+                                }
+                            }
+                        }
+                        
+                        options += `<option value="${slot.time}">${slotText}</option>`;
+                    });
+                    
+                    if (selectedMasterId) {
+                        timeSlotsInfo.innerHTML = '<span class="text-info"><i class="fas fa-info-circle me-1"></i>Показано время, когда выбранный мастер свободен</span>';
+                    } else {
+                        timeSlotsInfo.innerHTML = `<span class="text-info"><i class="fas fa-info-circle me-1"></i>Найдено ${data.available_slots.length} свободных временных слотов из ${data.total_masters} мастеров</span>`;
+                    }
+                }
+                
+                timeSlotSelect.innerHTML = options;
+                timeSlotSelect.disabled = false;
+                
+                // Восстанавливаем выбранное время, если оно все еще доступно
+                if (currentSelectedTime && currentTimeAvailable) {
+                    timeSlotSelect.value = currentSelectedTime;
+                    console.log('Сохранен выбор времени:', currentSelectedTime);
+                } else if (currentSelectedTime && !currentTimeAvailable) {
+                    // Если ранее выбранное время больше недоступно, показываем предупреждение
+                    timeSlotsInfo.innerHTML += '<br><span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Ранее выбранное время (' + currentSelectedTime + ') недоступно для выбранного мастера</span>';
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при загрузке временных слотов:', error);
+                timeLoading.style.display = 'none';
+                timeSlotSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+                timeSlotsInfo.innerHTML = '<span class="text-danger">Ошибка при загрузке данных</span>';
+                timeSlotSelect.disabled = false;
+            });
+    }
+    
+    function updateMasterAvailability() {
+        const date = dateField.value;
+        const time = timeSlotSelect.value;
+        
+        if (!date || !time) {
+            return;
+        }
+        
+        // Показываем индикатор загрузки для мастеров
+        masterField.disabled = true;
+        const originalOptions = masterField.innerHTML;
+        masterField.innerHTML = '<option value="">Проверяем доступность мастеров...</option>';
+        
+        // Делаем запрос к API
+        fetch(`{% url 'core:check_masters_availability' autoservice.id %}?date=${date}&time=${time}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Ошибка:', data.error);
+                    masterField.innerHTML = originalOptions;
+                    masterField.disabled = false;
+                    return;
+                }
+                
+                // Обновляем список мастеров
+                let options = '<option value="">Мастер будет назначен менеджером автосервиса</option>';
+                
+                data.masters.forEach(master => {
+                    let optionText = master.name;
+                    let optionClass = '';
+                    
+                    if (master.is_available) {
+                        optionText += ` - ✓ Доступен`;
+                        if (master.schedule_info) {
+                            optionText += ` (${master.schedule_info})`;
+                        }
+                    } else {
+                        if (master.is_busy) {
+                            optionText += ` - ⚠️ ${master.busy_reason}`;
+                            optionClass = 'text-warning';
+                        } else if (master.unavailable_reason) {
+                            optionText += ` - ⚠️ ${master.unavailable_reason}`;
+                            optionClass = 'text-warning';
+                        }
+                    }
+                    
+                    options += `<option value="${master.id}" class="${optionClass}" ${!master.is_available ? 'disabled' : ''}>${optionText}</option>`;
+                });
+                
+                masterField.innerHTML = options;
+                masterField.disabled = false;
+            })
+            .catch(error => {
+                console.error('Ошибка при загрузке данных:', error);
+                masterField.innerHTML = originalOptions;
+                masterField.disabled = false;
+            });
+    }
+    
+    // Привязываем события
+    if (dateField && timeSlotSelect && masterField) {
+        dateField.addEventListener('change', updateTimeSlots);
+        masterField.addEventListener('change', updateTimeSlots); // Теперь просто обновляем временные слоты
+        timeSlotSelect.addEventListener('change', updateMasterAvailability);
+        
+        // Инициализируем при загрузке страницы, если дата уже выбрана
+        if (dateField.value) {
+            updateTimeSlots();
         }
     }
 });

@@ -561,6 +561,18 @@ class OrderCreateForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select form-select-lg'}),
         label="Сохраненный автомобиль"
     )
+    
+    # Поле для выбора мастера
+    preferred_master = forms.ModelChoiceField(
+        queryset=User.objects.none(),
+        required=False,
+        empty_label="Мастер будет назначен менеджером автосервиса",
+        widget=forms.Select(attrs={
+            'class': 'form-select form-select-lg',
+            'id': 'preferred_master_select'
+        }),
+        label="Предпочитаемый мастер (необязательно)"
+    )
 
     class Meta:
         model = Order
@@ -573,6 +585,7 @@ class OrderCreateForm(forms.ModelForm):
             "description",
             "preferred_date",
             "preferred_time",
+            "preferred_master",
         ]
         widgets = {
             "car_brand": forms.TextInput(
@@ -632,11 +645,13 @@ class OrderCreateForm(forms.ModelForm):
             "description": "Описание проблемы",
             "preferred_date": "Предпочтительная дата *",
             "preferred_time": "Удобное время *",
+            "preferred_master": "Предпочитаемый мастер",
         }
 
     def __init__(self, *args, **kwargs):
         self.service = kwargs.pop("service", None)
         self.user = kwargs.pop("user", None)
+        self.autoservice = kwargs.pop("autoservice", None)
         super().__init__(*args, **kwargs)
 
         # Устанавливаем минимальную дату на завтра
@@ -649,6 +664,18 @@ class OrderCreateForm(forms.ModelForm):
 
         # Устанавливаем начальные значения
         self.fields["preferred_time"].initial = "10:00"
+        
+        # Настраиваем queryset для доступных мастеров
+        if self.autoservice:
+            from users.models import User
+            available_masters = User.objects.filter(
+                autoservice=self.autoservice,
+                role='master',
+                is_active=True
+            ).order_by('last_name', 'first_name', 'username')
+            self.fields["preferred_master"].queryset = available_masters
+            # Переопределяем отображение мастеров в выпадающем списке
+            self.fields["preferred_master"].label_from_instance = lambda obj: obj.get_full_name()
         
         # Настраиваем queryset для сохраненных автомобилей пользователя
         if self.user and self.user.is_authenticated:
@@ -716,11 +743,11 @@ class WorkScheduleForm(forms.ModelForm):
                  'custom_days', 'start_time', 'end_time', 'is_active']
         widgets = {
             'master': forms.Select(attrs={
-                'class': 'form-control',
+                'class': 'form-select',
                 'required': True
             }),
             'schedule_type': forms.Select(attrs={
-                'class': 'form-control',
+                'class': 'form-select',
                 'required': True
             }),
             'start_date': forms.DateInput(attrs={
@@ -773,6 +800,9 @@ class WorkScheduleForm(forms.ModelForm):
                 role='master',
                 autoservice=self.autoservice
             )
+        
+        # Переопределяем отображение мастеров в выпадающем списке
+        self.fields['master'].label_from_instance = lambda obj: obj.get_full_name()
         
         # Устанавливаем начальные значения
         self.fields['start_time'].initial = '09:00'

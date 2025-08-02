@@ -139,6 +139,14 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email  # Или self.username
+    
+    def get_full_name(self):
+        """Возвращает полное имя пользователя"""
+        full_name = f"{self.first_name} {self.last_name}".strip()
+        if full_name:
+            return full_name
+        # Если имя и фамилия не указаны, возвращаем никнейм
+        return self.username or self.email
 
     def get_absolute_url(self):
         """Возвращает URL профиля пользователя"""

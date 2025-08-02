@@ -10,6 +10,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from datetime import timedelta
+import json
 from .models import Region, AutoService, Service, Order, Car, Notification, WorkSchedule, get_master_schedule_for_date, is_master_working_at_datetime
 from .forms import (
     AutoServiceEditForm,
@@ -1066,7 +1067,7 @@ def order_create(request, autoservice_id, service_id):
     service = get_object_or_404(Service, id=service_id, autoservice=autoservice)
 
     if request.method == "POST":
-        form = OrderCreateForm(request.POST, service=service, user=request.user)
+        form = OrderCreateForm(request.POST, service=service, user=request.user, autoservice=autoservice)
         if form.is_valid():
             order = form.save()
             
@@ -1099,7 +1100,7 @@ def order_create(request, autoservice_id, service_id):
             
             return redirect("core:order_success", order_id=order.id)
     else:
-        form = OrderCreateForm(service=service, user=request.user)
+        form = OrderCreateForm(service=service, user=request.user, autoservice=autoservice)
 
     context = {
         "form": form,
@@ -1122,6 +1123,191 @@ def order_success(request, order_id):
     }
 
     return render(request, "core/order_success.html", context)
+
+
+@require_http_methods(["GET"])
+def check_masters_availability(request, autoservice_id):
+    """API для проверки доступности мастеров на определенную дату и время"""
+    try:
+        autoservice = get_object_or_404(AutoService, id=autoservice_id)
+        date_str = request.GET.get('date')
+        time_str = request.GET.get('time')
+        
+        if not date_str or time_str is None:
+            return JsonResponse({'error': 'Необходимо указать дату и время'}, status=400)
+        
+        from datetime import datetime, date, time
+        try:
+            check_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            check_time = datetime.strptime(time_str, '%H:%M').time()
+            check_datetime = datetime.combine(check_date, check_time)
+        except ValueError:
+            return JsonResponse({'error': 'Неверный формат даты или времени'}, status=400)
+        
+        # Получаем всех мастеров автосервиса
+        masters = User.objects.filter(
+            autoservice=autoservice,
+            role='master',
+            is_active=True
+        ).order_by('last_name', 'first_name', 'username')
+        
+        masters_info = []
+        for master in masters:
+            is_working = is_master_working_at_datetime(master, check_datetime)
+            schedule = get_master_schedule_for_date(master, check_date)
+            
+            # Проверяем занятость мастера другими заказами
+            conflicting_orders = Order.objects.filter(
+                assigned_master=master,
+                preferred_date=check_date,
+                status__in=['confirmed', 'in_progress']
+            )
+            
+            is_busy = False
+            busy_reason = ""
+            
+            for order in conflicting_orders:
+                order_duration = order.estimated_duration or 60
+                order_start = datetime.combine(order.preferred_date, order.preferred_time)
+                order_end = order_start + timedelta(minutes=order_duration)
+                
+                # Проверяем пересечение времени (примерная длительность заказа 60 минут)
+                check_end = check_datetime + timedelta(minutes=60)
+                if (check_datetime < order_end and check_end > order_start):
+                    is_busy = True
+                    busy_reason = f"Занят заказом №{order.id} ({order.preferred_time.strftime('%H:%M')}-{order_end.strftime('%H:%M')})"
+                    break
+            
+            master_info = {
+                'id': master.id,
+                'name': master.get_full_name() or master.username,
+                'is_available': is_working and not is_busy,
+                'is_working': is_working,
+                'is_busy': is_busy,
+                'busy_reason': busy_reason,
+                'schedule_info': None,
+                'unavailable_reason': None
+            }
+            
+            if not is_working and schedule:
+                if not schedule.is_working_day(check_date):
+                    master_info['unavailable_reason'] = 'Не рабочий день'
+                else:
+                    master_info['unavailable_reason'] = f'Время работы: {schedule.start_time.strftime("%H:%M")}-{schedule.end_time.strftime("%H:%M")}'
+            elif not schedule:
+                master_info['unavailable_reason'] = 'Нет активного графика'
+            elif is_working and schedule:
+                master_info['schedule_info'] = f'{schedule.start_time.strftime("%H:%M")}-{schedule.end_time.strftime("%H:%M")}'
+            
+            masters_info.append(master_info)
+        
+        return JsonResponse({
+            'masters': masters_info,
+            'date': date_str,
+            'time': time_str
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_available_time_slots(request, autoservice_id):
+    """API для получения доступных временных слотов на определенную дату"""
+    try:
+        autoservice = get_object_or_404(AutoService, id=autoservice_id)
+        date_str = request.GET.get('date')
+        preferred_master_id = request.GET.get('master_id')  # Опционально
+        
+        if not date_str:
+            return JsonResponse({'error': 'Необходимо указать дату'}, status=400)
+        
+        from datetime import datetime, date, time, timedelta
+        try:
+            check_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return JsonResponse({'error': 'Неверный формат даты'}, status=400)
+        
+        # Определяем мастеров для проверки
+        if preferred_master_id:
+            # Если выбран конкретный мастер
+            masters = User.objects.filter(
+                id=preferred_master_id,
+                autoservice=autoservice,
+                role='master',
+                is_active=True
+            )
+        else:
+            # Все мастера автосервиса
+            masters = User.objects.filter(
+                autoservice=autoservice,
+                role='master',
+                is_active=True
+            )
+        
+        # Генерируем временные слоты с 8:00 до 20:00 с интервалом 30 минут
+        available_slots = []
+        current_time = time(8, 0)  # Начинаем с 8:00
+        end_time = time(20, 0)     # Заканчиваем в 20:00
+        
+        while current_time < end_time:
+            slot_datetime = datetime.combine(check_date, current_time)
+            slot_available = False
+            available_masters = []
+            
+            # Проверяем каждого мастера для этого слота
+            for master in masters:
+                # Проверяем график работы мастера
+                if not is_master_working_at_datetime(master, slot_datetime):
+                    continue
+                
+                # Проверяем занятость заказами
+                is_busy = False
+                conflicting_orders = Order.objects.filter(
+                    assigned_master=master,
+                    preferred_date=check_date,
+                    status__in=['confirmed', 'in_progress']
+                )
+                
+                for order in conflicting_orders:
+                    order_duration = order.estimated_duration or 60
+                    order_start = datetime.combine(order.preferred_date, order.preferred_time)
+                    order_end = order_start + timedelta(minutes=order_duration)
+                    
+                    # Проверяем пересечение (предполагаем длительность нового заказа 60 минут)
+                    slot_end = slot_datetime + timedelta(minutes=60)
+                    if (slot_datetime < order_end and slot_end > order_start):
+                        is_busy = True
+                        break
+                
+                if not is_busy:
+                    slot_available = True
+                    available_masters.append({
+                        'id': master.id,
+                        'name': master.get_full_name() or master.username
+                    })
+            
+            if slot_available:
+                available_slots.append({
+                    'time': current_time.strftime('%H:%M'),
+                    'available_masters_count': len(available_masters),
+                    'available_masters': available_masters[:3] if not preferred_master_id else available_masters  # Показываем до 3 мастеров
+                })
+            
+            # Переходим к следующему слоту (прибавляем 30 минут)
+            current_datetime = datetime.combine(date.today(), current_time)
+            next_datetime = current_datetime + timedelta(minutes=30)
+            current_time = next_datetime.time()
+        
+        return JsonResponse({
+            'date': date_str,
+            'available_slots': available_slots,
+            'preferred_master_id': preferred_master_id,
+            'total_masters': masters.count()
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 # =============================================================================
