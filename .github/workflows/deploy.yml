@@ -30,23 +30,38 @@ jobs:
             # Переходим в директорию проекта
             cd /home/koddex/Diploma
 
+            # Показываем текущий статус (для диагностики)
+            echo "=== Статус перед обновлением ==="
+            git status
+            git log --oneline -1
+
             # Останавливаем службу приложения
             echo "${{ secrets.PASSWORD }}" | sudo -S systemctl stop diploma
 
-            # Обновляем код из репозитория (без sudo)
-            git pull
+            # ПРИНУДИТЕЛЬНО обновляем код (это решит проблему с локальными изменениями)
+            git fetch origin
+            git reset --hard origin/main
+            git clean -fd
 
-            # Если у вас Poetry
+            # Показываем новый статус (для диагностики)
+            echo "=== Статус после обновления ==="
+            git log --oneline -1
+
+            # Обновляем зависимости
             /home/koddex/.local/bin/poetry install --no-root
 
-            # Применяем миграции (если нужно)
+            # Применяем миграции
             /home/koddex/.local/bin/poetry run python manage.py migrate
 
             # Создаем файл .env из секрета
             echo "${{ secrets.ENV_FILE }}" > .env
 
-            # Собираем статические файлы (если нужно)
+            # Собираем статические файлы
             #/home/koddex/.local/bin/poetry run python manage.py collectstatic --noinput
 
             # Перезапускаем systemd сервис
             echo "${{ secrets.PASSWORD }}" | sudo -S systemctl start diploma
+            
+            # Проверяем статус сервиса
+            sleep 3
+            echo "${{ secrets.PASSWORD }}" | sudo -S systemctl status diploma
