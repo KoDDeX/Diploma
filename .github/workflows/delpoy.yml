@@ -34,7 +34,7 @@ jobs:
             echo "${{ secrets.PASSWORD }}" | sudo -S systemctl stop diploma
 
             # Обновляем код из репозитория (с sudo и передачей пароля)
-            echo "${{ secrets.PASSWORD }}" | git pull
+            git pull
 
             # Если у вас PIP
             # Активируем виртуальное окружение
