@@ -30,26 +30,23 @@ jobs:
             # Переходим в директорию проекта
             cd /home/koddex/Diploma
 
-            # Останавливаем службу приложения  (с sudo и передачей пароля)
+            # Останавливаем службу приложения
             echo "${{ secrets.PASSWORD }}" | sudo -S systemctl stop diploma
 
-            # Обновляем код из репозитория (с sudo и передачей пароля)
+            # Обновляем код из репозитория (без sudo)
             git pull
-
-            # Если у вас PIP
-            # Активируем виртуальное окружение
-            # source venv/bin/activate
-
-            # Обновляем зависимости
-            # pip install -r requirements.txt
 
             # Если у вас Poetry
             /home/koddex/.local/bin/poetry install --no-root
 
-   # Тут можно добавить команду для создания миграций
+            # Применяем миграции (если нужно)
+            /home/koddex/.local/bin/poetry run python manage.py migrate
 
-            # Создаем файл .env из секрета где записано все его содержимое
+            # Создаем файл .env из секрета
             echo "${{ secrets.ENV_FILE }}" > .env
 
-            # Перезапускаем systemd сервис (с sudo и передачей пароля)
+            # Собираем статические файлы (если нужно)
+            /home/koddex/.local/bin/poetry run python manage.py collectstatic --noinput
+
+            # Перезапускаем systemd сервис
             echo "${{ secrets.PASSWORD }}" | sudo -S systemctl start diploma
