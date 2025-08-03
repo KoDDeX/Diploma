@@ -29,7 +29,21 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '77.233.222.149',  # Ваш IP сервера
+    '24autoservice.ru'  # Если есть домен
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost',
+    'http://127.0.0.1',
+    'http://77.233.222.149',
+    'https://77.233.222.149',
+    'http://24autoservice.ru',
+    'https://24autoservice.ru'
+]
 
 
 # Application definition
