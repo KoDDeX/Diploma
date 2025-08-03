@@ -79,6 +79,17 @@
                             Отменить заказ
                         </button>
                     {% endif %}
+                    {% if order.status == 'completed' and not order.review_left %}
+                        <a href="{% url 'core:order_review_create' order.id %}" class="btn btn-success">
+                            <i class="fas fa-star me-1"></i>
+                            Оставить отзыв
+                        </a>
+                    {% elif order.status == 'completed' and order.review_left %}
+                        <span class="btn btn-outline-success disabled">
+                            <i class="fas fa-check me-1"></i>
+                            Отзыв оставлен
+                        </span>
+                    {% endif %}
                 </div>
             </div>
 

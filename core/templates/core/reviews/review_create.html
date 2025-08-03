@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock title %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Заголовок -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="text-primary mb-2">
+                        <i class="bi bi-star me-2"></i>
+                        {{ title }}
+                    </h1>
+                    {% if autoservice %}
+                        <p class="text-muted mb-0">
+                            <i class="bi bi-building me-1"></i>
+                            {{ autoservice.name }}
+                        </p>
+                    {% elif master %}
+                        <p class="text-muted mb-0">
+                            <i class="bi bi-person me-1"></i>
+                            {{ master.get_full_name }}
+                        </p>
+                    {% elif service %}
+                        <p class="text-muted mb-0">
+                            <i class="bi bi-tools me-1"></i>
+                            {{ service.name }}
+                        </p>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if order %}
+                        <a href="{% url 'core:user_order_detail' order.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Назад к заказу
+                        </a>
+                    {% elif autoservice %}
+                        <a href="{% url 'core:autoservice_reviews_list' autoservice.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Назад к отзывам
+                        </a>
+                    {% elif master %}
+                        <a href="{% url 'core:master_reviews_list' master.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Назад к отзывам
+                        </a>
+                    {% elif service %}
+                        <a href="{% url 'core:service_reviews_list' service.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Назад к отзывам
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Информация о заказе (если отзыв создается по заказу) -->
+            {% if order %}
+            <div class="card border-info mb-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-clipboard-check me-2"></i>
+                        Информация о заказе №{{ order.id }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <strong>Автосервис:</strong> {{ order.autoservice.name }}
+                            </p>
+                            <p class="mb-2">
+                                <strong>Услуга:</strong> {{ order.service.name }}
+                            </p>
+                            <p class="mb-2">
+                                <strong>Автомобиль:</strong> {{ order.get_car_info }}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            {% if order.assigned_master %}
+                                <p class="mb-2">
+                                    <strong>Мастер:</strong> {{ order.assigned_master.get_full_name|default:order.assigned_master.username }}
+                                </p>
+                            {% endif %}
+                            <p class="mb-2">
+                                <strong>Дата выполнения:</strong> {{ order.completed_at|date:"d.m.Y H:i"|default:"Не указана" }}
+                            </p>
+                            <p class="mb-0">
+                                <strong>Стоимость:</strong> {{ order.service.price|floatformat:0 }} ₽
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Форма отзыва -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-pencil me-2"></i>
+                        Поделитесь своим опытом
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Оценка -->
+                        <div class="mb-4">
+                            <label for="{{ form.rating.id_for_label }}" class="form-label">
+                                {{ form.rating.label }}
+                            </label>
+                            <div class="rating-input mt-2">
+                                <div class="star-rating-input" data-rating="0">
+                                    {% for i in "12345" %}
+                                        <i class="bi bi-star star-icon" data-rating="{{ forloop.counter }}"></i>
+                                    {% endfor %}
+                                </div>
+                                {{ form.rating }}
+                                <div class="rating-text mt-2 text-muted"></div>
+                            </div>
+                            {% if form.rating.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.rating.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Текст отзыва -->
+                        <div class="mb-4">
+                            <label for="{{ form.text.id_for_label }}" class="form-label">
+                                {{ form.text.label }}
+                            </label>
+                            {{ form.text }}
+                            {% if form.text.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.text.errors.0 }}
+                                </div>
+                            {% endif %}
+                            {% if form.text.help_text %}
+                                <div class="form-text">{{ form.text.help_text }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Плюсы и минусы -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.pros.id_for_label }}" class="form-label">
+                                    <i class="bi bi-plus-circle text-success me-1"></i>
+                                    {{ form.pros.label }}
+                                </label>
+                                {{ form.pros }}
+                                {% if form.pros.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.pros.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.cons.id_for_label }}" class="form-label">
+                                    <i class="bi bi-dash-circle text-danger me-1"></i>
+                                    {{ form.cons.label }}
+                                </label>
+                                {{ form.cons }}
+                                {% if form.cons.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.cons.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Общие ошибки формы -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger mb-4">
+                                {% for error in form.non_field_errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Кнопки -->
+                        <div class="d-flex justify-content-between">
+                            {% if autoservice %}
+                                <a href="{% url 'core:autoservice_reviews_list' autoservice.id %}" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Отмена
+                                </a>
+                            {% elif master %}
+                                <a href="{% url 'core:master_reviews_list' master.id %}" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Отмена
+                                </a>
+                            {% elif service %}
+                                <a href="{% url 'core:service_reviews_list' service.id %}" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Отмена
+                                </a>
+                            {% endif %}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i>Опубликовать отзыв
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Информация о модерации -->
+            <div class="alert alert-info mt-4">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Важно:</strong>
+                Ваш отзыв будет опубликован после проверки модератором. 
+                Пожалуйста, будьте корректны и конструктивны в своих комментариях.
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Стили для интерактивных звездочек */
+.star-rating-input {
+    font-size: 2rem;
+    color: #dee2e6;
+    cursor: pointer;
+    user-select: none;
+}
+
+.star-rating-input .star-icon {
+    transition: all 0.2s ease;
+    margin-right: 0.25rem;
+}
+
+.star-rating-input .star-icon:hover {
+    transform: scale(1.1);
+}
+
+.star-rating-input .star-icon.active {
+    color: #ffc107;
+}
+
+.star-rating-input .star-icon.hover {
+    color: #ffcd39;
+}
+
+/* Скрываем стандартный select */
+#id_rating {
+    display: none;
+}
+
+.rating-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const starContainer = document.querySelector('.star-rating-input');
+    const stars = starContainer.querySelectorAll('.star-icon');
+    const ratingInput = document.getElementById('id_rating');
+    const ratingText = document.querySelector('.rating-text');
+    
+    const ratingTexts = {
+        0: 'Выберите оценку',
+        1: '1 звезда - Очень плохо',
+        2: '2 звезды - Плохо', 
+        3: '3 звезды - Нормально',
+        4: '4 звезды - Хорошо',
+        5: '5 звезд - Отлично'
+    };
+    
+    let currentRating = 0;
+    
+    // Инициализация
+    ratingText.textContent = ratingTexts[0];
+    ratingText.className = 'rating-text mt-2 text-muted';
+    
+    // Функция обновления звездочек
+    function updateStars(rating, isHover = false) {
+        stars.forEach((star, index) => {
+            const starRating = index + 1;
+            star.classList.remove('active', 'hover');
+            
+            if (starRating <= rating) {
+                if (isHover) {
+                    star.classList.add('hover');
+                } else {
+                    star.classList.add('active');
+                }
+            }
+        });
+    }
+    
+    // Функция обновления текста
+    function updateRatingText(rating) {
+        ratingText.textContent = ratingTexts[rating];
+        
+        // Меняем цвет текста в зависимости от оценки
+        ratingText.className = 'rating-text mt-2';
+        if (rating === 0) {
+            ratingText.classList.add('text-muted');
+        } else if (rating <= 2) {
+            ratingText.classList.add('text-danger');
+        } else if (rating === 3) {
+            ratingText.classList.add('text-warning');
+        } else {
+            ratingText.classList.add('text-success');
+        }
+    }
+    
+    // Обработчики событий для каждой звездочки
+    stars.forEach((star, index) => {
+        const starRating = index + 1;
+        
+        // Наведение мыши
+        star.addEventListener('mouseenter', function() {
+            updateStars(starRating, true);
+            updateRatingText(starRating);
+        });
+        
+        // Клик
+        star.addEventListener('click', function() {
+            currentRating = starRating;
+            ratingInput.value = starRating;
+            updateStars(starRating);
+            updateRatingText(starRating);
+            
+            // Добавляем небольшую анимацию
+            starContainer.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                starContainer.style.transform = 'scale(1)';
+            }, 150);
+        });
+    });
+    
+    // Когда мышь покидает контейнер звездочек
+    starContainer.addEventListener('mouseleave', function() {
+        updateStars(currentRating);
+        updateRatingText(currentRating);
+    });
+    
+    // Если есть предварительно выбранное значение
+    if (ratingInput.value) {
+        currentRating = parseInt(ratingInput.value);
+        updateStars(currentRating);
+        updateRatingText(currentRating);
+    }
+});
+</script>
+{% endblock content %}

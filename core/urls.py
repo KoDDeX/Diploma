@@ -56,6 +56,20 @@ from .views import (
     notification_delete,
     notification_get_count,
     notification_get_recent,
+    # Система отзывов
+    autoservice_reviews_list,
+    autoservice_review_create,
+    master_reviews_list,
+    master_review_create,
+    service_reviews_list,
+    service_review_create,
+    review_reply_create,
+    # Модерация отзывов для суперадминистратора
+    reviews_moderation,
+    review_approve,
+    review_reject,
+    # Отзыв по заказу
+    order_review_create,
 )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -291,6 +305,64 @@ urlpatterns = [
         "api/autoservice/<int:autoservice_id>/available-time-slots/",
         get_available_time_slots,
         name="get_available_time_slots",
+    ),
+    # Система отзывов
+    path(
+        "autoservice/<int:autoservice_id>/reviews/",
+        autoservice_reviews_list,
+        name="autoservice_reviews_list",
+    ),
+    path(
+        "autoservice/<int:autoservice_id>/review/create/",
+        autoservice_review_create,
+        name="autoservice_review_create",
+    ),
+    path(
+        "master/<int:master_id>/reviews/",
+        master_reviews_list,
+        name="master_reviews_list",
+    ),
+    path(
+        "master/<int:master_id>/review/create/",
+        master_review_create,
+        name="master_review_create",
+    ),
+    path(
+        "service/<int:service_id>/reviews/",
+        service_reviews_list,
+        name="service_reviews_list",
+    ),
+    path(
+        "service/<int:service_id>/review/create/",
+        service_review_create,
+        name="service_review_create",
+    ),
+    path(
+        "review/<int:review_id>/reply/",
+        review_reply_create,
+        name="review_reply_create",
+    ),
+    # Модерация отзывов для суперадминистратора
+    path(
+        "admin-panel/reviews-moderation/",
+        reviews_moderation,
+        name="reviews_moderation",
+    ),
+    path(
+        "admin-panel/review-approve/<int:review_id>/",
+        review_approve,
+        name="review_approve",
+    ),
+    path(
+        "admin-panel/review-reject/<int:review_id>/",
+        review_reject,
+        name="review_reject",
+    ),
+    # Отзыв по заказу
+    path(
+        "order/<int:order_id>/review/create/",
+        order_review_create,
+        name="order_review_create",
     ),
 ]
 

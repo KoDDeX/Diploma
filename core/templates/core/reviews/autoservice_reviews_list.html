@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Отзывы о {{ autoservice.name }}{% endblock title %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Заголовок -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="text-primary mb-2">
+                        <i class="bi bi-star me-2"></i>
+                        Отзывы о {{ autoservice.name }}
+                    </h1>
+                    <p class="text-muted mb-0">
+                        <i class="bi bi-building me-1"></i>
+                        {{ autoservice.address }}
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'core:autoservice_detail' autoservice.slug %}" class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-arrow-left me-1"></i>К автосервису
+                    </a>
+                    {% if can_leave_review %}
+                        <a href="{% url 'core:autoservice_review_create' autoservice.id %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-1"></i>Оставить отзыв
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Статистика отзывов -->
+            {% if rating_stats.total > 0 %}
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-3 text-center">
+                                <div class="display-4 text-primary mb-2">{{ rating_stats.average }}</div>
+                                <div class="text-warning mb-2">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= rating_stats.average %}
+                                            <i class="bi bi-star-fill"></i>
+                                        {% else %}
+                                            <i class="bi bi-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <small class="text-muted">На основе {{ rating_stats.total }} отзыв{{ rating_stats.total|pluralize:"а,ов" }}</small>
+                            </div>
+                            <div class="col-md-9">
+                                <div class="rating-breakdown">
+                                    {% for rating, data in rating_stats.breakdown.items %}
+                                        <div class="d-flex align-items-center mb-1">
+                                            <span class="me-2">{{ rating }} <i class="bi bi-star-fill text-warning"></i></span>
+                                            <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                                <div class="progress-bar bg-warning" 
+                                                     style="width: {{ data.percentage }}%"></div>
+                                            </div>
+                                            <small class="text-muted">{{ data.count }}</small>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Список отзывов -->
+            {% if reviews %}
+                <div class="reviews-list">
+                    {% for review in reviews %}
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <!-- Заголовок отзыва -->
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h5 class="card-title mb-1">{{ review.title }}</h5>
+                                        <div class="text-warning mb-2">
+                                            {% for i in "12345" %}
+                                                {% if forloop.counter <= review.rating %}
+                                                    <i class="bi bi-star-fill"></i>
+                                                {% else %}
+                                                    <i class="bi bi-star"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">{{ review.created_at|date:"d.m.Y H:i" }}</small>
+                                </div>
+
+                                <!-- Автор отзыва -->
+                                <div class="mb-3">
+                                    {% if review.is_anonymous %}
+                                        <strong>Анонимный пользователь</strong>
+                                    {% else %}
+                                        <strong>{{ review.author.get_full_name }}</strong>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Текст отзыва -->
+                                <div class="mb-3">
+                                    <p class="card-text">{{ review.text|linebreaks }}</p>
+                                </div>
+
+                                <!-- Плюсы и минусы -->
+                                {% if review.pros or review.cons %}
+                                    <div class="row mb-3">
+                                        {% if review.pros %}
+                                            <div class="col-md-6">
+                                                <div class="border rounded p-3 bg-light">
+                                                    <h6 class="text-success mb-2">
+                                                        <i class="bi bi-plus-circle me-1"></i>Плюсы
+                                                    </h6>
+                                                    <p class="small mb-0">{{ review.pros|linebreaks }}</p>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        {% if review.cons %}
+                                            <div class="col-md-6">
+                                                <div class="border rounded p-3 bg-light">
+                                                    <h6 class="text-danger mb-2">
+                                                        <i class="bi bi-dash-circle me-1"></i>Минусы
+                                                    </h6>
+                                                    <p class="small mb-0">{{ review.cons|linebreaks }}</p>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+
+                                <!-- Ответ на отзыв -->
+                                {% if review.reply %}
+                                    <div class="border-start border-primary border-3 ps-3 mt-3">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="text-primary mb-0">
+                                                <i class="bi bi-reply me-1"></i>Ответ от {{ autoservice.name }}
+                                            </h6>
+                                            <small class="text-muted">{{ review.reply.created_at|date:"d.m.Y H:i" }}</small>
+                                        </div>
+                                        <p class="mb-0">{{ review.reply.text|linebreaks }}</p>
+                                    </div>
+                                {% elif user.role in "autoservice_admin,manager"|split:"," and user.autoservice == autoservice %}
+                                    <div class="mt-3">
+                                        <a href="{% url 'core:review_reply_create' review.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-reply me-1"></i>Ответить
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-star text-muted display-1 mb-3"></i>
+                        <h4 class="text-muted">Пока нет отзывов</h4>
+                        <p class="text-muted mb-4">Станьте первым, кто оставит отзыв об этом автосервисе!</p>
+                        {% if can_leave_review %}
+                            <a href="{% url 'core:autoservice_review_create' autoservice.id %}" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-1"></i>Оставить первый отзыв
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.rating-breakdown {
+    max-width: 400px;
+}
+
+.reviews-list .card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.reviews-list .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+}
+</style>
+{% endblock content %}

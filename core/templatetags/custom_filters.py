@@ -51,3 +51,51 @@ def split(value, delimiter):
     if not value:
         return []
     return value.split(delimiter)
+
+@register.filter
+def mul(value, arg):
+    """Умножает значение на аргумент"""
+    try:
+        return int(value) * int(arg)
+    except (ValueError, TypeError):
+        return 0
+
+@register.filter
+def custom_range(value):
+    """Создает диапазон от 1 до value включительно"""
+    try:
+        return range(1, int(value) + 1)
+    except (ValueError, TypeError):
+        return range(0)
+
+@register.filter
+def custom_range(value):
+    """Создает диапазон чисел от 1 до value"""
+    try:
+        return range(1, int(value) + 1)
+    except (ValueError, TypeError):
+        return range(0)
+
+@register.filter
+def custom_range(value):
+    """Создает диапазон чисел от 1 до value"""
+    try:
+        return range(1, int(value) + 1)
+    except (ValueError, TypeError):
+        return range(0)
+
+@register.filter
+def custom_range(value):
+    """Создает диапазон от 1 до value"""
+    try:
+        return range(1, int(value) + 1)
+    except (ValueError, TypeError):
+        return range(1, 6)  # По умолчанию для звёзд
+
+@register.filter
+def custom_range(value):
+    """Создаёт диапазон чисел от 1 до value"""
+    try:
+        return range(1, int(value) + 1)
+    except (ValueError, TypeError):
+        return range(0)

@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ответ на отзыв{% endblock title %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Заголовок -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="text-primary mb-2">
+                        <i class="bi bi-reply me-2"></i>
+                        Ответ на отзыв
+                    </h1>
+                    <p class="text-muted mb-0">
+                        Ответьте на отзыв от имени администрации
+                    </p>
+                </div>
+                <div>
+                    {% if review.autoservice %}
+                        <a href="{% url 'core:autoservice_reviews_list' review.autoservice.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Назад к отзывам
+                        </a>
+                    {% elif review.user and review.user.role == 'master' %}
+                        <a href="{% url 'core:master_reviews_list' review.user.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Назад к отзывам
+                        </a>
+                    {% elif review.service %}
+                        <a href="{% url 'core:service_reviews_list' review.service.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Назад к отзывам
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Оригинальный отзыв -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-chat-quote me-2"></i>
+                        Оригинальный отзыв
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Заголовок отзыва -->
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="card-title mb-1">{{ review.title }}</h5>
+                            <div class="d-flex align-items-center text-muted small">
+                                {% if review.is_anonymous %}
+                                    <i class="bi bi-incognito me-1"></i>
+                                    <span>Анонимный пользователь</span>
+                                {% else %}
+                                    <i class="bi bi-person me-1"></i>
+                                    <span>{{ review.reviewer.get_full_name }}</span>
+                                {% endif %}
+                                <span class="mx-2">•</span>
+                                <i class="bi bi-calendar me-1"></i>
+                                <span>{{ review.created_at|date:"d.m.Y H:i" }}</span>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <!-- Рейтинг -->
+                            <div class="star-rating mb-1">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= review.rating %}
+                                        <i class="bi bi-star-fill text-warning"></i>
+                                    {% else %}
+                                        <i class="bi bi-star text-muted"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <div class="small text-muted">{{ review.rating }}/5</div>
+                        </div>
+                    </div>
+
+                    <!-- Текст отзыва -->
+                    <p class="card-text">{{ review.text }}</p>
+
+                    <!-- Плюсы и минусы -->
+                    {% if review.pros or review.cons %}
+                        <div class="row mt-3">
+                            {% if review.pros %}
+                                <div class="col-md-6">
+                                    <div class="border-start border-success border-3 ps-3 mb-3">
+                                        <h6 class="text-success mb-2">
+                                            <i class="bi bi-plus-circle me-1"></i>Плюсы
+                                        </h6>
+                                        <p class="mb-0 small">{{ review.pros }}</p>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {% if review.cons %}
+                                <div class="col-md-6">
+                                    <div class="border-start border-danger border-3 ps-3 mb-3">
+                                        <h6 class="text-danger mb-2">
+                                            <i class="bi bi-dash-circle me-1"></i>Минусы
+                                        </h6>
+                                        <p class="mb-0 small">{{ review.cons }}</p>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Цель отзыва -->
+                    <div class="mt-3 p-3 bg-light rounded">
+                        <div class="small text-muted">
+                            <strong>Отзыв о:</strong>
+                            {% if review.autoservice %}
+                                <i class="bi bi-building me-1"></i>
+                                Автосервис "{{ review.autoservice.name }}"
+                            {% elif review.user %}
+                                <i class="bi bi-person me-1"></i>
+                                {% if review.user.role == 'master' %}
+                                    Мастер {{ review.user.get_full_name }}
+                                {% elif review.user.role == 'manager' %}
+                                    Менеджер {{ review.user.get_full_name }}
+                                {% elif review.user.role == 'admin' %}
+                                    Администратор {{ review.user.get_full_name }}
+                                {% else %}
+                                    Клиент {{ review.user.get_full_name }}
+                                {% endif %}
+                            {% elif review.service %}
+                                <i class="bi bi-tools me-1"></i>
+                                Услуга "{{ review.service.name }}"
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Форма ответа -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-pencil me-2"></i>
+                        Ваш ответ
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Текст ответа -->
+                        <div class="mb-4">
+                            <label for="{{ form.text.id_for_label }}" class="form-label">
+                                {{ form.text.label }}
+                            </label>
+                            {{ form.text }}
+                            {% if form.text.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.text.errors.0 }}
+                                </div>
+                            {% endif %}
+                            {% if form.text.help_text %}
+                                <div class="form-text">{{ form.text.help_text }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Общие ошибки формы -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger mb-4">
+                                {% for error in form.non_field_errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Кнопки -->
+                        <div class="d-flex justify-content-between">
+                            {% if review.autoservice %}
+                                <a href="{% url 'core:autoservice_reviews_list' review.autoservice.id %}" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Отмена
+                                </a>
+                            {% elif review.user and review.user.role == 'master' %}
+                                <a href="{% url 'core:master_reviews_list' review.user.id %}" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Отмена
+                                </a>
+                            {% elif review.service %}
+                                <a href="{% url 'core:service_reviews_list' review.service.id %}" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Отмена
+                                </a>
+                            {% endif %}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i>Опубликовать ответ
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Рекомендации по ответу -->
+            <div class="alert alert-info mt-4">
+                <i class="bi bi-lightbulb me-2"></i>
+                <strong>Рекомендации:</strong>
+                <ul class="mb-0 mt-2">
+                    <li>Будьте вежливы и профессиональны</li>
+                    <li>Поблагодарите клиента за обратную связь</li>
+                    <li>Если есть проблемы, предложите способы их решения</li>
+                    <li>При необходимости предложите личную встречу для обсуждения</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

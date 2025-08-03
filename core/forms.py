@@ -10,6 +10,8 @@ from .models import (
     Order,
     Car,
     WorkSchedule,
+    Review,
+    ReviewReply,
 )
 
 User = get_user_model()
@@ -844,3 +846,140 @@ class WorkScheduleForm(forms.ModelForm):
                 )
         
         return cleaned_data
+
+
+class ReviewForm(forms.ModelForm):
+    """Базовая форма для создания отзыва"""
+    
+    class Meta:
+        model = Review
+        fields = ['rating', 'text', 'pros', 'cons']
+        widgets = {
+            'rating': forms.Select(attrs={
+                'class': 'form-select form-select-lg',
+                'required': True
+            }),
+            'text': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 5,
+                'placeholder': 'Напишите подробный отзыв...',
+                'required': True
+            }),
+            'pros': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Что вам понравилось? (необязательно)'
+            }),
+            'cons': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Что можно улучшить? (необязательно)'
+            })
+        }
+        labels = {
+            'rating': 'Оценка *',
+            'text': 'Текст отзыва *',
+            'pros': 'Плюсы',
+            'cons': 'Минусы'
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Добавляем подсказки
+        self.fields['rating'].help_text = 'Выберите оценку от 1 до 5 звезд'
+        self.fields['text'].help_text = 'Поделитесь подробностями вашего опыта'
+
+
+class AutoServiceReviewForm(ReviewForm):
+    """Форма для отзыва об автосервисе"""
+    
+    def __init__(self, *args, **kwargs):
+        self.autoservice = kwargs.pop('autoservice', None)
+        super().__init__(*args, **kwargs)
+    
+    def save(self, commit=True):
+        review = super().save(commit=False)
+        review.review_type = 'autoservice'
+        review.autoservice = self.autoservice
+        # Обязательно устанавливаем другие поля в None для валидации
+        review.reviewed_user = None
+        review.service = None
+        
+        if commit:
+            review.save()
+        return review
+
+
+class MasterReviewForm(ReviewForm):
+    """Форма для отзыва о мастере"""
+    
+    def __init__(self, *args, **kwargs):
+        self.master = kwargs.pop('master', None)
+        super().__init__(*args, **kwargs)
+    
+    def save(self, commit=True):
+        review = super().save(commit=False)
+        review.review_type = 'master'
+        review.reviewed_user = self.master
+        # Обязательно устанавливаем другие поля в None для валидации
+        review.autoservice = None
+        review.service = None
+        
+        if commit:
+            review.save()
+        return review
+
+
+class ServiceReviewForm(ReviewForm):
+    """Форма для отзыва об услуге"""
+    
+    def __init__(self, *args, **kwargs):
+        self.service = kwargs.pop('service', None)
+        super().__init__(*args, **kwargs)
+    
+    def save(self, commit=True):
+        review = super().save(commit=False)
+        review.review_type = 'service'
+        review.service = self.service
+        # Обязательно устанавливаем другие поля в None для валидации
+        review.autoservice = None
+        review.reviewed_user = None
+        
+        if commit:
+            review.save()
+        return review
+
+
+class ReviewReplyForm(forms.ModelForm):
+    """Форма для ответа на отзыв"""
+    
+    class Meta:
+        model = ReviewReply
+        fields = ['text']
+        widgets = {
+            'text': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Напишите ответ на отзыв...',
+                'required': True
+            })
+        }
+        labels = {
+            'text': 'Ответ на отзыв *'
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.review = kwargs.pop('review', None)
+        super().__init__(*args, **kwargs)
+        self.fields['text'].help_text = 'Профессиональный ответ от имени автосервиса'
+    
+    def save(self, commit=True):
+        reply = super().save(commit=False)
+        reply.review = self.review
+        if commit:
+            reply.save()
+        return reply
+
+
+

@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Отзывы об услуге - {{ service.name }}{% endblock title %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Заголовок -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="text-primary mb-2">
+                <i class="bi bi-star me-2"></i>
+                Отзывы об услуге
+            </h1>
+            <p class="text-muted mb-1">
+                <i class="bi bi-tools me-1"></i>
+                {{ service.name }}
+            </p>
+            <p class="text-muted mb-0">
+                <small>
+                    <i class="bi bi-tag me-1"></i>
+                    {{ service.category.name }}
+                    {% if service.autoservice %}
+                        <span class="text-secondary"> • {{ service.autoservice.name }}</span>
+                    {% endif %}
+                </small>
+            </p>
+        </div>
+        <div>
+            <!-- Кнопка добавления отзыва -->
+            {% if user.is_authenticated %}
+                <a href="{% url 'core:service_review_create' service.id %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>Оставить отзыв
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Информация об услуге и статистика -->
+        <div class="col-lg-4 mb-4">
+            <!-- Информация об услуге -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Об услуге
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Цена:</strong>
+                        <span class="text-primary fs-5">{{ service.price|floatformat:0 }} ₽</span>
+                    </div>
+                    {% if service.description %}
+                        <div class="mb-3">
+                            <strong>Описание:</strong>
+                            <p class="mb-0 small text-muted">{{ service.description|truncatewords:20 }}</p>
+                        </div>
+                    {% endif %}
+                    <div class="mb-0">
+                        <strong>Продолжительность:</strong>
+                        <span class="badge bg-secondary">{{ service.duration }} мин</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Статистика отзывов -->
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up me-2"></i>
+                        Статистика оценок
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if reviews %}
+                        <!-- Общая оценка -->
+                        <div class="text-center mb-4">
+                            <div class="display-4 text-primary mb-2">{{ rating_stats.average|floatformat:1 }}</div>
+                            <div class="star-rating mb-2">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= rating_stats.average|floatformat:0 %}
+                                        <i class="bi bi-star-fill text-warning"></i>
+                                    {% else %}
+                                        <i class="bi bi-star text-muted"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <div class="text-muted">на основе {{ rating_stats.total }} отзыв{{ rating_stats.total|pluralize:"а,ов,ов" }}</div>
+                        </div>
+
+                        <!-- Распределение оценок -->
+                        <div class="rating-breakdown">
+                            {% for rating, data in rating_stats.breakdown.items %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="me-2" style="width: 60px;">
+                                        <small>{{ rating }} <i class="bi bi-star-fill text-warning"></i></small>
+                                    </div>
+                                    <div class="flex-grow-1 me-2">
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-warning" 
+                                                 style="width: {{ data.percentage }}%"></div>
+                                        </div>
+                                    </div>
+                                    <div style="width: 40px;">
+                                        <small class="text-muted">{{ data.count }}</small>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted">
+                            <i class="bi bi-star display-1 mb-3"></i>
+                            <p>Пока нет отзывов</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Список отзывов -->
+        <div class="col-lg-8">
+            {% if reviews %}
+                {% for review in reviews %}
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body">
+                            <!-- Заголовок отзыва -->
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5 class="card-title mb-1">{{ review.title }}</h5>
+                                    <div class="d-flex align-items-center text-muted small">
+                                        {% if review.is_anonymous %}
+                                            <i class="bi bi-incognito me-1"></i>
+                                            <span>Анонимный пользователь</span>
+                                        {% else %}
+                                            <i class="bi bi-person me-1"></i>
+                                            <span>{{ review.reviewer.get_full_name }}</span>
+                                        {% endif %}
+                                        <span class="mx-2">•</span>
+                                        <i class="bi bi-calendar me-1"></i>
+                                        <span>{{ review.created_at|date:"d.m.Y" }}</span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <!-- Рейтинг -->
+                                    <div class="star-rating mb-1">
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= review.rating %}
+                                                <i class="bi bi-star-fill text-warning"></i>
+                                            {% else %}
+                                                <i class="bi bi-star text-muted"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    <div class="small text-muted">{{ review.rating }}/5</div>
+                                </div>
+                            </div>
+
+                            <!-- Текст отзыва -->
+                            <p class="card-text">{{ review.text }}</p>
+
+                            <!-- Плюсы и минусы -->
+                            {% if review.pros or review.cons %}
+                                <div class="row mt-3">
+                                    {% if review.pros %}
+                                        <div class="col-md-6">
+                                            <div class="border-start border-success border-3 ps-3 mb-3">
+                                                <h6 class="text-success mb-2">
+                                                    <i class="bi bi-plus-circle me-1"></i>Плюсы
+                                                </h6>
+                                                <p class="mb-0 small">{{ review.pros }}</p>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if review.cons %}
+                                        <div class="col-md-6">
+                                            <div class="border-start border-danger border-3 ps-3 mb-3">
+                                                <h6 class="text-danger mb-2">
+                                                    <i class="bi bi-dash-circle me-1"></i>Минусы
+                                                </h6>
+                                                <p class="mb-0 small">{{ review.cons }}</p>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+
+                            <!-- Статус модерации -->
+                            {% if not review.is_approved %}
+                                <div class="alert alert-warning mt-3 mb-0">
+                                    <i class="bi bi-clock me-2"></i>
+                                    Отзыв ожидает модерации
+                                </div>
+                            {% endif %}
+
+                            <!-- Ответ администрации -->
+                            {% if review.reply %}
+                                <div class="mt-4 p-3 bg-light rounded">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="bi bi-reply me-2 text-primary"></i>
+                                        <strong class="text-primary">Ответ администрации</strong>
+                                        <span class="text-muted small ms-auto">{{ review.reply.created_at|date:"d.m.Y H:i" }}</span>
+                                    </div>
+                                    <p class="mb-0">{{ review.reply.text }}</p>
+                                </div>
+                            {% elif user.is_staff and user.role in 'admin,manager' %}
+                                <!-- Форма ответа для администрации -->
+                                <div class="mt-3">
+                                    <a href="{% url 'core:review_reply_create' review.id %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-reply me-1"></i>Ответить
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+
+                <!-- Пагинация -->
+                {% if reviews.has_other_pages %}
+                    <nav aria-label="Навигация по отзывам">
+                        <ul class="pagination justify-content-center">
+                            {% if reviews.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1">Первая</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ reviews.previous_page_number }}">Предыдущая</a>
+                                </li>
+                            {% endif %}
+
+                            {% for num in reviews.paginator.page_range %}
+                                {% if reviews.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > reviews.number|add:'-3' and num < reviews.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if reviews.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ reviews.next_page_number }}">Следующая</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ reviews.paginator.num_pages }}">Последняя</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <!-- Пустое состояние -->
+                <div class="card shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-star display-1 text-muted mb-3"></i>
+                        <h5 class="text-muted">Пока нет отзывов</h5>
+                        <p class="text-muted">Станьте первым, кто оставит отзыв об этой услуге</p>
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'core:service_review_create' service.id %}" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-1"></i>Оставить отзыв
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock content %}

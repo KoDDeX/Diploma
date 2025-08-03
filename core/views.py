@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import TemplateView
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.http import JsonResponse
@@ -91,11 +91,34 @@ def autoservice_detail_view(request, autoservice_slug):
     services = autoservice.services.filter(is_active=True).order_by(
         "-is_popular", "name"
     )
+    
+    # Получаем последние отзывы об автосервисе (максимум 6 для отображения)
+    recent_reviews = Review.objects.filter(
+        autoservice=autoservice,
+        is_approved=True
+    ).select_related('author').order_by('-created_at')[:6]
+    
+    # Общая статистика отзывов
+    total_reviews = Review.objects.filter(
+        autoservice=autoservice,
+        is_approved=True
+    ).count()
+    
+    avg_rating = 0
+    if total_reviews > 0:
+        all_reviews = Review.objects.filter(
+            autoservice=autoservice,
+            is_approved=True
+        )
+        avg_rating = round(sum(review.rating for review in all_reviews) / total_reviews, 1)
 
     context = {
         "title": f"{autoservice.name} - {autoservice.region.name}",
         "autoservice": autoservice,
         "services": services,
+        "recent_reviews": recent_reviews,
+        "total_reviews": total_reviews,
+        "avg_rating": avg_rating,
     }
     return render(request, "core/autoservice_detail.html", context)
 
@@ -2084,6 +2107,8 @@ def autoservice_order_complete(request, order_id):
     completion_notes = request.POST.get('completion_notes', '')
     
     order.status = 'completed'
+    from django.utils import timezone
+    order.completed_at = timezone.now()
     order.save()
     
     # Создаем уведомления
@@ -2096,6 +2121,16 @@ def autoservice_order_complete(request, order_id):
         title="Заказ выполнен",
         message=completion_message,
         level="success"
+    )
+    
+    # Отправляем уведомление с предложением оставить отзыв
+    from django.urls import reverse
+    review_url = request.build_absolute_uri(reverse('core:order_review_create', args=[order.id]))
+    add_notification(
+        user=order.client,
+        title="Оставьте отзыв о выполненной работе",
+        message=f'Ваш заказ №{order.id} успешно выполнен! Поделитесь своим мнением о качестве работы. Ваш отзыв поможет другим клиентам сделать правильный выбор. <br><br><a href="{review_url}" class="btn btn-primary btn-sm"><i class="fas fa-star"></i> Оставить отзыв</a>',
+        level="info"
     )
     
     if order.assigned_master:
@@ -2413,3 +2448,531 @@ def work_schedule_delete(request, schedule_id):
     
     messages.success(request, f'График работы для {master_name} удален')
     return redirect('core:work_schedule_list')
+
+
+# ============== СИСТЕМА ОТЗЫВОВ ==============
+
+from .models import Review, ReviewReply
+from .forms import (
+    AutoServiceReviewForm,
+    MasterReviewForm,
+    ServiceReviewForm,
+    ReviewReplyForm
+)
+
+def autoservice_reviews_list(request, autoservice_id):
+    """Список отзывов об автосервисе"""
+    autoservice = get_object_or_404(AutoService, id=autoservice_id, is_active=True)
+    
+    reviews = Review.objects.filter(
+        autoservice=autoservice,
+        is_approved=True
+    ).select_related('author', 'reply').order_by('-created_at')
+    
+    # Вычисляем статистику
+    total_reviews = reviews.count()
+    if total_reviews > 0:
+        avg_rating = sum(review.rating for review in reviews) / total_reviews
+        rating_distribution = {}
+        for i in range(1, 6):
+            count = reviews.filter(rating=i).count()
+            percentage = round((count * 100) / total_reviews, 1) if total_reviews > 0 else 0
+            rating_distribution[i] = {
+                'count': count,
+                'percentage': percentage
+            }
+    else:
+        avg_rating = 0
+        rating_distribution = {i: {'count': 0, 'percentage': 0} for i in range(1, 6)}
+
+    context = {
+        'autoservice': autoservice,
+        'reviews': reviews,
+        'rating_stats': {
+            'total': total_reviews,
+            'average': round(avg_rating, 1),
+            'breakdown': rating_distribution
+        },
+        'can_leave_review': request.user.is_authenticated,
+    }
+    
+    return render(request, 'core/reviews/autoservice_reviews_list.html', context)
+
+
+@login_required
+def autoservice_review_create(request, autoservice_id):
+    """Создание отзыва об автосервисе"""
+    autoservice = get_object_or_404(AutoService, id=autoservice_id, is_active=True)
+    
+    # Проверяем, не оставлял ли пользователь уже отзыв
+    existing_review = Review.objects.filter(
+        author=request.user,
+        autoservice=autoservice
+    ).first()
+    
+    if existing_review:
+        messages.warning(request, 'Вы уже оставили отзыв об этом автосервисе')
+        return redirect('core:autoservice_reviews_list', autoservice_id=autoservice.id)
+    
+    if request.method == 'POST':
+        form = AutoServiceReviewForm(request.POST, autoservice=autoservice)
+        if form.is_valid():
+            # Просто сохраняем форму и устанавливаем автора
+            review = form.save(commit=False)
+            review.author = request.user
+            # Форма уже установила все нужные поля, теперь можно сохранять
+            review.save()
+            
+            # Отправляем уведомление суперадминистратору о новом отзыве
+            try:
+                superadmins = User.objects.filter(role='super_admin', is_active=True)
+                for superadmin in superadmins:
+                    add_notification(
+                        user=superadmin,
+                        title="Новый отзыв на модерацию",
+                        message=f"Пользователь {review.author.get_full_name() or review.author.username} оставил отзыв об автосервисе '{autoservice.name}'. Оценка: {review.rating}/5. Требуется модерация.",
+                        level="info"
+                    )
+            except Exception:
+                pass  # Игнорируем ошибки уведомлений
+            
+            messages.success(request, 'Спасибо за отзыв! Он будет опубликован после модерации.')
+            return redirect('core:autoservice_reviews_list', autoservice_id=autoservice.id)
+    else:
+        form = AutoServiceReviewForm(autoservice=autoservice)
+    
+    context = {
+        'form': form,
+        'autoservice': autoservice,
+        'title': f'Отзыв об автосервисе {autoservice.name}'
+    }
+    
+    return render(request, 'core/reviews/review_create.html', context)
+
+
+def master_reviews_list(request, master_id):
+    """Список отзывов о мастере"""
+    master = get_object_or_404(User, id=master_id, role='master', is_active=True)
+    
+    reviews = Review.objects.filter(
+        reviewed_user=master,
+        is_approved=True
+    ).select_related('author', 'reply').order_by('-created_at')
+      # Вычисляем статистику
+    total_reviews = reviews.count()
+    if total_reviews > 0:
+        avg_rating = sum(review.rating for review in reviews) / total_reviews
+        rating_distribution = {}
+        for i in range(1, 6):
+            count = reviews.filter(rating=i).count()
+            percentage = round((count * 100) / total_reviews, 1) if total_reviews > 0 else 0
+            rating_distribution[i] = {
+                'count': count,
+                'percentage': percentage
+            }
+    else:
+        avg_rating = 0
+        rating_distribution = {i: {'count': 0, 'percentage': 0} for i in range(1, 6)}
+
+    context = {
+        'master': master,
+        'reviews': reviews,
+        'rating_stats': {
+            'total': total_reviews,
+            'average': round(avg_rating, 1),
+            'breakdown': rating_distribution
+        },
+        'can_leave_review': request.user.is_authenticated and request.user != master,
+    }
+    
+    return render(request, 'core/reviews/master_reviews_list.html', context)
+
+
+@login_required
+def master_review_create(request, master_id):
+    """Создание отзыва о мастере"""
+    master = get_object_or_404(User, id=master_id, role='master', is_active=True)
+    
+    # Нельзя оставлять отзыв о самом себе
+    if request.user == master:
+        messages.error(request, 'Нельзя оставлять отзыв о самом себе')
+        return redirect('core:master_reviews_list', master_id=master.id)
+    
+    # Проверяем, не оставлял ли пользователь уже отзыв
+    existing_review = Review.objects.filter(
+        author=request.user,
+        reviewed_user=master
+    ).first()
+    
+    if existing_review:
+        messages.warning(request, 'Вы уже оставили отзыв об этом мастере')
+        return redirect('core:master_reviews_list', master_id=master.id)
+    
+    if request.method == 'POST':
+        form = MasterReviewForm(request.POST, master=master)
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.author = request.user
+            review.save()
+            
+            # Отправляем уведомление суперадминистратору о новом отзыве
+            try:
+                superadmins = User.objects.filter(role='super_admin', is_active=True)
+                for superadmin in superadmins:
+                    add_notification(
+                        user=superadmin,
+                        title="Новый отзыв на модерацию",
+                        message=f"Пользователь {review.author.get_full_name() or review.author.username} оставил отзыв о мастере '{master.get_full_name() or master.username}'. Оценка: {review.rating}/5. Требуется модерация.",
+                        level="info"
+                    )
+            except Exception:
+                pass  # Игнорируем ошибки уведомлений
+            
+            messages.success(request, 'Спасибо за отзыв! Он будет опубликован после модерации.')
+            return redirect('core:master_reviews_list', master_id=master.id)
+    else:
+        form = MasterReviewForm(master=master)
+    
+    context = {
+        'form': form,
+        'master': master,
+        'title': f'Отзыв о мастере {master.get_full_name()}'
+    }
+    
+    return render(request, 'core/reviews/review_create.html', context)
+
+
+def service_reviews_list(request, service_id):
+    """Список отзывов об услуге"""
+    service = get_object_or_404(Service, id=service_id, is_active=True)
+    
+    reviews = Review.objects.filter(
+        service=service,
+        is_approved=True
+    ).select_related('author', 'reply').order_by('-created_at')
+      # Вычисляем статистику
+    total_reviews = reviews.count()
+    if total_reviews > 0:
+        avg_rating = sum(review.rating for review in reviews) / total_reviews
+        rating_distribution = {}
+        for i in range(1, 6):
+            count = reviews.filter(rating=i).count()
+            percentage = round((count * 100) / total_reviews, 1) if total_reviews > 0 else 0
+            rating_distribution[i] = {
+                'count': count,
+                'percentage': percentage
+            }
+    else:
+        avg_rating = 0
+        rating_distribution = {i: {'count': 0, 'percentage': 0} for i in range(1, 6)}
+
+    context = {
+        'service': service,
+        'reviews': reviews,
+        'rating_stats': {
+            'total': total_reviews,
+            'average': round(avg_rating, 1),
+            'breakdown': rating_distribution
+        },
+        'can_leave_review': request.user.is_authenticated,
+    }
+    
+    return render(request, 'core/reviews/service_reviews_list.html', context)
+
+
+@login_required
+def service_review_create(request, service_id):
+    """Создание отзыва об услуге"""
+    service = get_object_or_404(Service, id=service_id, is_active=True)
+    
+    # Проверяем, если есть параметр order_id - это отзыв по заказу
+    order_id = request.GET.get('order_id')
+    order = None
+    if order_id:
+        order = get_object_or_404(Order, id=order_id, client=request.user, service=service, status='completed')
+        
+        # Проверяем, не оставлен ли уже отзыв по этому заказу
+        if order.review_left:
+            messages.warning(request, 'Вы уже оставили отзыв по этому заказу')
+            return redirect('core:user_order_detail', order_id=order.id)
+    else:
+        # Обычная проверка на существующий отзыв об услуге
+        existing_review = Review.objects.filter(
+            author=request.user,
+            service=service
+        ).first()
+        
+        if existing_review:
+            messages.warning(request, 'Вы уже оставили отзыв об этой услуге')
+            return redirect('core:service_reviews_list', service_id=service.id)
+
+    if request.method == 'POST':
+        form = ServiceReviewForm(request.POST, service=service)
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.author = request.user
+            
+            # Если это отзыв по заказу, связываем его с заказом
+            if order:
+                review.order = order
+                order.review_left = True
+                order.save()
+            
+            review.save()
+            
+            # Отправляем уведомление суперадминистратору о новом отзыве
+            try:
+                superadmins = User.objects.filter(role='super_admin', is_active=True)
+                message_text = f"Пользователь {review.author.get_full_name() or review.author.username} оставил отзыв об услуге '{service.name}' (автосервис '{service.autoservice.name}')"
+                if order:
+                    message_text += f" по заказу №{order.id}"
+                message_text += f". Оценка: {review.rating}/5. Требуется модерация."
+                
+                for superadmin in superadmins:
+                    add_notification(
+                        user=superadmin,
+                        title="Новый отзыв на модерацию",
+                        message=message_text,
+                        level="info"
+                    )
+            except Exception:
+                pass  # Игнорируем ошибки уведомлений
+            
+            messages.success(request, 'Спасибо за отзыв! Он будет опубликован после модерации.')
+            
+            # Возвращаем на соответствующую страницу
+            if order:
+                return redirect('core:user_order_detail', order_id=order.id)
+            else:
+                return redirect('core:service_reviews_list', service_id=service.id)
+    else:
+        form = ServiceReviewForm(service=service)
+    
+    # Определяем заголовок в зависимости от контекста
+    if order:
+        title = f'Отзыв по заказу №{order.id} - услуга "{service.name}"'
+    else:
+        title = f'Отзыв об услуге {service.name}'
+    
+    context = {
+        'form': form,
+        'service': service,
+        'order': order,
+        'title': title
+    }
+    
+    return render(request, 'core/reviews/review_create.html', context)
+
+
+@login_required
+@user_passes_test(lambda user: user.role in ['autoservice_admin', 'manager'])
+def review_reply_create(request, review_id):
+    """Создание ответа на отзыв"""
+    review = get_object_or_404(Review, id=review_id, is_approved=True)
+    
+    # Проверяем права доступа
+    user_autoservice = getattr(request.user, 'autoservice', None)
+    if not user_autoservice:
+        raise PermissionDenied('У вас нет доступа к этому действию')
+    
+    # Проверяем, что отзыв относится к автосервису пользователя
+    review_autoservice = None
+    if review.autoservice:
+        review_autoservice = review.autoservice
+    elif review.reviewed_user and hasattr(review.reviewed_user, 'autoservice'):
+        review_autoservice = review.reviewed_user.autoservice
+    elif review.service:
+        review_autoservice = review.service.autoservice
+    
+    if review_autoservice != user_autoservice:
+        raise PermissionDenied('У вас нет доступа к этому отзыву')
+    
+    # Проверяем, нет ли уже ответа
+    if hasattr(review, 'reply'):
+        messages.warning(request, 'На этот отзыв уже есть ответ')
+        return redirect('core:autoservice_reviews_list', autoservice_id=review_autoservice.id)
+    
+    if request.method == 'POST':
+        form = ReviewReplyForm(request.POST, review=review)
+        if form.is_valid():
+            reply = form.save(commit=False)
+            reply.author = request.user
+            reply.save()
+            
+            messages.success(request, 'Ответ на отзыв добавлен')
+            return redirect('core:autoservice_reviews_list', autoservice_id=review_autoservice.id)
+    else:
+        form = ReviewReplyForm(review=review)
+    
+    context = {
+        'form': form,
+        'review': review,
+        'title': 'Ответ на отзыв'
+    }
+    
+    return render(request, 'core/reviews/review_reply_create.html', context)
+
+
+# ============== МОДЕРАЦИЯ ОТЗЫВОВ ==============
+
+@login_required
+@user_passes_test(is_super_admin)
+def reviews_moderation(request):
+    """Модерация отзывов для суперадминистратора"""
+    # Получаем все отзывы с фильтрацией
+    reviews_queryset = Review.objects.select_related(
+        'author', 'autoservice', 'reviewed_user', 'service'
+    ).order_by('-created_at')
+    
+    # Фильтры
+    status_filter = request.GET.get('status')
+    review_type_filter = request.GET.get('review_type')
+    rating_filter = request.GET.get('rating')
+    
+    # Применяем фильтры статуса
+    if status_filter == 'pending':
+        reviews_queryset = reviews_queryset.filter(is_approved=False, is_rejected=False)
+    elif status_filter == 'approved':
+        reviews_queryset = reviews_queryset.filter(is_approved=True)
+    elif status_filter == 'rejected':
+        reviews_queryset = reviews_queryset.filter(is_rejected=True)
+    else:
+        # По умолчанию показываем только ожидающие модерации
+        if not status_filter:
+            reviews_queryset = reviews_queryset.filter(is_approved=False, is_rejected=False)
+    
+    # Фильтр по типу отзыва
+    if review_type_filter == 'autoservice':
+        reviews_queryset = reviews_queryset.filter(autoservice__isnull=False)
+    elif review_type_filter == 'master':
+        reviews_queryset = reviews_queryset.filter(reviewed_user__isnull=False)
+    elif review_type_filter == 'service':
+        reviews_queryset = reviews_queryset.filter(service__isnull=False)
+    
+    # Фильтр по рейтингу
+    if rating_filter:
+        reviews_queryset = reviews_queryset.filter(rating=rating_filter)
+    
+    reviews = reviews_queryset
+    
+    # Статистика
+    pending_count = Review.objects.filter(is_approved=False, is_rejected=False).count()
+    approved_count = Review.objects.filter(is_approved=True).count()
+    rejected_count = Review.objects.filter(is_rejected=True).count()
+    total_count = Review.objects.count()
+    
+    context = {
+        'title': 'Модерация отзывов',
+        'reviews': reviews,
+        'pending_count': pending_count,
+        'approved_count': approved_count,
+        'rejected_count': rejected_count,
+        'total_count': total_count,
+    }
+    
+    return render(request, 'core/admin/reviews_moderation.html', context)
+
+
+@login_required
+@user_passes_test(is_super_admin)
+@require_POST
+def review_approve(request, review_id):
+    """Одобрение отзыва"""
+    review = get_object_or_404(Review, id=review_id, is_approved=False, is_rejected=False)
+    
+    review.is_approved = True
+    review.is_rejected = False
+    review.moderated_by = request.user
+    from django.utils import timezone
+    review.approved_at = timezone.now()
+    review.moderated_at = timezone.now()
+    review.save()
+    
+    # Уведомляем автора отзыва об одобрении
+    try:
+        target_name = ""
+        if review.autoservice:
+            target_name = f"автосервисе '{review.autoservice.name}'"
+        elif review.reviewed_user:
+            target_name = f"мастере '{review.reviewed_user.get_full_name() or review.reviewed_user.username}'"
+        elif review.service:
+            target_name = f"услуге '{review.service.name}'"
+        
+        add_notification(
+            user=review.author,
+            title="Отзыв одобрен",
+            message=f"Ваш отзыв о {target_name} одобрен и опубликован.",
+            level="success"
+        )
+    except Exception:
+        pass
+    
+    messages.success(request, f'Отзыв №{review.id} одобрен')
+    return redirect('core:reviews_moderation')
+
+
+@login_required
+@login_required
+@user_passes_test(is_super_admin)
+@require_POST
+def review_reject(request, review_id):
+    """Отклонение отзыва"""
+    review = get_object_or_404(Review, id=review_id, is_approved=False, is_rejected=False)
+    
+    reject_reason = request.POST.get('reject_reason', '')
+    
+    review.is_rejected = True
+    review.is_approved = False
+    review.moderated_by = request.user
+    from django.utils import timezone
+    review.rejected_at = timezone.now()
+    review.moderated_at = timezone.now()
+    review.save()
+    
+    # Уведомляем автора отзыва об отклонении
+    try:
+        target_name = ""
+        if review.autoservice:
+            target_name = f"автосервисе '{review.autoservice.name}'"
+        elif review.reviewed_user:
+            target_name = f"мастере '{review.reviewed_user.get_full_name() or review.reviewed_user.username}'"
+        elif review.service:
+            target_name = f"услуге '{review.service.name}'"
+        
+        message = f"Ваш отзыв о {target_name} отклонен модератором."
+        if reject_reason:
+            message += f" Причина: {reject_reason}"
+        
+        add_notification(
+            user=review.author,
+            title="Отзыв отклонен",
+            message=message,
+            level="warning"
+        )
+    except Exception:
+        pass
+    
+    messages.success(request, f'Отзыв №{review.id} отклонен')
+    return redirect('core:reviews_moderation')
+
+
+@login_required
+def order_review_create(request, order_id):
+    """Создание отзыва по завершенному заказу - перенаправляет на создание отзыва об услуге"""
+    order = get_object_or_404(Order, id=order_id, client=request.user, status='completed')
+    
+    # Проверяем, не оставлен ли уже отзыв
+    if order.review_left:
+        messages.warning(request, 'Вы уже оставили отзыв по этому заказу')
+        return redirect('core:user_order_detail', order_id=order.id)
+    
+    # Проверяем, что с момента завершения заказа прошло не более 30 дней
+    from datetime import timedelta
+    from django.utils import timezone
+    if order.completed_at and order.completed_at < timezone.now() - timedelta(days=30):
+        messages.error(request, 'Срок для оставления отзыва истёк (30 дней с момента завершения заказа)')
+        return redirect('core:user_order_detail', order_id=order.id)
+    
+    # Перенаправляем на создание отзыва об услуге с параметром заказа
+    from django.urls import reverse
+    return redirect(f"{reverse('core:service_review_create', args=[order.service.id])}?order_id={order.id}")

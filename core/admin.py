@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Region, AutoService
+from django.db import models
+from .models import Region, AutoService, Review, ReviewReply
 
 
 @admin.register(Region)
@@ -133,3 +134,117 @@ class AutoServiceAdmin(admin.ModelAdmin):
             ]
 
         return readonly_fields
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ('author', 'review_type', 'get_target', 'rating', 'is_approved', 'created_at')
+    list_filter = ('review_type', 'rating', 'is_approved', 'created_at')
+    search_fields = ('title', 'text', 'author__email', 'author__first_name', 'author__last_name')
+    ordering = ('-created_at',)
+    list_editable = ('is_approved',)
+    readonly_fields = ('created_at', 'updated_at', 'get_target')
+    
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('author', 'review_type', 'get_target', 'order')
+        }),
+        ('Объекты отзыва', {
+            'fields': ('autoservice', 'reviewed_user', 'service'),
+            'description': 'Укажите только один объект, о котором оставлен отзыв'
+        }),
+        ('Содержание отзыва', {
+            'fields': ('rating', 'title', 'text', 'pros', 'cons')
+        }),
+        ('Настройки', {
+            'fields': ('is_approved', 'is_anonymous')
+        }),
+        ('Модерация', {
+            'fields': ('moderated_at', 'moderated_by'),
+            'classes': ('collapse',)
+        }),
+        ('Служебная информация', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def get_target(self, obj):
+        """Отображает объект отзыва"""
+        return obj.get_review_target()
+    get_target.short_description = 'Объект отзыва'
+    
+    def save_model(self, request, obj, form, change):
+        """Автоматически проставляем модератора при одобрении"""
+        if change and obj.is_approved and not obj.moderated_by:
+            obj.moderated_by = request.user
+            from django.utils import timezone
+            obj.moderated_at = timezone.now()
+        super().save_model(request, obj, form, change)
+    
+    def get_queryset(self, request):
+        """Фильтруем отзывы в зависимости от роли пользователя"""
+        qs = super().get_queryset(request)
+        user = request.user
+        
+        if user.is_superuser or getattr(user, 'role', None) == 'super_admin':
+            return qs
+        elif getattr(user, 'role', None) == 'autoservice_admin':
+            # Администратор видит только отзывы о своем автосервисе и его сотрудниках
+            if hasattr(user, 'autoservice'):
+                return qs.filter(
+                    models.Q(autoservice=user.autoservice) |
+                    models.Q(reviewed_user__autoservice=user.autoservice)
+                )
+        elif getattr(user, 'role', None) in ['manager', 'master']:
+            # Сотрудники видят отзывы о своем автосервисе и о себе
+            if hasattr(user, 'autoservice'):
+                return qs.filter(
+                    models.Q(autoservice=user.autoservice) |
+                    models.Q(reviewed_user=user)
+                )
+        
+        return qs.none()
+
+
+@admin.register(ReviewReply)
+class ReviewReplyAdmin(admin.ModelAdmin):
+    list_display = ('review', 'author', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('text', 'author__email', 'review__title')
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('review', 'author', 'text')
+        }),
+        ('Служебная информация', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def get_queryset(self, request):
+        """Фильтруем ответы на отзывы в зависимости от роли пользователя"""
+        qs = super().get_queryset(request)
+        user = request.user
+        
+        if user.is_superuser or getattr(user, 'role', None) == 'super_admin':
+            return qs
+        elif getattr(user, 'role', None) == 'autoservice_admin':
+            # Администратор видит только ответы на отзывы о своем автосервисе
+            if hasattr(user, 'autoservice'):
+                return qs.filter(
+                    models.Q(review__autoservice=user.autoservice) |
+                    models.Q(review__reviewed_user__autoservice=user.autoservice)
+                )
+        elif getattr(user, 'role', None) in ['manager', 'master']:
+            # Сотрудники видят ответы на отзывы о своем автосервисе и о себе
+            if hasattr(user, 'autoservice'):
+                return qs.filter(
+                    models.Q(review__autoservice=user.autoservice) |
+                    models.Q(review__reviewed_user=user)
+                )
+        
+        return qs.none()

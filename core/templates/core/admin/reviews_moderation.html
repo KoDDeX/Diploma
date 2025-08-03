@@ -1,0 +1,405 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Модерация отзывов{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Заголовок панели -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="h3 text-primary">
+                <i class="fas fa-shield-alt"></i> Модерация отзывов
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'core:admin_panel' %}">Панель администратора</a>
+                    </li>
+                    <li class="breadcrumb-item active">Модерация отзывов</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Статистика отзывов -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                    <h5 class="card-title">{{ pending_count }}</h5>
+                    <p class="card-text text-muted">Ожидают модерации</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                    <h5 class="card-title">{{ approved_count }}</h5>
+                    <p class="card-text text-muted">Одобрено</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-danger">
+                <div class="card-body text-center">
+                    <i class="fas fa-times-circle fa-2x text-danger mb-2"></i>
+                    <h5 class="card-title">{{ rejected_count }}</h5>
+                    <p class="card-text text-muted">Отклонено</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-star fa-2x text-info mb-2"></i>
+                    <h5 class="card-title">{{ total_count }}</h5>
+                    <p class="card-text text-muted">Всего отзывов</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Фильтры отзывов -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Статус</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">Все статусы</option>
+                                <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>
+                                    Ожидают модерации
+                                </option>
+                                <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>
+                                    Одобрено
+                                </option>
+                                <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>
+                                    Отклонено
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="review_type" class="form-label">Тип отзыва</label>
+                            <select class="form-select" id="review_type" name="review_type">
+                                <option value="">Все типы</option>
+                                <option value="autoservice" {% if request.GET.review_type == 'autoservice' %}selected{% endif %}>
+                                    Автосервис
+                                </option>
+                                <option value="master" {% if request.GET.review_type == 'master' %}selected{% endif %}>
+                                    Мастер
+                                </option>
+                                <option value="service" {% if request.GET.review_type == 'service' %}selected{% endif %}>
+                                    Услуга
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="rating" class="form-label">Рейтинг</label>
+                            <select class="form-select" id="rating" name="rating">
+                                <option value="">Любой рейтинг</option>
+                                <option value="5" {% if request.GET.rating == '5' %}selected{% endif %}>5 звёзд</option>
+                                <option value="4" {% if request.GET.rating == '4' %}selected{% endif %}>4 звезды</option>
+                                <option value="3" {% if request.GET.rating == '3' %}selected{% endif %}>3 звезды</option>
+                                <option value="2" {% if request.GET.rating == '2' %}selected{% endif %}>2 звезды</option>
+                                <option value="1" {% if request.GET.rating == '1' %}selected{% endif %}>1 звезда</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-filter"></i> Фильтровать
+                            </button>
+                            <a href="{% url 'core:reviews_moderation' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Сбросить
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Список отзывов -->
+    <div class="row">
+        <div class="col">
+            {% if reviews %}
+                {% for review in reviews %}
+                <div class="card mb-3 border-left-{% if review.is_approved %}success{% elif review.is_rejected %}danger{% else %}warning{% endif %}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ review.title }}</strong>
+                            <span class="badge badge-pill 
+                                {% if review.is_approved %}badge-success
+                                {% elif review.is_rejected %}badge-danger
+                                {% else %}badge-warning{% endif %}">
+                                {% if review.is_approved %}
+                                    <i class="fas fa-check"></i> Одобрено
+                                {% elif review.is_rejected %}
+                                    <i class="fas fa-times"></i> Отклонено
+                                {% else %}
+                                    <i class="fas fa-clock"></i> На модерации
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="text-muted">
+                            <small>{{ review.created_at|date:"d.m.Y H:i" }}</small>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <!-- Информация об отзыве -->
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <strong class="me-2">Пользователь:</strong>
+                                        <span>{{ review.author.get_full_name|default:review.author.username }}</span>
+                                        {% if review.author.role %}
+                                            <span class="badge bg-info ms-2">{{ review.author.get_role_display }}</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="d-flex align-items-center mb-2">
+                                        <strong class="me-2">Рейтинг:</strong>
+                                        <div class="text-warning">
+                                            {% for i in "12345" %}
+                                                {% if forloop.counter <= review.rating %}
+                                                    <i class="fas fa-star"></i>
+                                                {% else %}
+                                                    <i class="far fa-star"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        <span class="ms-2 text-muted">({{ review.rating }}/5)</span>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <strong>Объект отзыва:</strong>
+                                        {% if review.autoservice %}
+                                            <span class="badge bg-primary">Автосервис</span>
+                                            <a href="{% url 'core:autoservice_detail' review.autoservice.slug %}" target="_blank">
+                                                {{ review.autoservice.name }}
+                                            </a>
+                                        {% elif review.reviewed_user %}
+                                            <span class="badge bg-success">Мастер</span>
+                                            {{ review.reviewed_user.get_full_name|default:review.reviewed_user.username }}
+                                        {% elif review.service %}
+                                            <span class="badge bg-info">Услуга</span>
+                                            {{ review.service.name }}
+                                            <small class="text-muted">({{ review.service.autoservice.name }})</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- Текст отзыва -->
+                                <div class="review-content">
+                                    <strong>Текст отзыва:</strong>
+                                    <div class="bg-light p-3 rounded mt-2">
+                                        {{ review.text|linebreaksbr }}
+                                    </div>
+                                </div>
+
+                                <!-- Плюсы и минусы -->
+                                {% if review.pros or review.cons %}
+                                    <div class="mt-3">
+                                        <div class="row">
+                                            {% if review.pros %}
+                                                <div class="col-md-6">
+                                                    <div class="card border-success">
+                                                        <div class="card-header bg-success text-white py-2">
+                                                            <strong><i class="fas fa-thumbs-up me-2"></i>Что понравилось</strong>
+                                                        </div>
+                                                        <div class="card-body py-2">
+                                                            {{ review.pros|linebreaksbr }}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                            {% if review.cons %}
+                                                <div class="col-md-6">
+                                                    <div class="card border-danger">
+                                                        <div class="card-header bg-danger text-white py-2">
+                                                            <strong><i class="fas fa-thumbs-down me-2"></i>Что не понравилось</strong>
+                                                        </div>
+                                                        <div class="card-body py-2">
+                                                            {{ review.cons|linebreaksbr }}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+
+                                <!-- Ответ на отзыв (если есть) -->
+                                {% if review.replies.exists %}
+                                    <div class="mt-3">
+                                        <strong>Ответы на отзыв:</strong>
+                                        {% for reply in review.replies.all %}
+                                            <div class="bg-info bg-opacity-10 p-3 rounded mt-2">
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <strong>{{ reply.author.get_full_name|default:reply.author.username }}</strong>
+                                                    <small class="text-muted">{{ reply.created_at|date:"d.m.Y H:i" }}</small>
+                                                </div>
+                                                <div>{{ reply.text|linebreaksbr }}</div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Панель действий -->
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-header">
+                                        <strong>Действия модератора</strong>
+                                    </div>
+                                    <div class="card-body">
+                                        {% if not review.is_approved and not review.is_rejected %}
+                                            <div class="d-grid gap-2">
+                                                <form method="post" action="{% url 'core:review_approve' review.id %}" style="display: inline;">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-success w-100" 
+                                                            onclick="return confirm('Одобрить данный отзыв?')">
+                                                        <i class="fas fa-check"></i> Одобрить
+                                                    </button>
+                                                </form>
+                                                
+                                                <form method="post" action="{% url 'core:review_reject' review.id %}" style="display: inline;">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-danger w-100" 
+                                                            onclick="return confirm('Отклонить данный отзыв?')">
+                                                        <i class="fas fa-times"></i> Отклонить
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        {% else %}
+                                            <div class="text-center">
+                                                {% if review.is_approved %}
+                                                    <div class="text-success mb-2">
+                                                        <i class="fas fa-check-circle fa-2x"></i>
+                                                    </div>
+                                                    <p class="text-success">Отзыв одобрен</p>
+                                                    {% if review.approved_at %}
+                                                        <small class="text-muted">
+                                                            {{ review.approved_at|date:"d.m.Y H:i" }}
+                                                        </small>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <div class="text-danger mb-2">
+                                                        <i class="fas fa-times-circle fa-2x"></i>
+                                                    </div>
+                                                    <p class="text-danger">Отзыв отклонён</p>
+                                                    {% if review.rejected_at %}
+                                                        <small class="text-muted">
+                                                            {{ review.rejected_at|date:"d.m.Y H:i" }}
+                                                        </small>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <!-- Дополнительная информация -->
+                                        <hr>
+                                        <div class="small text-muted">
+                                            <div><strong>ID отзыва:</strong> #{{ review.id }}</div>
+                                            {% if review.order %}
+                                                <div><strong>Связанный заказ:</strong> #{{ review.order.id }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Пагинация -->
+                {% if is_paginated %}
+                <nav aria-label="Пагинация отзывов">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.review_type %}&review_type={{ request.GET.review_type }}{% endif %}{% if request.GET.rating %}&rating={{ request.GET.rating }}{% endif %}">
+                                    Первая
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.review_type %}&review_type={{ request.GET.review_type }}{% endif %}{% if request.GET.rating %}&rating={{ request.GET.rating }}{% endif %}">
+                                    Предыдущая
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">
+                                Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
+                            </span>
+                        </li>
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.review_type %}&review_type={{ request.GET.review_type }}{% endif %}{% if request.GET.rating %}&rating={{ request.GET.rating }}{% endif %}">
+                                    Следующая
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.review_type %}&review_type={{ request.GET.review_type }}{% endif %}{% if request.GET.rating %}&rating={{ request.GET.rating }}{% endif %}">
+                                    Последняя
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-star fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">Отзывы не найдены</h4>
+                        <p class="text-muted">
+                            {% if request.GET.status or request.GET.review_type or request.GET.rating %}
+                                Попробуйте изменить критерии фильтрации.
+                            {% else %}
+                                Пока нет отзывов для модерации.
+                            {% endif %}
+                        </p>
+                        {% if request.GET.status or request.GET.review_type or request.GET.rating %}
+                            <a href="{% url 'core:reviews_moderation' %}" class="btn btn-primary">
+                                <i class="fas fa-times"></i> Сбросить фильтры
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.border-left-success {
+    border-left: 4px solid #28a745 !important;
+}
+
+.border-left-danger {
+    border-left: 4px solid #dc3545 !important;
+}
+
+.border-left-warning {
+    border-left: 4px solid #ffc107 !important;
+}
+
+.review-content {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.badge {
+    font-size: 0.8em;
+}
+</style>
+{% endblock %}

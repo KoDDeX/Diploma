@@ -20,6 +20,45 @@
                 </div>
             </div>
 
+            <!-- Быстрые действия -->
+            <div class="card mb-4">
+                <div class="card-body p-3">
+                    <h6 class="text-primary mb-3">
+                        <i class="bi bi-speedometer2 me-2"></i>
+                        Быстрые действия
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6 col-lg-4">
+                            <a href="{% url 'core:reviews_moderation' %}" class="btn btn-outline-warning w-100 d-flex align-items-center justify-content-center py-3">
+                                <i class="fas fa-shield-alt me-2"></i>
+                                <div>
+                                    <div class="fw-bold">Модерация отзывов</div>
+                                    <small class="text-muted">Управление отзывами</small>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <a href="{% url 'core:notifications_list' %}" class="btn btn-outline-info w-100 d-flex align-items-center justify-content-center py-3">
+                                <i class="fas fa-bell me-2"></i>
+                                <div>
+                                    <div class="fw-bold">Уведомления</div>
+                                    <small class="text-muted">Просмотр уведомлений</small>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <a href="#" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center py-3">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                <div>
+                                    <div class="fw-bold">Статистика</div>
+                                    <small class="text-muted">Аналитика системы</small>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Фильтры -->
             <div class="card mb-4">
                 <div class="card-body p-3">
@@ -185,18 +224,26 @@
                                     </strong>
                                     <div class="mt-1">
                                         {% for manager in autoservice.managers %}
-                                        <span class="badge {% if manager.is_deactivated %}bg-secondary text-decoration-line-through{% else %}bg-info{% endif %} me-1 mb-1"
-                                              {% if manager.is_deactivated %}title="Деактивированный менеджер"{% endif %}>
-                                            <i class="bi bi-person me-1"></i>
-                                            {% if manager.last_name or manager.first_name %}
-                                                {{ manager.last_name }} {{ manager.first_name }}
-                                            {% else %}
-                                                {{ manager.username }}
+                                        <div class="d-flex align-items-center mb-1">
+                                            <span class="badge {% if manager.is_deactivated %}bg-secondary text-decoration-line-through{% else %}bg-info{% endif %} me-2"
+                                                  {% if manager.is_deactivated %}title="Деактивированный менеджер"{% endif %}>
+                                                <i class="bi bi-person me-1"></i>
+                                                {% if manager.last_name or manager.first_name %}
+                                                    {{ manager.last_name }} {{ manager.first_name }}
+                                                {% else %}
+                                                    {{ manager.username }}
+                                                {% endif %}
+                                                {% if manager.is_deactivated %}
+                                                <i class="bi bi-pause-circle ms-1" title="Деактивирован"></i>
+                                                {% endif %}
+                                            </span>
+                                            {% if manager.role == 'master' %}
+                                                <a href="{% url 'core:master_reviews_list' manager.id %}" 
+                                                   class="btn btn-outline-warning btn-sm">
+                                                    <i class="bi bi-star me-1"></i>Отзывы
+                                                </a>
                                             {% endif %}
-                                            {% if manager.is_deactivated %}
-                                            <i class="bi bi-pause-circle ms-1" title="Деактивирован"></i>
-                                            {% endif %}
-                                        </span>
+                                        </div>
                                         {% endfor %}
                                     </div>
                                 </div>

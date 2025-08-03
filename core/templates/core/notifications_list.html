@@ -44,7 +44,7 @@
                                         </div>
                                         
                                         <p class="card-text {% if not notification.is_read %}fw-semibold{% endif %}">
-                                            {{ notification.message }}
+                                            {{ notification.message|safe }}
                                         </p>
                                         
                                         <div class="d-flex justify-content-between align-items-center">

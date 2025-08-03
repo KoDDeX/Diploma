@@ -449,12 +449,25 @@ class Order(models.Model):
     # Системные поля
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата изменения")
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Дата завершения",
+        help_text="Дата и время завершения заказа"
+    )
 
     # Комментарии автосервиса
     admin_notes = models.TextField(
         blank=True,
         verbose_name="Комментарии автосервиса",
         help_text="Внутренние заметки для сотрудников",
+    )
+    
+    # Отзыв о заказе
+    review_left = models.BooleanField(
+        default=False,
+        verbose_name="Отзыв оставлен",
+        help_text="Отметка о том, что клиент оставил отзыв по данному заказу"
     )
 
     def __str__(self):
@@ -851,3 +864,269 @@ def is_master_working_at_datetime(master, datetime_obj):
         return False  # Если нет активного графика, мастер не работает
     
     return schedule.is_working_at_time(datetime_obj)
+
+
+class Review(models.Model):
+    """Модель отзывов с поддержкой разных типов объектов"""
+    
+    RATING_CHOICES = [
+        (1, '⭐ Очень плохо'),
+        (2, '⭐⭐ Плохо'),
+        (3, '⭐⭐⭐ Нормально'),
+        (4, '⭐⭐⭐⭐ Хорошо'),
+        (5, '⭐⭐⭐⭐⭐ Отлично'),
+    ]
+    
+    REVIEW_TYPE_CHOICES = [
+        ('autoservice', 'Отзыв об автосервисе'),
+        ('master', 'Отзыв о мастере'),
+        ('manager', 'Отзыв о менеджере'),
+        ('administrator', 'Отзыв об администраторе'),
+        ('service', 'Отзыв об услуге'),
+        ('client', 'Отзыв о клиенте'),
+    ]
+    
+    # Автор отзыва
+    author = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='authored_reviews',
+        verbose_name='Автор отзыва'
+    )
+    
+    # Тип отзыва
+    review_type = models.CharField(
+        max_length=20,
+        choices=REVIEW_TYPE_CHOICES,
+        verbose_name='Тип отзыва'
+    )
+    
+    # Ссылки на объекты (только одно поле должно быть заполнено)
+    autoservice = models.ForeignKey(
+        'AutoService',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='reviews',
+        verbose_name='Автосервис'
+    )
+    
+    reviewed_user = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='received_reviews',
+        verbose_name='Пользователь (мастер/менеджер/админ/клиент)'
+    )
+    
+    service = models.ForeignKey(
+        'Service',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='reviews',
+        verbose_name='Услуга'
+    )
+    
+    # Связь с заказом (для контекста)
+    order = models.ForeignKey(
+        'Order',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviews',
+        verbose_name='Связанный заказ'
+    )
+    
+    # Основные поля отзыва
+    rating = models.PositiveSmallIntegerField(
+        choices=RATING_CHOICES,
+        verbose_name='Оценка'
+    )
+    
+    title = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name='Заголовок отзыва'
+    )
+    
+    text = models.TextField(
+        verbose_name='Текст отзыва'
+    )
+    
+    # Плюсы и минусы (опционально)
+    pros = models.TextField(
+        blank=True,
+        verbose_name='Плюсы',
+        help_text='Что понравилось'
+    )
+    
+    cons = models.TextField(
+        blank=True,
+        verbose_name='Минусы',
+        help_text='Что не понравилось'
+    )
+    
+    # Модерация
+    is_approved = models.BooleanField(
+        default=False,
+        verbose_name='Одобрен'
+    )
+    
+    is_rejected = models.BooleanField(
+        default=False,
+        verbose_name='Отклонён'
+    )
+    
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата одобрения'
+    )
+    
+    rejected_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата отклонения'
+    )
+    
+    is_anonymous = models.BooleanField(
+        default=False,
+        verbose_name='Анонимный отзыв'
+    )
+    
+    # Служебные поля
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания'
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата обновления'
+    )
+    
+    moderated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата модерации'
+    )
+    
+    moderated_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='moderated_reviews',
+        verbose_name='Модератор'
+    )
+    
+    class Meta:
+        verbose_name = 'Отзыв'
+        verbose_name_plural = 'Отзывы'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['review_type', 'is_approved']),
+            models.Index(fields=['rating', 'created_at']),
+            models.Index(fields=['autoservice', 'is_approved']),
+            models.Index(fields=['reviewed_user', 'is_approved']),
+        ]
+    
+    def __str__(self):
+        target = self.get_review_target()
+        return f'Отзыв от {self.author.get_full_name()} о {target} ({self.rating}/5)'
+    
+    def get_review_target(self):
+        """Возвращает объект, о котором оставлен отзыв"""
+        if self.autoservice:
+            return f'автосервисе "{self.autoservice.name}"'
+        elif self.reviewed_user:
+            role_names = {
+                'master': 'мастере',
+                'manager': 'менеджере', 
+                'autoservice_admin': 'администраторе',
+                'client': 'клиенте'
+            }
+            role_name = role_names.get(self.reviewed_user.role, 'пользователе')
+            return f'{role_name} {self.reviewed_user.get_full_name()}'
+        elif self.service:
+            return f'услуге "{self.service.name}"'
+        return 'неизвестном объекте'
+    
+    def get_rating_stars(self):
+        """Возвращает строку со звездами для отображения рейтинга"""
+        full_stars = '⭐' * self.rating
+        empty_stars = '☆' * (5 - self.rating)
+        return full_stars + empty_stars
+    
+    def save(self, *args, **kwargs):
+        # Автоматически генерируем заголовок, если он не задан
+        if not self.title:
+            self.title = self.generate_title()
+        
+        super().save(*args, **kwargs)
+    
+    def generate_title(self):
+        """Автоматически генерирует заголовок отзыва на основе рейтинга и типа"""
+        rating_phrases = {
+            5: "Отличный",
+            4: "Хороший", 
+            3: "Обычный",
+            2: "Не очень",
+            1: "Плохой"
+        }
+        
+        type_names = {
+            'autoservice': "автосервис",
+            'master': "мастер", 
+            'manager': "менеджер",
+            'administrator': "администратор",
+            'client': "клиент",
+            'service': "сервис"
+        }
+        
+        rating_word = rating_phrases.get(self.rating, "")
+        type_word = type_names.get(self.review_type, "объект")
+        
+        return f"{rating_word} {type_word}"
+
+
+class ReviewReply(models.Model):
+    """Ответы на отзывы от администрации автосервиса"""
+    
+    review = models.OneToOneField(
+        Review,
+        on_delete=models.CASCADE,
+        related_name='reply',
+        verbose_name='Отзыв'
+    )
+    
+    author = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='review_replies',
+        verbose_name='Автор ответа'
+    )
+    
+    text = models.TextField(
+        verbose_name='Текст ответа'
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания'
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата обновления'
+    )
+    
+    class Meta:
+        verbose_name = 'Ответ на отзыв'
+        verbose_name_plural = 'Ответы на отзывы'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'Ответ от {self.author.get_full_name()} на отзыв #{self.review.id}'
