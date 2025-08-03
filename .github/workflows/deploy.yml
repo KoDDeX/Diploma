@@ -46,7 +46,7 @@ jobs:
             echo "${{ secrets.ENV_FILE }}" > .env
 
             # Собираем статические файлы (если нужно)
-            /home/koddex/.local/bin/poetry run python manage.py collectstatic --noinput
+            #/home/koddex/.local/bin/poetry run python manage.py collectstatic --noinput
 
             # Перезапускаем systemd сервис
             echo "${{ secrets.PASSWORD }}" | sudo -S systemctl start diploma
