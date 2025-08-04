@@ -68,8 +68,6 @@ from .views import (
     reviews_moderation,
     review_approve,
     review_reject,
-    # Отзыв по заказу
-    order_review_create,
 )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -357,12 +355,6 @@ urlpatterns = [
         "admin-panel/review-reject/<int:review_id>/",
         review_reject,
         name="review_reject",
-    ),
-    # Отзыв по заказу
-    path(
-        "order/<int:order_id>/review/create/",
-        order_review_create,
-        name="order_review_create",
     ),
 ]
 
