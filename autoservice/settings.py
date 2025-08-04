@@ -33,7 +33,8 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     '77.233.222.149',  # Ваш IP сервера
-    '24autoservice.ru'  # Если есть домен
+    '24autoservice.ru',  # Если есть домен
+    'www.24autoservice.ru'  # Если есть домен
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -42,7 +43,10 @@ CSRF_TRUSTED_ORIGINS = [
     'http://77.233.222.149',
     'https://77.233.222.149',
     'http://24autoservice.ru',
-    'https://24autoservice.ru'
+    'https://24autoservice.ru',
+    'http://www.24autoservice.ru',
+    'https://www.24autoservice.ru'
+
 ]
 
 

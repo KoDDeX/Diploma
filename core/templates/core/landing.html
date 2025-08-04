@@ -8,7 +8,7 @@
     <div class="row justify-content-center">
         <div class="col-12">
             <!-- О проекте -->
-            <div class="mb-5">
+            <div class="mb-5" id="about">
                 <div class="card shadow-lg border-0 text-light">
                     <div class="card-header text-center py-4">
                         <h1 class="display-4 fw-bold text-primary mb-2">
@@ -35,7 +35,7 @@
                         </div>
                         
                         <!-- Участники проекта -->
-                        <div class="row g-4 mb-4">
+                        <div class="row g-4 mb-4" id="features">
                             <div class="col-lg-4">
                                 <div class="h-100 p-3 bg-dark rounded">
                                     <h5 class="text-primary fw-bold mb-3">
@@ -155,7 +155,7 @@
             </div>
             
             <!-- Блок выбора автосервиса -->
-            <div class="row mb-5">
+            <div class="row mb-5" id="autoservice-selection">
                 <div class="col-12">
                     <div class="card shadow-lg border-0 text-light">
                         <div class="card-header text-center py-3">
@@ -163,6 +163,9 @@
                                 <i class="bi bi-search me-2"></i>
                                 Выберите автосервис
                             </h3>
+                            <p class="text-muted mb-0 mt-2">
+                                <small>Регион можно выбрать в меню сверху</small>
+                            </p>
                         </div>
                         <div class="card-body p-4">
                             <form id="autoservice-search-form" class="row g-3">
@@ -321,6 +324,81 @@
                 </div>
         </div>
     </div>
+    
+    <!-- Раздел контактов -->
+    <div class="container py-5" id="contacts">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow-lg border-0 text-light">
+                    <div class="card-header text-center py-4">
+                        <h2 class="text-primary mb-0">
+                            <i class="bi bi-telephone me-2"></i>
+                            Контакты
+                        </h2>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <h5 class="text-primary">
+                                    <i class="bi bi-geo-alt me-2"></i>Адрес
+                                </h5>
+                                <p class="text-light">
+                                    г. Москва, ул. Примерная, д. 123<br>
+                                    Офис 456
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="text-primary">
+                                    <i class="bi bi-telephone me-2"></i>Телефон
+                                </h5>
+                                <p class="text-light">
+                                    <a href="tel:+74951234567" class="text-light text-decoration-none">
+                                        +7 (495) 123-45-67
+                                    </a>
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="text-primary">
+                                    <i class="bi bi-envelope me-2"></i>Email
+                                </h5>
+                                <p class="text-light">
+                                    <a href="mailto:info@24autoservice.ru" class="text-light text-decoration-none">
+                                        info@24autoservice.ru
+                                    </a>
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="text-primary">
+                                    <i class="bi bi-clock me-2"></i>Режим работы
+                                </h5>
+                                <p class="text-light">
+                                    Пн-Пт: 09:00 - 18:00<br>
+                                    Сб-Вс: 10:00 - 16:00
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-12 text-center">
+                                <h5 class="text-primary mb-3">Свяжитесь с нами</h5>
+                                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                                    <a href="tel:+74951234567" class="btn btn-primary">
+                                        <i class="bi bi-telephone me-2"></i>Позвонить
+                                    </a>
+                                    <a href="mailto:info@24autoservice.ru" class="btn btn-outline-primary">
+                                        <i class="bi bi-envelope me-2"></i>Написать
+                                    </a>
+                                    <button type="button" class="btn btn-success" onclick="window.scrollTo({top: document.getElementById('autoservice-selection').offsetTop, behavior: 'smooth'})">
+                                        <i class="bi bi-search me-2"></i>Найти автосервис
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Стили для hover эффектов -->
@@ -356,17 +434,45 @@ document.addEventListener('DOMContentLoaded', function() {
         ]{% if not forloop.last %},{% endif %}
         {% endfor %}
     };
-    
-    // Обработчик изменения региона
-    regionSelect.addEventListener('change', function() {
-        const regionId = this.value;
+
+    // Функция для получения региона из localStorage
+    function getRegionFromStorage() {
+        try {
+            const regionDataStr = localStorage.getItem('selectedRegion');
+            if (!regionDataStr) return null;
+            
+            const regionData = JSON.parse(regionDataStr);
+            
+            // Проверяем, не истек ли срок хранения (30 дней)
+            if (Date.now() - regionData.timestamp > 30 * 24 * 60 * 60 * 1000) {
+                localStorage.removeItem('selectedRegion');
+                return null;
+            }
+            
+            return regionData;
+        } catch (error) {
+            localStorage.removeItem('selectedRegion');
+            return null;
+        }
+    }
+
+    // Функция для обновления интерфейса при смене региона
+    window.updateRegionInInterface = function(regionId, regionName) {
+        // Обновляем выбранный регион в селекте
+        regionSelect.value = regionId;
         
+        // Обновляем список автосервисов
+        updateAutoservicesList(regionId);
+    };
+
+    // Функция для обновления списка автосервисов
+    function updateAutoservicesList(regionId) {
         // Очищаем список автосервисов
         autoserviceSelect.innerHTML = '';
         autoserviceSelect.disabled = true;
         submitButton.disabled = true;
         
-        if (regionId) {
+        if (regionId && regionId != '0') {
             const autoservices = autoservicesByRegion[regionId] || [];
             
             if (autoservices.length > 0) {
@@ -396,6 +502,29 @@ document.addEventListener('DOMContentLoaded', function() {
             defaultOption.value = '';
             defaultOption.textContent = 'Сначала выберите регион';
             autoserviceSelect.appendChild(defaultOption);
+        }
+    }
+
+    // Инициализация с сохранённым регионом
+    const savedRegion = getRegionFromStorage();
+    if (savedRegion && savedRegion.id && savedRegion.id != '0') {
+        updateRegionInInterface(savedRegion.id, savedRegion.name);
+    }
+
+    // Обработчик изменения региона
+    regionSelect.addEventListener('change', function() {
+        const regionId = this.value;
+        updateAutoservicesList(regionId);
+        
+        // Сохраняем выбор в localStorage
+        if (regionId) {
+            const regionName = this.options[this.selectedIndex].text;
+            const regionData = {
+                id: regionId,
+                name: regionName,
+                timestamp: Date.now()
+            };
+            localStorage.setItem('selectedRegion', JSON.stringify(regionData));
         }
     });
     

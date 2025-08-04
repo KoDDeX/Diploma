@@ -61,6 +61,28 @@
                 top: 56px; /* Может быть другая высота на мобильных */
             }
         }
+        
+        /* Стили для темного модального окна выбора региона */
+        #regionModal .modal-content {
+            background-color: var(--bs-dark) !important;
+            border: 1px solid var(--bs-secondary);
+        }
+        
+        #regionModal .list-group-item {
+            background-color: var(--bs-dark);
+            border-color: var(--bs-secondary);
+            color: var(--bs-light);
+        }
+        
+        #regionModal .list-group-item:hover {
+            background-color: var(--bs-primary);
+            color: white;
+        }
+        
+        #regionModal .form-control:focus {
+            border-color: var(--bs-primary);
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
     </style>
     
     {% block styles %}
@@ -90,6 +112,44 @@
             </div>
         </div>
     {% endif %}
+
+    <!-- Модальное окно выбора региона -->
+    <div class="modal fade" id="regionModal" tabindex="-1" aria-labelledby="regionModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="regionModalLabel">
+                        <i class="fas fa-map-marker-alt me-2"></i>Выберите ваш регион
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <p class="text-light mb-3">Выберите регион для поиска автосервисов рядом с вами:</p>
+                        
+                        <!-- Поле поиска -->
+                        <div class="input-group mb-3">
+                            <span class="input-group-text bg-secondary text-light border-secondary">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="regionSearch" placeholder="Введите название региона...">
+                        </div>
+                        
+                        <!-- Список регионов -->
+                        <div id="regionsList" class="list-group" style="max-height: 400px; overflow-y: auto;">
+                            <!-- Регионы будут загружены через JavaScript -->
+                            <div class="text-center py-3">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Загрузка...</span>
+                                </div>
+                                <p class="mt-2 text-light">Загружаем список регионов...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <main class="content-wrapper pt-5">
         {% block content %}
@@ -228,6 +288,200 @@
         });
     </script>
     {% endif %}
+    
+    <!-- Скрипт для работы с выбором региона -->
+    <script>
+        // Константы для работы с localStorage
+        const REGION_STORAGE_KEY = 'selectedRegion';
+        const REGION_STORAGE_EXPIRY = 30 * 24 * 60 * 60 * 1000; // 30 дней в миллисекундах
+        
+        // Функция для сохранения региона в localStorage
+        function saveRegionToStorage(regionId, regionName) {
+            const regionData = {
+                id: regionId,
+                name: regionName,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(REGION_STORAGE_KEY, JSON.stringify(regionData));
+        }
+        
+        // Функция для получения региона из localStorage
+        function getRegionFromStorage() {
+            try {
+                const regionDataStr = localStorage.getItem(REGION_STORAGE_KEY);
+                if (!regionDataStr) return null;
+                
+                const regionData = JSON.parse(regionDataStr);
+                
+                // Проверяем, не истек ли срок хранения (30 дней)
+                if (Date.now() - regionData.timestamp > REGION_STORAGE_EXPIRY) {
+                    localStorage.removeItem(REGION_STORAGE_KEY);
+                    return null;
+                }
+                
+                return regionData;
+            } catch (error) {
+                console.error('Ошибка при чтении региона из localStorage:', error);
+                localStorage.removeItem(REGION_STORAGE_KEY);
+                return null;
+            }
+        }
+        
+        // Функция для загрузки списка регионов
+        function loadRegions() {
+            fetch('{% url "core:api_regions" %}')
+                .then(response => response.json())
+                .then(data => {
+                    const regionsList = document.getElementById('regionsList');
+                    regionsList.innerHTML = '';
+                    
+                    if (data.regions && data.regions.length > 0) {
+                        data.regions.forEach(region => {
+                            const regionItem = document.createElement('button');
+                            regionItem.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                            regionItem.setAttribute('data-region-id', region.id);
+                            regionItem.setAttribute('data-region-name', region.name);
+                            
+                            regionItem.innerHTML = `
+                                <div>
+                                    <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                                    <strong>${region.name}</strong>
+                                </div>
+                                <i class="fas fa-chevron-right text-muted"></i>
+                            `;
+                            
+                            regionItem.addEventListener('click', function() {
+                                selectRegion(region.id, region.name);
+                            });
+                            
+                            regionsList.appendChild(regionItem);
+                        });
+                    } else {
+                        regionsList.innerHTML = '<div class="text-center py-3 text-muted">Регионы не найдены</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при загрузке регионов:', error);
+                    const regionsList = document.getElementById('regionsList');
+                    regionsList.innerHTML = '<div class="text-center py-3 text-danger">Ошибка загрузки регионов</div>';
+                });
+        }
+        
+        // Функция для выбора региона
+        function selectRegion(regionId, regionName) {
+            // Сохраняем в localStorage
+            saveRegionToStorage(regionId, regionName);
+            
+            // Закрываем модальное окно
+            const regionModal = bootstrap.Modal.getInstance(document.getElementById('regionModal'));
+            if (regionModal) {
+                regionModal.hide();
+            }
+            
+            // Показываем сообщение об успешном выборе
+            showRegionMessage(regionName);
+            
+            // Обновляем navbar
+            updateNavbarRegion(regionId, regionName);
+            
+            // Обновляем интерфейс, если есть соответствующая функция
+            if (typeof updateRegionInInterface === 'function') {
+                updateRegionInInterface(regionId, regionName);
+            }
+            
+            // Перезагружаем страницу для применения фильтра
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        }
+        
+        // Функция для обновления региона в navbar
+        function updateNavbarRegion(regionId, regionName) {
+            const navbarRegionBadge = document.getElementById('navbar-region-badge');
+            const navbarRegionName = document.getElementById('navbar-region-name');
+            
+            if (navbarRegionBadge && navbarRegionName) {
+                if (regionId && regionId != '0') {
+                    navbarRegionName.textContent = regionName;
+                    navbarRegionBadge.style.display = 'inline-block';
+                } else {
+                    navbarRegionBadge.style.display = 'none';
+                }
+            }
+        }
+        
+        // Функция для показа сообщения о выборе региона
+        function showRegionMessage(regionName) {
+            const messagesContainer = document.querySelector('.fixed-messages .container');
+            if (messagesContainer) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'alert alert-success alert-dismissible fade show mb-2';
+                messageDiv.innerHTML = `
+                    <i class="bi bi-check-circle me-2"></i>
+                    Регион "${regionName}" успешно выбран
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                messagesContainer.appendChild(messageDiv);
+                
+                // Автоматически скрываем через 3 секунды
+                setTimeout(() => {
+                    const alert = new bootstrap.Alert(messageDiv);
+                    alert.close();
+                }, 3000);
+            }
+        }
+        
+        // Функция для поиска регионов
+        function setupRegionSearch() {
+            const searchInput = document.getElementById('regionSearch');
+            const regionsList = document.getElementById('regionsList');
+            
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                const regionItems = regionsList.querySelectorAll('.list-group-item');
+                
+                regionItems.forEach(item => {
+                    const regionName = item.getAttribute('data-region-name');
+                    if (regionName && regionName.toLowerCase().includes(searchTerm)) {
+                        item.style.display = 'block';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+        
+        // Функция для принудительного показа модального окна выбора региона
+        function showRegionModal() {
+            const regionModal = new bootstrap.Modal(document.getElementById('regionModal'));
+            regionModal.show();
+            loadRegions();
+            setupRegionSearch();
+        }
+        
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            // Проверяем, есть ли сохраненный регион
+            const savedRegion = getRegionFromStorage();
+            
+            // Обновляем navbar с сохранённым регионом
+            if (savedRegion && savedRegion.id && savedRegion.id != '0') {
+                updateNavbarRegion(savedRegion.id, savedRegion.name);
+            }
+            
+            // Если региона нет, показываем модальное окно выбора
+            if (!savedRegion) {
+                setTimeout(() => {
+                    showRegionModal();
+                }, 500); // Небольшая задержка для лучшего UX
+            }
+            
+            // Глобальная функция для смены региона (можно вызвать из любого места)
+            window.changeRegion = function() {
+                showRegionModal();
+            };
+        });
+    </script>
     
     {% block scripts %}
     {% endblock %}

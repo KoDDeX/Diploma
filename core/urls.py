@@ -68,6 +68,8 @@ from .views import (
     reviews_moderation,
     review_approve,
     review_reject,
+    # API для регионов
+    api_regions,
 )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -355,6 +357,12 @@ urlpatterns = [
         "admin-panel/review-reject/<int:review_id>/",
         review_reject,
         name="review_reject",
+    ),
+    # API endpoints
+    path(
+        "api/regions/",
+        api_regions,
+        name="api_regions",
     ),
 ]
 

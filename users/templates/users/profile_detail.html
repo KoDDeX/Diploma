@@ -127,24 +127,24 @@
                 
                 <!-- Кнопки действий -->
                 <div class="card-footer text-center py-3">
-                    <div class="d-grid gap-2 d-md-block" role="group">
+                    <div class="d-flex flex-wrap justify-content-center gap-2" role="group">
                         {% if is_own_profile %}
-                            <a href="{% url 'users:profile_edit' username=profile_user.username %}" class="btn btn-primary btn-lg me-2">
+                            <a href="{% url 'users:profile_edit' username=profile_user.username %}" class="btn btn-primary btn-lg">
                                 <i class="bi bi-pencil-square me-2"></i>
                                 Редактировать профиль
                             </a>
-                            <a href="{% url 'core:user_cars_list' %}" class="btn btn-info btn-lg me-2">
+                            <a href="{% url 'core:user_cars_list' %}" class="btn btn-info btn-lg">
                                 <i class="bi bi-car-front me-2"></i>
                                 Мои автомобили
                             </a>
-                            <a href="{% url 'core:user_orders_list' %}" class="btn btn-success btn-lg me-2">
+                            <a href="{% url 'core:user_orders_list' %}" class="btn btn-success btn-lg">
                                 <i class="bi bi-journal-text me-2"></i>
                                 Мои заказы
                             </a>
                         {% endif %}
                         
                         {% if profile_user.role == 'autoservice_admin' or profile_user.role == 'super_admin' %}
-                            <a href="#" class="btn btn-warning btn-lg me-2">
+                            <a href="#" class="btn btn-warning btn-lg">
                                 <i class="bi bi-people me-2"></i>
                                 Управление сотрудниками
                             </a>
@@ -154,7 +154,8 @@
                             <i class="bi bi-arrow-left me-2"></i>
                             На главную
                         </a>
-                    </div>                </div>
+                    </div>
+                </div>
             </div>
             
             <!-- Дополнительные блоки со статистикой и настройками -->

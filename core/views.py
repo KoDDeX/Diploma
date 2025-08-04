@@ -57,10 +57,23 @@ class LandingPageView(TemplateView):
         # Получаем все активные регионы
         all_regions = Region.objects.filter(is_active=True)
 
-        # Получаем все активные автосервисы
-        all_autoservices = AutoService.objects.filter(is_active=True).select_related(
-            "region"
-        )
+        # Проверяем, выбран ли регион через GET параметр (приоритет)
+        selected_region_id = self.request.GET.get('region')
+        selected_region = None
+        
+        if selected_region_id:
+            try:
+                selected_region = Region.objects.get(id=selected_region_id, is_active=True)
+            except Region.DoesNotExist:
+                selected_region = None
+
+        # Получаем автосервисы с учетом выбранного региона
+        autoservices_query = AutoService.objects.filter(is_active=True).select_related("region")
+        
+        if selected_region:
+            autoservices_query = autoservices_query.filter(region=selected_region)
+        
+        all_autoservices = autoservices_query
 
         # Группируем автосервисы по регионам
         autoservices_by_region = {}
@@ -78,6 +91,8 @@ class LandingPageView(TemplateView):
                 "title": "Выберите автосервис",
                 "regions": regions_with_autoservices,
                 "autoservices_by_region": autoservices_by_region,
+                "all_regions": all_regions,  # Все регионы для выпадающего списка
+                "selected_region": selected_region,  # Выбранный регион
             }
         )
         return context
@@ -2976,3 +2991,26 @@ def order_review_create(request, order_id):
     # Перенаправляем на создание отзыва об услуге с параметром заказа
     from django.urls import reverse
     return redirect(f"{reverse('core:service_review_create', args=[order.service.id])}?order_id={order.id}")
+
+
+def api_regions(request):
+    """API для получения списка регионов"""
+    try:
+        regions = Region.objects.all().order_by('name')
+        regions_data = [
+            {
+                'id': region.id,
+                'name': region.name
+            }
+            for region in regions
+        ]
+        
+        return JsonResponse({
+            'success': True,
+            'regions': regions_data
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

@@ -1,33 +1,40 @@
 {% load static %}
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
     <div class="container">
-        <a class="navbar-brand" href="{% url 'landing' %}">
-            <i class="bi bi-car-front"></i>
+        <!-- Логотип и кнопка главной страницы слева -->
+        <a class="navbar-brand" href="{% url 'core:landing' %}">
+            <i class="bi bi-car-front me-2"></i>
+            <span class="d-none d-md-inline">24АвтоСервис</span>
         </a>
+        
+        <!-- Кнопка для мобильного меню -->
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
+        
         <div class="collapse navbar-collapse" id="navbarNav">
+            <!-- Блок выбора региона по центру -->
+            <div class="navbar-nav mx-auto">
+                <div class="nav-item d-flex align-items-center">
+                    <span class="text-light me-2">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </span>
+                    <span class="badge bg-primary me-2" id="navbar-region-badge" style="display: none;">
+                        <span id="navbar-region-name"></span>
+                    </span>
+                    <button type="button" class="btn btn-outline-light btn-sm" onclick="changeRegion()">
+                        <i class="fas fa-exchange-alt me-1"></i>
+                        <span class="d-none d-md-inline">Выбрать регион</span>
+                        <span class="d-md-none">Регион</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Правое меню -->
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="#about">О нас</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#location">Где нас найти</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#contacts">Контакты</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link btn btn-outline-light ms-2 px-3" href="#contacts">Записаться</a>
-                </li>
-            </ul>
-        </div>
-        <!-- Блок авторизации пользователя (справа) -->
-        <div class="navbar-nav ms-auto"> {# ms-auto для выравнивания по правому краю #}
-            {% if user.is_authenticated %}
-                <!-- Уведомления -->
-                <div class="nav-item dropdown">
+                <!-- Уведомления (только для авторизованных) -->
+                {% if user.is_authenticated %}
+                <li class="nav-item dropdown">
                     <a class="nav-link position-relative" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Уведомления">
                         <i class="bi bi-bell"></i>
                         <span id="notification-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">
@@ -42,53 +49,158 @@
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item text-center" href="{% url 'core:notifications_list' %}">Все уведомления</a></li>
                     </ul>
-                </div>
-                
-                {% if user.role == 'super_admin' %}
-                    <a href="{% url 'users:profile_detail' username=user.username %}" class="nav-link" title="Личный кабинет">
-                        <i class="bi bi-person-circle"></i> {{ user.username|capfirst }} (Профиль)
-                    </a>
-                    <a href="{% url 'core:admin_panel' %}" class="nav-link" title="Панель управления">
-                        <i class="bi bi-gear-fill"></i> Панель управления
-                    </a>
-                    <a href="{% url 'admin:index' %}" class="nav-link" title="Админпанель">
-                        <i class="bi bi-person-check-fill"></i> Админ Django
-                    </a>
-                {% elif user.role == 'autoservice_admin' %}
-                    <a href="{% url 'users:profile_detail' username=user.username %}" class="nav-link" title="Личный кабинет">
-                        <i class="bi bi-person-circle"></i> {{ user.username|capfirst }} (Профиль)
-                    </a>
-                    <a href="{% url 'core:autoservice_admin_dashboard' %}" class="nav-link" title="Панель управления автосервисом">
-                        <i class="bi bi-speedometer2"></i> Панель автосервиса
-                    </a>
-                {% elif user.role == 'manager' %}
-                    <a href="{% url 'users:profile_detail' username=user.username %}" class="nav-link" title="Личный кабинет">
-                        <i class="bi bi-person-circle"></i> {{ user.username|capfirst }} (Профиль)
-                    </a>
-                    <a href="{% url 'core:autoservice_admin_dashboard' %}" class="nav-link" title="Панель управления автосервисом">
-                        <i class="bi bi-speedometer2"></i> Панель автосервиса
-                    </a>
-                {% else %}
-                    <a href="{% url 'users:profile_detail' username=user.username %}" class="nav-link" title="Личный кабинет">
-                        <i class="bi bi-person-circle"></i> {{ user.username|capfirst }} (Профиль)
-                    </a>
+                </li>
                 {% endif %}
-                {% comment %} Сделать это же методом POST {% endcomment %}
-                <form action="{% url 'users:logout' %}" method="post" class="d-inline">
-                    {% csrf_token %}
-                    <button type="submit" class="nav-link btn btn-link" title="Выйти">
-                        <i class="bi bi-box-arrow-right"></i> Выйти
-                    </button>
-                </form>
-            {% else %}
-                <a href="{% url 'users:login' %}" class="nav-link" title="Войти">
-                    <i class="bi bi-box-arrow-in-right"></i> Войти
-                </a>
-                <a href="{% url 'users:register' %}" class="nav-link" title="Зарегистрироваться">
-                    <i class="bi bi-person-plus-fill"></i> Зарегистрироваться
-                </a>
-            {% endif %}
+                
+                <!-- Главное меню навигации -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="mainMenuDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-list"></i>
+                        <span class="d-none d-md-inline ms-1">Меню</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">Навигация</h6></li>
+                        <li><a class="dropdown-item" href="{% url 'core:landing' %}">
+                            <i class="bi bi-house me-2"></i>Главная страница
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'core:landing' %}#about">
+                            <i class="bi bi-info-circle me-2"></i>О проекте
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'core:landing' %}#autoservice-selection">
+                            <i class="bi bi-search me-2"></i>Выбор автосервиса
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'core:landing' %}#features">
+                            <i class="bi bi-star me-2"></i>Возможности
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'core:landing' %}#contacts">
+                            <i class="bi bi-telephone me-2"></i>Контакты
+                        </a></li>
+                        {% if user.is_authenticated %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header">Мои разделы</h6></li>
+                        <li><a class="dropdown-item" href="{% url 'core:user_orders_list' %}">
+                            <i class="bi bi-clipboard-check me-2"></i>Мои заказы
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'core:user_cars_list' %}">
+                            <i class="bi bi-car-front me-2"></i>Мои автомобили
+                        </a></li>
+                        {% endif %}
+                        
+                        <!-- Для владельцев автосервисов -->
+                        {% if not user.is_authenticated %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header">Для бизнеса</h6></li>
+                        <li><a class="dropdown-item" href="{% url 'core:autoservice_register' %}">
+                            <i class="bi bi-building-add me-2"></i>Зарегистрировать автосервис
+                        </a></li>
+                        {% endif %}
+                    </ul>
+                </li>
+                
+                <!-- Меню пользователя -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userMenuDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-person-circle"></i>
+                        {% if user.is_authenticated %}
+                            <span class="d-none d-md-inline ms-1">{{ user.get_full_name|default:user.username|truncatechars:15 }}</span>
+                        {% else %}
+                            <span class="d-none d-md-inline ms-1">Аккаунт</span>
+                        {% endif %}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        {% if user.is_authenticated %}
+                            <li><h6 class="dropdown-header">
+                                {{ user.get_full_name|default:user.username }}
+                                {% if user.role %}
+                                    <br><small class="text-muted">{{ user.get_role_display }}</small>
+                                {% endif %}
+                            </h6></li>
+                            <li><a class="dropdown-item" href="{% url 'users:profile_detail' username=user.username %}">
+                                <i class="bi bi-person me-2"></i>Мой профиль
+                            </a></li>
+                            
+                            <!-- Специальные разделы по ролям -->
+                            {% if user.role == 'super_admin' %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Администрирование</h6></li>
+                                <li><a class="dropdown-item" href="{% url 'core:admin_panel' %}">
+                                    <i class="bi bi-gear-fill me-2"></i>Панель управления
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'core:reviews_moderation' %}">
+                                    <i class="fas fa-shield-alt me-2"></i>Модерация отзывов
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'admin:index' %}">
+                                    <i class="bi bi-person-check-fill me-2"></i>Django Admin
+                                </a></li>
+                            {% elif user.role == 'autoservice_admin' or user.role == 'manager' %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Управление автосервисом</h6></li>
+                                <li><a class="dropdown-item" href="{% url 'core:autoservice_admin_dashboard' %}">
+                                    <i class="bi bi-speedometer2 me-2"></i>Панель автосервиса
+                                </a></li>
+                            {% endif %}
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form action="{% url 'users:logout' %}" method="post" class="dropdown-item p-0">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-link dropdown-item text-danger">
+                                        <i class="bi bi-box-arrow-right me-2"></i>Выйти
+                                    </button>
+                                </form>
+                            </li>
+                        {% else %}
+                            <li><h6 class="dropdown-header">Вход в систему</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'users:login' %}">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>Войти
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'users:register' %}">
+                                <i class="bi bi-person-plus-fill me-2"></i>Зарегистрироваться
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'core:autoservice_register' %}">
+                                <i class="bi bi-building-add me-2"></i>Зарегистрировать автосервис
+                            </a></li>
+                        {% endif %}
+                    </ul>
+                </li>
+            </ul>
         </div>
-        <!-- Конец блока авторизации -->
     </div>
 </nav>
+
+<!-- Дополнительные стили для навигации -->
+<style>
+.navbar-brand {
+    font-weight: bold;
+}
+
+#navbar-region-badge {
+    font-size: 0.8em;
+    padding: 0.3em 0.6em;
+}
+
+.dropdown-header {
+    font-weight: bold;
+    color: var(--bs-primary);
+}
+
+.dropdown-item:hover {
+    background-color: var(--bs-light);
+}
+
+.dropdown-item.text-danger:hover {
+    background-color: var(--bs-danger);
+    color: white !important;
+}
+
+/* Анимация для спиннера уведомлений */
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
