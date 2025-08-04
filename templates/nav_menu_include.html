@@ -59,28 +59,17 @@
                         <span class="d-none d-md-inline ms-1">Меню</span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><h6 class="dropdown-header">Навигация</h6></li>
-                        <li><a class="dropdown-item" href="{% url 'core:landing' %}">
-                            <i class="bi bi-house me-2"></i>Главная страница
-                        </a></li>
+                        <li><h6 class="dropdown-header">Главная страница</h6></li>
                         <li><a class="dropdown-item" href="{% url 'core:landing' %}#about">
                             <i class="bi bi-info-circle me-2"></i>О проекте
                         </a></li>
                         <li><a class="dropdown-item" href="{% url 'core:landing' %}#autoservice-selection">
                             <i class="bi bi-search me-2"></i>Выбор автосервиса
                         </a></li>
-                        <li><a class="dropdown-item" href="{% url 'core:landing' %}#features">
-                            <i class="bi bi-star me-2"></i>Возможности
+                        <li><a class="dropdown-item" href="{% url 'core:landing' %}#join">
+                            <i class="bi bi-people me-2"></i>Стать участником
                         </a></li>
                         {% if user.is_authenticated %}
-                        <li><hr class="dropdown-divider"></li>
-                        <li><h6 class="dropdown-header">Мои разделы</h6></li>
-                        <li><a class="dropdown-item" href="{% url 'core:user_orders_list' %}">
-                            <i class="bi bi-clipboard-check me-2"></i>Мои заказы
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url 'core:user_cars_list' %}">
-                            <i class="bi bi-car-front me-2"></i>Мои автомобили
-                        </a></li>
                         {% endif %}
                         
                         <!-- Для владельцев автосервисов -->
