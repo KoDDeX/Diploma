@@ -673,7 +673,7 @@ textarea.form-control {
     }
 
     body {
-        background-attachment: scroll;
+        background-attachment: fixed;
         background-size: cover;
         background-position: center center;
     }
@@ -682,7 +682,7 @@ textarea.form-control {
 /* Адаптивность для мобильных устройств */
 @media (max-width: 480px) {
     body {
-        background-attachment: scroll;
+        background-attachment: fixed;
         background-size: auto 100vh;
         background-position: center top;
         background-repeat: no-repeat;
@@ -697,7 +697,7 @@ textarea.form-control {
 /* Для очень маленьких экранов - используем более простой фон */
 @media (max-width: 360px) {
     body {
-        background-attachment: scroll;
+        background-attachment: fixed;
         background-size: auto 100vh;
         background-position: center top;
         background-repeat: no-repeat;
@@ -712,7 +712,7 @@ textarea.form-control {
 /* Специальная настройка для мобильных в альбомной ориентации */
 @media (max-width: 768px) and (orientation: landscape) {
     body {
-        background-attachment: scroll;
+        background-attachment: fixed;
         background-size: cover;
         background-position: center center;
         background-repeat: no-repeat;
@@ -749,7 +749,7 @@ textarea.form-control {
 
     /* Улучшаем отображение фоновой картинки на мобильных */
     body {
-        background-attachment: scroll !important;
+        background-attachment: fixed !important;
         background-size: auto 100vh !important;
         background-position: center top !important;
         background-repeat: no-repeat !important;
