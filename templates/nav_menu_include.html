@@ -189,4 +189,62 @@
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+
+/* Стили для мобильных устройств */
+@media (max-width: 991.98px) {
+    /* Компактное отображение элементов навбара на мобильных */
+    .navbar-nav {
+        text-align: left;
+    }
+    
+    .navbar-nav .nav-item {
+        width: auto !important;
+        display: inline-block !important;
+    }
+    
+    .navbar-nav .nav-link {
+        display: inline-flex !important;
+        align-items: center !important;
+        width: auto !important;
+        padding: 0.5rem 1rem !important;
+    }
+    
+    /* Специальные стили для уведомлений на мобильных */
+    .navbar-nav .nav-item .nav-link.position-relative {
+        position: relative !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        width: auto !important;
+    }
+    
+    /* Бейдж уведомлений остается рядом с иконкой */
+    .navbar-nav .nav-item .nav-link .position-absolute {
+        position: absolute !important;
+        top: -2px !important;
+        left: 20px !important;
+        transform: none !important;
+    }
+    
+    /* Центрирование блока выбора региона */
+    .navbar-nav.mx-auto {
+        margin: 1rem 0 !important;
+        text-align: center;
+    }
+    
+    /* Правое меню компактно */
+    .navbar-nav.ms-auto {
+        margin-left: 0 !important;
+        margin-top: 1rem;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+    
+    .navbar-nav.ms-auto .nav-item {
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+}
 </style>
