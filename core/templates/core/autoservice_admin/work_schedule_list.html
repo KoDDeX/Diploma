@@ -227,41 +227,15 @@
                                                         <i class="bi bi-pencil"></i>
                                                     </a>
                                                     <button type="button" 
-                                                            class="btn btn-sm btn-outline-danger" 
+                                                            class="btn btn-sm btn-outline-danger delete-schedule-btn" 
                                                             title="Удалить"
-                                                            data-bs-toggle="modal" 
-                                                            data-bs-target="#deleteModal{{ schedule.id }}">
+                                                            data-schedule-id="{{ schedule.id }}"
+                                                            data-master-name="{{ schedule.master.get_full_name }}">
                                                         <i class="bi bi-trash"></i>
                                                     </button>
                                                 </div>
                                             </td>
                                         </tr>
-
-                                        <!-- Модальное окно для удаления -->
-                                        <div class="modal fade" id="deleteModal{{ schedule.id }}" tabindex="-1">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title">Удалить график работы</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <p>Вы уверены, что хотите удалить график работы для мастера 
-                                                           <strong>{{ schedule.master.get_full_name }}</strong>?</p>
-                                                        <p class="text-muted small">Это действие нельзя отменить.</p>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                                            Отмена
-                                                        </button>
-                                                        <a href="{% url 'core:work_schedule_delete' schedule.id %}" 
-                                                           class="btn btn-danger">
-                                                            <i class="bi bi-trash me-1"></i>Удалить
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -296,6 +270,125 @@
     </div>
 </div>
 
+<!-- Единое модальное окно для удаления графика -->
+<div class="modal fade" id="deleteScheduleModal" tabindex="-1" aria-labelledby="deleteScheduleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header bg-dark border-secondary">
+                <h5 class="modal-title text-light" id="deleteScheduleModalLabel">
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                    Удалить график работы
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body bg-dark">
+                <div class="text-center mb-3">
+                    <i class="bi bi-trash text-danger" style="font-size: 3rem;"></i>
+                </div>
+                <p class="text-center mb-3 text-light">
+                    Вы уверены, что хотите удалить график работы для мастера 
+                    <strong id="masterNameToDelete" class="text-warning"></strong>?
+                </p>
+                <div class="alert alert-warning bg-warning bg-opacity-25 border-warning text-warning" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i><strong>Внимание!</strong> Это действие нельзя отменить.
+                </div>
+            </div>
+            <div class="modal-footer bg-dark border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Отмена
+                </button>
+                <form id="deleteScheduleForm" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Удалить график
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteModal = document.getElementById('deleteScheduleModal');
+    const masterNameElement = document.getElementById('masterNameToDelete');
+    const deleteForm = document.getElementById('deleteScheduleForm');
+    
+    // Проверяем, что все элементы найдены
+    if (!deleteModal || !masterNameElement || !deleteForm) {
+        return;
+    }
+    
+    // Обработка клика по кнопкам удаления
+    document.querySelectorAll('.delete-schedule-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const scheduleId = this.getAttribute('data-schedule-id');
+            const masterName = this.getAttribute('data-master-name');
+            
+            // Обновляем содержимое модального окна
+            masterNameElement.textContent = masterName || 'Неизвестный мастер';
+            deleteForm.action = "{% url 'core:work_schedule_delete' 0 %}".replace('0', scheduleId);
+            
+            // Показываем модальное окно
+            try {
+                const modal = bootstrap.Modal.getOrCreateInstance(deleteModal, {
+                    backdrop: 'static',
+                    keyboard: false
+                });
+                modal.show();
+            } catch (error) {
+                // Fallback - простое подтверждение
+                if (confirm(`Вы уверены, что хотите удалить график работы для мастера ${masterName}?`)) {
+                    window.location.href = deleteForm.action;
+                }
+            }
+        });
+    });
+    
+    // Обработка отправки формы удаления
+    deleteForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Показываем индикатор загрузки
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Удаление...';
+        submitBtn.disabled = true;
+        
+        // Создаем FormData с CSRF токеном
+        const formData = new FormData(this);
+        
+        // Отправляем форму
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                // Успешное удаление - перезагружаем страницу
+                window.location.reload();
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            alert('Произошла ошибка при удалении графика работы: ' + error.message);
+            
+            // Восстанавливаем кнопку
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        });
+    });
+});
+</script>
+
 <style>
 .avatar {
     font-weight: 600;
@@ -328,6 +421,71 @@
 
 .btn-group .btn {
     margin: 0 1px;
+}
+
+/* Стили для модального окна */
+.modal-content {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    background-color: #343a40 !important;
+}
+
+.modal-header {
+    border-bottom: 1px solid #495057;
+    background-color: #343a40 !important;
+    border-radius: 15px 15px 0 0;
+}
+
+.modal-footer {
+    border-top: 1px solid #495057;
+    background-color: #343a40 !important;
+    border-radius: 0 0 15px 15px;
+}
+
+.modal-body {
+    padding: 2rem 1.5rem;
+    background-color: #343a40 !important;
+}
+
+/* Анимация появления */
+.modal.fade .modal-dialog {
+    transform: translate(0, -50px);
+    transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+    transform: translate(0, 0);
+}
+
+/* Улучшенные кнопки в модальном окне */
+.modal-footer .btn {
+    min-width: 120px;
+    border-radius: 25px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.modal-footer .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Темный alert */
+.alert-warning.bg-warning.bg-opacity-25 {
+    background-color: rgba(255, 193, 7, 0.25) !important;
+    border: 1px solid #ffc107;
+    color: #ffc107;
+}
+
+/* Кнопка закрытия для темной темы */
+.btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Фон модального окна */
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.7);
 }
 </style>
 {% endblock content %}

@@ -284,18 +284,47 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обработчик изменения типа графика
     scheduleTypeSelect.addEventListener('change', toggleCustomDaysSection);
     
-    // Валидация при изменении даты начала
-    startDateInput.addEventListener('change', function() {
-        const startDate = new Date(this.value);
-        const endDate = new Date(endDateInput.value);
+    // Добавляем обработчики для плавного ввода дат
+    startDateInput.addEventListener('input', function() {
+        // Убираем предыдущие сообщения об ошибках при вводе
+        clearValidationMessages();
+    });
+    
+    endDateInput.addEventListener('input', function() {
+        // Убираем предыдущие сообщения об ошибках при вводе
+        clearValidationMessages();
+    });
+    
+    // Валидация при изменении даты начала (только при выходе из поля)
+    startDateInput.addEventListener('blur', function() {
+        setTimeout(() => {
+            validateStartDate();
+        }, 100);
+    });
+    
+    function validateStartDate() {
+        // Проверяем, что дата введена и соответствует формату YYYY-MM-DD
+        if (!startDateInput.value || !/^\d{4}-\d{2}-\d{2}$/.test(startDateInput.value)) {
+            return; // Не валидируем неполную или некорректную дату
+        }
+        
+        const startDate = new Date(startDateInput.value);
+        
+        // Проверяем валидность даты (не NaN и соответствует введенной)
+        if (isNaN(startDate.getTime()) || startDate.toISOString().split('T')[0] !== startDateInput.value) {
+            return; // Не валидируем некорректную дату
+        }
         
         // Устанавливаем минимальную дату окончания
-        endDateInput.min = this.value;
+        endDateInput.min = startDateInput.value;
         
-        // Проверяем, что дата окончания не раньше начала
-        if (endDate < startDate) {
-            endDateInput.value = '';
-            showValidationMessage('Выберите дату окончания');
+        // Проверяем, что дата окончания не раньше начала (только если она уже введена)
+        if (endDateInput.value && /^\d{4}-\d{2}-\d{2}$/.test(endDateInput.value)) {
+            const endDate = new Date(endDateInput.value);
+            if (!isNaN(endDate.getTime()) && endDate < startDate) {
+                endDateInput.value = '';
+                showValidationMessage('Выберите дату окончания');
+            }
         }
         
         // Устанавливаем рекомендуемую дату окончания в зависимости от типа
@@ -306,15 +335,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 endDateInput.value = recommendedEnd.toISOString().split('T')[0];
             }
         }
+    }
+    
+    // Валидация при изменении даты окончания (только при выходе из поля)
+    endDateInput.addEventListener('blur', function() {
+        setTimeout(() => {
+            validateEndDate();
+        }, 100);
     });
     
-    // Валидация при изменении даты окончания
-    endDateInput.addEventListener('change', function() {
+    function validateEndDate() {
+        // Проверяем, что дата введена и соответствует формату YYYY-MM-DD
+        if (!endDateInput.value || !/^\d{4}-\d{2}-\d{2}$/.test(endDateInput.value)) {
+            return; // Не валидируем неполную или некорректную дату
+        }
+        
         const startDate = new Date(startDateInput.value);
-        const endDate = new Date(this.value);
+        const endDate = new Date(endDateInput.value);
+        
+        // Проверяем валидность дат (не NaN и соответствуют введенным)
+        const isStartDateValid = !isNaN(startDate.getTime()) && /^\d{4}-\d{2}-\d{2}$/.test(startDateInput.value);
+        const isEndDateValid = !isNaN(endDate.getTime()) && endDate.toISOString().split('T')[0] === endDateInput.value;
+        
+        if (!isStartDateValid || !isEndDateValid) {
+            return; // Не валидируем, если даты некорректные
+        }
         
         if (endDate < startDate) {
-            this.value = '';
+            endDateInput.value = '';
             showValidationMessage('Дата окончания не может быть раньше даты начала');
             return;
         }
@@ -322,7 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Проверяем максимальный период
         const daysDiff = (endDate - startDate) / (1000 * 60 * 60 * 24);
         if (daysDiff > 365) {
-            this.value = '';
+            endDateInput.value = '';
             showValidationMessage('Максимальный период графика - 1 год');
             return;
         }
@@ -333,10 +381,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (scheduleTypeSelect.value === 'custom' && daysDiff > 90) {
-            this.value = '';
+            endDateInput.value = '';
             showValidationMessage('Для пользовательского графика максимальный период - 3 месяца');
         }
-    });
+    }
     
     // Валидация времени
     startTimeInput.addEventListener('change', validateWorkingHours);
@@ -409,8 +457,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function showValidationMessage(message, type = 'error') {
         // Удаляем предыдущие сообщения
-        const existingAlerts = document.querySelectorAll('.validation-alert');
-        existingAlerts.forEach(alert => alert.remove());
+        clearValidationMessages();
         
         // Создаем и показываем сообщение валидации
         const alertClass = type === 'warning' ? 'alert-warning' : 'alert-danger';
@@ -434,8 +481,52 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
     
+    function clearValidationMessages() {
+        const existingAlerts = document.querySelectorAll('.validation-alert');
+        existingAlerts.forEach(alert => alert.remove());
+    }
+    
     // Инициализация при загрузке
     toggleCustomDaysSection();
+    
+    // Валидация перед отправкой формы
+    document.querySelector('form').addEventListener('submit', function(e) {
+        // Очищаем предыдущие сообщения
+        clearValidationMessages();
+        
+        let hasErrors = false;
+        
+        // Проверяем даты
+        if (startDateInput.value && !/^\d{4}-\d{2}-\d{2}$/.test(startDateInput.value)) {
+            showValidationMessage('Неверный формат даты начала');
+            hasErrors = true;
+        }
+        
+        if (endDateInput.value && !/^\d{4}-\d{2}-\d{2}$/.test(endDateInput.value)) {
+            showValidationMessage('Неверный формат даты окончания');
+            hasErrors = true;
+        }
+        
+        // Проверяем время
+        if (startTimeInput.value && endTimeInput.value) {
+            const start = new Date(`2000-01-01T${startTimeInput.value}:00`);
+            const end = new Date(`2000-01-01T${endTimeInput.value}:00`);
+            const duration = (end - start) / (1000 * 60 * 60);
+            
+            if (duration <= 0) {
+                showValidationMessage('Время окончания должно быть позже времени начала');
+                hasErrors = true;
+            } else if (duration > 12) {
+                showValidationMessage('Рабочий день не может быть длиннее 12 часов');
+                hasErrors = true;
+            }
+        }
+        
+        if (hasErrors) {
+            e.preventDefault();
+            return false;
+        }
+    });
 });
 
 // Функция для быстрого выбора дней
