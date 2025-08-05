@@ -46,6 +46,43 @@ def add_notification(user, title, message, level='info'):
     return None
 
 
+def validate_schedule_business_logic(schedule):
+    """
+    Бизнес-валидация графика работы.
+    Возвращает список ошибок, если они есть.
+    """
+    errors = []
+    
+    # Проверка конфликтов с заказами
+    if schedule.pk:  # Только для существующих графиков
+        conflicting_orders = Order.objects.filter(
+            assigned_master=schedule.master,
+            preferred_date__range=[schedule.start_date, schedule.end_date or schedule.start_date],
+            status__in=['confirmed', 'in_progress']
+        )
+        
+        for order in conflicting_orders:
+            # Проверяем, попадает ли заказ в новое время работы
+            order_time = order.preferred_time
+            if not (schedule.start_time <= order_time <= schedule.end_time):
+                errors.append(
+                    f'Заказ №{order.id} на {order.preferred_date.strftime("%d.%m.%Y")} '
+                    f'в {order_time.strftime("%H:%M")} не попадает в новое время работы мастера'
+                )
+    
+    # Проверка загрузки мастера
+    if schedule.master:
+        # Проверяем, не превышает ли количество рабочих дней разумные пределы
+        working_days = schedule.get_working_days()
+        if len(working_days) >= 6:
+            errors.append(
+                'Предупреждение: Мастер работает 6 или более дней в неделю. '
+                'Рекомендуется предусмотреть выходные дни для предотвращения переутомления.'
+            )
+    
+    return errors
+
+
 class LandingPageView(TemplateView):
     """Представление для главной страницы сайта."""
 
@@ -88,7 +125,7 @@ class LandingPageView(TemplateView):
 
         context.update(
             {
-                "title": "Выберите автосервис",
+                "title": "24АвтоСервис",
                 "regions": regions_with_autoservices,
                 "autoservices_by_region": autoservices_by_region,
                 "all_regions": all_regions,  # Все регионы для выпадающего списка
@@ -2398,9 +2435,34 @@ def work_schedule_create(request):
     if request.method == 'POST':
         form = WorkScheduleForm(request.POST, autoservice=autoservice)
         if form.is_valid():
-            schedule = form.save()
-            messages.success(request, f'График работы для {schedule.master.get_full_name() or schedule.master.username} создан')
-            return redirect('core:work_schedule_list')
+            try:
+                schedule = form.save(commit=False)
+                
+                # Дополнительные бизнес-проверки
+                validation_errors = validate_schedule_business_logic(schedule)
+                if validation_errors:
+                    for error in validation_errors:
+                        messages.error(request, error)
+                    return render(request, 'core/autoservice_admin/work_schedule_form.html', {
+                        'title': f'Создание графика работы - {autoservice.name}',
+                        'form': form,
+                        'autoservice': autoservice,
+                    })
+                
+                schedule.save()
+                
+                # Создаем уведомления
+                add_notification(
+                    user=schedule.master,
+                    title="Создан график работы",
+                    message=f"Для вас создан новый график работы с {schedule.start_date.strftime('%d.%m.%Y')} по {schedule.end_date.strftime('%d.%m.%Y') if schedule.end_date else 'бессрочно'}. Время работы: {schedule.start_time.strftime('%H:%M')}-{schedule.end_time.strftime('%H:%M')}.",
+                    level="info"
+                )
+                
+                messages.success(request, f'График работы для {schedule.master.get_full_name() or schedule.master.username} создан')
+                return redirect('core:work_schedule_list')
+            except Exception as e:
+                messages.error(request, f'Ошибка при создании графика: {str(e)}')
     else:
         form = WorkScheduleForm(autoservice=autoservice)
     
@@ -2429,9 +2491,46 @@ def work_schedule_edit(request, schedule_id):
     if request.method == 'POST':
         form = WorkScheduleForm(request.POST, instance=schedule, autoservice=autoservice)
         if form.is_valid():
-            schedule = form.save()
-            messages.success(request, f'График работы для {schedule.master.get_full_name() or schedule.master.username} обновлен')
-            return redirect('core:work_schedule_list')
+            try:
+                old_schedule_info = {
+                    'start_time': schedule.start_time,
+                    'end_time': schedule.end_time,
+                    'start_date': schedule.start_date,
+                    'end_date': schedule.end_date,
+                }
+                
+                updated_schedule = form.save(commit=False)
+                
+                # Дополнительные бизнес-проверки
+                validation_errors = validate_schedule_business_logic(updated_schedule)
+                if validation_errors:
+                    for error in validation_errors:
+                        messages.warning(request, error)
+                    # Не блокируем сохранение, но предупреждаем
+                
+                updated_schedule.save()
+                
+                # Создаем уведомления об изменении
+                changes = []
+                if old_schedule_info['start_time'] != updated_schedule.start_time or old_schedule_info['end_time'] != updated_schedule.end_time:
+                    changes.append(f"время работы изменено на {updated_schedule.start_time.strftime('%H:%M')}-{updated_schedule.end_time.strftime('%H:%M')}")
+                
+                if old_schedule_info['start_date'] != updated_schedule.start_date or old_schedule_info['end_date'] != updated_schedule.end_date:
+                    end_date_str = updated_schedule.end_date.strftime('%d.%m.%Y') if updated_schedule.end_date else 'бессрочно'
+                    changes.append(f"период действия изменен на {updated_schedule.start_date.strftime('%d.%m.%Y')} - {end_date_str}")
+                
+                if changes:
+                    add_notification(
+                        user=updated_schedule.master,
+                        title="Изменен график работы",
+                        message=f"Ваш график работы обновлен: {', '.join(changes)}.",
+                        level="info"
+                    )
+                
+                messages.success(request, f'График работы для {updated_schedule.master.get_full_name() or updated_schedule.master.username} обновлен')
+                return redirect('core:work_schedule_list')
+            except Exception as e:
+                messages.error(request, f'Ошибка при обновлении графика: {str(e)}')
     else:
         form = WorkScheduleForm(instance=schedule, autoservice=autoservice)
     

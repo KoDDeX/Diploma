@@ -163,6 +163,14 @@
                                 {% endif %}
                                 <div class="form-text">{{ form.end_time.help_text }}</div>
                             </div>
+                            
+                            <!-- Индикатор длительности рабочего дня -->
+                            <div class="col-12">
+                                <div id="work-duration-indicator" class="work-duration-info" style="display: none;">
+                                    <i class="bi bi-clock me-2"></i>
+                                    <span id="duration-text"></span>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Статус активности -->
@@ -255,6 +263,14 @@
 document.addEventListener('DOMContentLoaded', function() {
     const scheduleTypeSelect = document.getElementById('{{ form.schedule_type.id_for_label }}');
     const customDaysSection = document.getElementById('custom-days-section');
+    const startDateInput = document.getElementById('{{ form.start_date.id_for_label }}');
+    const endDateInput = document.getElementById('{{ form.end_date.id_for_label }}');
+    const startTimeInput = document.getElementById('{{ form.start_time.id_for_label }}');
+    const endTimeInput = document.getElementById('{{ form.end_time.id_for_label }}');
+    
+    // Устанавливаем минимальную дату (сегодня)
+    const today = new Date().toISOString().split('T')[0];
+    startDateInput.min = today;
     
     // Функция для показа/скрытия секции кастомных дней
     function toggleCustomDaysSection() {
@@ -267,6 +283,156 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Обработчик изменения типа графика
     scheduleTypeSelect.addEventListener('change', toggleCustomDaysSection);
+    
+    // Валидация при изменении даты начала
+    startDateInput.addEventListener('change', function() {
+        const startDate = new Date(this.value);
+        const endDate = new Date(endDateInput.value);
+        
+        // Устанавливаем минимальную дату окончания
+        endDateInput.min = this.value;
+        
+        // Проверяем, что дата окончания не раньше начала
+        if (endDate < startDate) {
+            endDateInput.value = '';
+            showValidationMessage('Выберите дату окончания');
+        }
+        
+        // Устанавливаем рекомендуемую дату окончания в зависимости от типа
+        if (scheduleTypeSelect.value === 'weekly') {
+            const recommendedEnd = new Date(startDate);
+            recommendedEnd.setMonth(recommendedEnd.getMonth() + 3); // 3 месяца
+            if (!endDateInput.value) {
+                endDateInput.value = recommendedEnd.toISOString().split('T')[0];
+            }
+        }
+    });
+    
+    // Валидация при изменении даты окончания
+    endDateInput.addEventListener('change', function() {
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(this.value);
+        
+        if (endDate < startDate) {
+            this.value = '';
+            showValidationMessage('Дата окончания не может быть раньше даты начала');
+            return;
+        }
+        
+        // Проверяем максимальный период
+        const daysDiff = (endDate - startDate) / (1000 * 60 * 60 * 24);
+        if (daysDiff > 365) {
+            this.value = '';
+            showValidationMessage('Максимальный период графика - 1 год');
+            return;
+        }
+        
+        // Предупреждения в зависимости от типа графика
+        if (scheduleTypeSelect.value === 'weekly' && daysDiff < 14) {
+            showValidationMessage('Для недельного графика рекомендуется период не менее 2 недель', 'warning');
+        }
+        
+        if (scheduleTypeSelect.value === 'custom' && daysDiff > 90) {
+            this.value = '';
+            showValidationMessage('Для пользовательского графика максимальный период - 3 месяца');
+        }
+    });
+    
+    // Валидация времени
+    startTimeInput.addEventListener('change', validateWorkingHours);
+    endTimeInput.addEventListener('change', validateWorkingHours);
+    
+    function validateWorkingHours() {
+        const indicator = document.getElementById('work-duration-indicator');
+        const durationText = document.getElementById('duration-text');
+        
+        if (!startTimeInput.value || !endTimeInput.value) {
+            indicator.style.display = 'none';
+            return;
+        }
+        
+        const startTime = startTimeInput.value;
+        const endTime = endTimeInput.value;
+        
+        if (endTime <= startTime) {
+            endTimeInput.classList.add('is-invalid');
+            endTimeInput.classList.remove('is-valid');
+            indicator.style.display = 'none';
+            showValidationMessage('Время окончания работы должно быть позже времени начала');
+            return;
+        }
+        
+        // Проверяем длительность рабочего дня
+        const start = new Date(`2000-01-01T${startTime}:00`);
+        const end = new Date(`2000-01-01T${endTime}:00`);
+        const duration = (end - start) / (1000 * 60 * 60); // в часах
+        
+        // Показываем индикатор длительности
+        indicator.style.display = 'block';
+        durationText.textContent = `Продолжительность рабочего дня: ${duration.toFixed(1)} час${duration === 1 ? '' : duration < 5 ? 'а' : 'ов'}`;
+        
+        // Удаляем предыдущие классы
+        indicator.className = 'work-duration-info';
+        endTimeInput.classList.remove('is-invalid', 'is-valid');
+        startTimeInput.classList.remove('is-invalid', 'is-valid');
+        
+        if (duration > 12) {
+            endTimeInput.classList.add('is-invalid');
+            indicator.classList.add('error');
+            showValidationMessage('Рабочий день не может быть длиннее 12 часов');
+            return;
+        }
+        
+        if (duration < 1) {
+            endTimeInput.classList.add('is-invalid');
+            indicator.classList.add('error');
+            showValidationMessage('Рабочий день должен быть не менее 1 часа');
+            return;
+        }
+        
+        // Устанавливаем соответствующий класс
+        if (duration > 10) {
+            indicator.classList.add('warning');
+            durationText.textContent += ' (длинный рабочий день)';
+        } else if (duration < 4) {
+            indicator.classList.add('warning');
+            durationText.textContent += ' (короткий рабочий день)';
+        } else {
+            indicator.classList.add('valid');
+            durationText.textContent += ' (оптимальная продолжительность)';
+        }
+        
+        // Показываем валидные поля
+        endTimeInput.classList.add('is-valid');
+        startTimeInput.classList.add('is-valid');
+    }
+    
+    function showValidationMessage(message, type = 'error') {
+        // Удаляем предыдущие сообщения
+        const existingAlerts = document.querySelectorAll('.validation-alert');
+        existingAlerts.forEach(alert => alert.remove());
+        
+        // Создаем и показываем сообщение валидации
+        const alertClass = type === 'warning' ? 'alert-warning' : 'alert-danger';
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert ${alertClass} alert-dismissible fade show mt-2 validation-alert`;
+        alertDiv.innerHTML = `
+            <i class="bi bi-${type === 'warning' ? 'exclamation-triangle' : 'exclamation-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Вставляем после формы
+        const form = document.querySelector('form');
+        form.parentNode.insertBefore(alertDiv, form.nextSibling);
+        
+        // Автоматически скрываем через 5 секунд
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
     
     // Инициализация при загрузке
     toggleCustomDaysSection();
@@ -306,6 +472,66 @@ function setDays(days) {
 
 .alert {
     border-radius: 8px;
+}
+
+/* Стили для валидации в реальном времени */
+.form-control.is-invalid, .form-select.is-invalid {
+    border-color: #dc3545;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath d='m5.8 4.6 2.4 2.4m0-2.4-2.4 2.4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.form-control.is-valid, .form-select.is-valid {
+    border-color: #198754;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='m2.3 6.73.94-.94 1.38-1.38L8 0l.94.94L2.3 7.67 0 5.38l.94-.94z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.validation-alert {
+    animation: slideInDown 0.3s ease-out;
+}
+
+@keyframes slideInDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Стили для индикаторов валидации времени */
+.work-duration-info {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    margin-top: 0.5rem;
+}
+
+.work-duration-info.valid {
+    background-color: #d1e7dd;
+    color: #0f5132;
+    border: 1px solid #badbcc;
+}
+
+.work-duration-info.warning {
+    background-color: #fff3cd;
+    color: #664d03;
+    border: 1px solid #ffecb5;
+}
+
+.work-duration-info.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c2c7;
 }
 </style>
 {% endblock content %}

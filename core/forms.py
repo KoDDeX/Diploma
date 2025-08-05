@@ -1,6 +1,9 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.utils.text import slugify
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from datetime import datetime, timedelta
 from .models import (
     AutoService,
     Region,
@@ -813,37 +816,88 @@ class WorkScheduleForm(forms.ModelForm):
         
     def clean(self):
         cleaned_data = super().clean()
-        schedule_type = cleaned_data.get('schedule_type')
         start_date = cleaned_data.get('start_date')
         end_date = cleaned_data.get('end_date')
+        schedule_type = cleaned_data.get('schedule_type')
+        master = cleaned_data.get('master')
         start_time = cleaned_data.get('start_time')
         end_time = cleaned_data.get('end_time')
         custom_days = cleaned_data.get('custom_days')
         
-        # Проверяем время
-        if start_time and end_time:
-            if start_time >= end_time:
-                raise forms.ValidationError(
-                    'Время начала работы должно быть раньше времени окончания'
-                )
-        
-        # Проверяем даты
+        # 1. Базовые проверки дат
         if start_date and end_date:
-            if start_date > end_date:
-                raise forms.ValidationError(
-                    'Дата начала должна быть раньше даты окончания'
-                )
+            # Дата окончания не может быть раньше даты начала
+            if end_date < start_date:
+                raise ValidationError('Дата окончания не может быть раньше даты начала')
+            
+            # Дата начала не может быть в прошлом (кроме сегодня)
+            if start_date < timezone.now().date():
+                raise ValidationError('Дата начала не может быть в прошлом')
+            
+            # Максимальный период графика - 1 год
+            if (end_date - start_date).days > 365:
+                raise ValidationError('Максимальный период графика - 1 год')
         
-        # Для кастомного графика проверяем дни недели
-        if schedule_type == 'custom' and custom_days:
-            try:
-                days = [int(day.strip()) for day in custom_days.split(',')]
-                if not all(1 <= day <= 7 for day in days):
-                    raise ValueError()
-            except (ValueError, AttributeError):
-                raise forms.ValidationError(
-                    'Дни недели должны быть числами от 1 до 7, разделенными запятыми'
-                )
+        # 2. Проверки для недельного графика
+        if schedule_type == 'weekly':
+            # Для недельного графика рекомендуем минимум 2 недели
+            if start_date and end_date and (end_date - start_date).days < 14:
+                self.add_error('end_date', 'Для недельного графика рекомендуется период не менее 2 недель')
+        
+        # 3. Проверки для пользовательского графика
+        if schedule_type == 'custom':
+            # Для пользовательского графика максимум 3 месяца
+            if start_date and end_date and (end_date - start_date).days > 90:
+                raise ValidationError('Для пользовательского графика максимальный период - 3 месяца')
+            
+            # Проверяем корректность дней недели
+            if custom_days:
+                try:
+                    days = [int(day.strip()) for day in custom_days.split(',')]
+                    if not all(1 <= day <= 7 for day in days):
+                        raise ValueError()
+                    if not days:
+                        raise ValidationError('Должен быть выбран хотя бы один рабочий день')
+                    if len(days) == 7:
+                        self.add_error('custom_days', 'Рекомендуется предусмотреть выходные дни')
+                except (ValueError, AttributeError):
+                    raise ValidationError('Дни недели должны быть числами от 1 до 7, разделенными запятыми')
+        
+        # 4. Проверка пересечений с существующими графиками
+        if master and start_date and end_date:
+            overlapping_schedules = WorkSchedule.objects.filter(
+                master=master,
+                is_active=True
+            )
+            
+            # Исключаем текущий график при редактировании
+            if self.instance.pk:
+                overlapping_schedules = overlapping_schedules.exclude(pk=self.instance.pk)
+            
+            for schedule in overlapping_schedules:
+                # Проверяем пересечение периодов
+                if (start_date <= schedule.end_date and end_date >= schedule.start_date):
+                    raise ValidationError(
+                        f'График пересекается с существующим графиком '
+                        f'({schedule.start_date.strftime("%d.%m.%Y")} - {schedule.end_date.strftime("%d.%m.%Y")})'
+                    )
+        
+        # 5. Логические проверки времени работы
+        if start_time and end_time:
+            # Время окончания должно быть позже времени начала
+            if end_time <= start_time:
+                raise ValidationError('Время окончания работы должно быть позже времени начала')
+            
+            # Проверяем разумность рабочего дня (не более 12 часов)
+            start_datetime = datetime.combine(datetime.today(), start_time)
+            end_datetime = datetime.combine(datetime.today(), end_time)
+            work_duration = (end_datetime - start_datetime).seconds / 3600
+            
+            if work_duration > 12:
+                self.add_error('end_time', 'Рабочий день не может быть длиннее 12 часов')
+            
+            if work_duration < 1:
+                self.add_error('end_time', 'Рабочий день должен быть не менее 1 часа')
         
         return cleaned_data
 

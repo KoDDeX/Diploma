@@ -811,14 +811,36 @@ class WorkSchedule(models.Model):
     def clean(self):
         """Валидация модели"""
         from django.core.exceptions import ValidationError
+        from django.utils import timezone
         
-        # Проверяем время
-        if self.start_time >= self.end_time:
-            raise ValidationError('Время начала работы должно быть раньше времени окончания')
+        # Базовые проверки времени
+        if self.start_time and self.end_time:
+            if self.start_time >= self.end_time:
+                raise ValidationError('Время начала работы должно быть раньше времени окончания')
+            
+            # Проверяем разумность рабочего дня (не более 12 часов)
+            from datetime import datetime, timedelta
+            start_datetime = datetime.combine(datetime.today(), self.start_time)
+            end_datetime = datetime.combine(datetime.today(), self.end_time)
+            work_duration = (end_datetime - start_datetime).seconds / 3600
+            
+            if work_duration > 12:
+                raise ValidationError('Рабочий день не может быть длиннее 12 часов')
+            if work_duration < 1:
+                raise ValidationError('Рабочий день должен быть не менее 1 часа')
         
-        # Проверяем даты
-        if self.end_date and self.start_date > self.end_date:
-            raise ValidationError('Дата начала должна быть раньше даты окончания')
+        # Проверки дат
+        if self.start_date and self.end_date:
+            if self.start_date > self.end_date:
+                raise ValidationError('Дата начала должна быть раньше даты окончания')
+            
+            # Максимальный период графика - 1 год
+            if (self.end_date - self.start_date).days > 365:
+                raise ValidationError('Максимальный период графика - 1 год')
+        
+        # Дата начала не может быть в прошлом (только для новых графиков)
+        if not self.pk and self.start_date and self.start_date < timezone.now().date():
+            raise ValidationError('Дата начала не может быть в прошлом')
         
         # Для кастомного графика проверяем дни недели
         if self.schedule_type == 'custom' and self.custom_days:
@@ -826,15 +848,34 @@ class WorkSchedule(models.Model):
                 days = [int(day.strip()) for day in self.custom_days.split(',')]
                 if not all(1 <= day <= 7 for day in days):
                     raise ValidationError('Дни недели должны быть числами от 1 до 7')
+                if not days:
+                    raise ValidationError('Должен быть выбран хотя бы один рабочий день')
             except ValueError:
                 raise ValidationError('Дни недели должны быть числами, разделенными запятыми')
         
-        # Проверяем конфликты с другими графиками
-        if self.pk:  # Только для существующих объектов
-            conflicts = self.get_conflicts()
-            if conflicts:
-                conflict_names = ', '.join([str(c) for c in conflicts])
-                raise ValidationError(f'График конфликтует с существующими: {conflict_names}')
+        # Проверяем активность только одного графика на период
+        if self.is_active and self.master_id:
+            overlapping = WorkSchedule.objects.filter(
+                master=self.master,
+                is_active=True,
+                start_date__lte=self.end_date if self.end_date else timezone.now().date() + timedelta(days=365),
+                end_date__gte=self.start_date
+            )
+            
+            if self.pk:
+                overlapping = overlapping.exclude(pk=self.pk)
+            
+            if overlapping.exists():
+                conflicting_schedule = overlapping.first()
+                raise ValidationError(
+                    f'У мастера уже есть активный график на этот период: '
+                    f'{conflicting_schedule.start_date.strftime("%d.%m.%Y")} - '
+                    f'{conflicting_schedule.end_date.strftime("%d.%m.%Y") if conflicting_schedule.end_date else "бессрочно"}'
+                )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  # Вызываем валидацию перед сохранением
+        super().save(*args, **kwargs)
 
 
 # Вспомогательные функции для работы с графиком
