@@ -83,6 +83,11 @@
             border-color: var(--bs-primary);
             box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
         }
+        
+        /* Стили для скрытия элементов при поиске */
+        .region-search-hidden {
+            display: none !important;
+        }
     </style>
     
     {% block styles %}
@@ -356,6 +361,10 @@
                             
                             regionsList.appendChild(regionItem);
                         });
+                        
+                        // ВАЖНО: Настраиваем поиск ПОСЛЕ загрузки регионов
+                        setupRegionSearch();
+                        
                     } else {
                         regionsList.innerHTML = '<div class="text-center py-3 text-muted">Регионы не найдены</div>';
                     }
@@ -372,8 +381,15 @@
             // Сохраняем в localStorage
             saveRegionToStorage(regionId, regionName);
             
+            // Убираем фокус перед закрытием модального окна
+            const regionModalElement = document.getElementById('regionModal');
+            const focusedElement = regionModalElement.querySelector(':focus');
+            if (focusedElement) {
+                focusedElement.blur();
+            }
+            
             // Закрываем модальное окно
-            const regionModal = bootstrap.Modal.getInstance(document.getElementById('regionModal'));
+            const regionModal = bootstrap.Modal.getInstance(regionModalElement);
             if (regionModal) {
                 regionModal.hide();
             }
@@ -436,27 +452,78 @@
             const searchInput = document.getElementById('regionSearch');
             const regionsList = document.getElementById('regionsList');
             
-            searchInput.addEventListener('input', function() {
+            if (!searchInput || !regionsList) {
+                return;
+            }
+            
+            // Удаляем предыдущие обработчики событий, если они есть
+            searchInput.removeEventListener('input', searchInput._searchHandler);
+            
+            // Создаем новый обработчик
+            const searchHandler = function() {
                 const searchTerm = this.value.toLowerCase().trim();
                 const regionItems = regionsList.querySelectorAll('.list-group-item');
                 
+                if (regionItems.length === 0) {
+                    return;
+                }
+                
+                let visibleCount = 0;
                 regionItems.forEach(item => {
                     const regionName = item.getAttribute('data-region-name');
+                    
                     if (regionName && regionName.toLowerCase().includes(searchTerm)) {
-                        item.style.display = 'block';
+                        item.classList.remove('region-search-hidden');
+                        visibleCount++;
                     } else {
-                        item.style.display = 'none';
+                        item.classList.add('region-search-hidden');
                     }
                 });
-            });
+                
+                // Если нет результатов поиска, показываем сообщение
+                const noResultsMessage = regionsList.querySelector('.no-results-message');
+                
+                if (visibleCount === 0 && searchTerm.length > 0) {
+                    if (!noResultsMessage) {
+                        const noResults = document.createElement('div');
+                        noResults.className = 'text-center py-3 text-muted no-results-message';
+                        noResults.textContent = 'Регионы не найдены';
+                        regionsList.appendChild(noResults);
+                    }
+                } else if (noResultsMessage) {
+                    noResultsMessage.remove();
+                }
+            };
+            
+            // Сохраняем ссылку на обработчик и добавляем его
+            searchInput._searchHandler = searchHandler;
+            searchInput.addEventListener('input', searchHandler);
         }
         
         // Функция для принудительного показа модального окна выбора региона
         function showRegionModal() {
-            const regionModal = new bootstrap.Modal(document.getElementById('regionModal'));
+            const regionModalElement = document.getElementById('regionModal');
+            const regionModal = new bootstrap.Modal(regionModalElement);
+            
+            // Добавляем обработчики событий для управления фокусом
+            regionModalElement.addEventListener('hidden.bs.modal', function () {
+                // Убираем фокус с любых элементов внутри модального окна
+                const focusedElement = regionModalElement.querySelector(':focus');
+                if (focusedElement) {
+                    focusedElement.blur();
+                }
+            });
+            
+            regionModalElement.addEventListener('hide.bs.modal', function () {
+                // Убираем фокус перед началом скрытия модального окна
+                const focusedElement = regionModalElement.querySelector(':focus');
+                if (focusedElement) {
+                    focusedElement.blur();
+                }
+            });
+            
             regionModal.show();
-            loadRegions();
-            setupRegionSearch();
+            loadRegions(); // Поиск будет настроен автоматически после загрузки регионов
         }
         
         // Инициализация при загрузке страницы
