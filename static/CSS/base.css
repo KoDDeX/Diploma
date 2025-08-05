@@ -19,9 +19,11 @@ body {
     display: block;
     background-image: url('../images/base.jpg');
     background-size: cover;
-    background-position: center;
+    background-position: center center;
     background-attachment: fixed;
     background-repeat: no-repeat;
+    /* Минимальная высота для предотвращения проблем с маленькими экранами */
+    min-height: 100vh;
 }
 
 /* Стили для навигации */
@@ -663,7 +665,7 @@ textarea.form-control {
     background-color: rgba(220, 53, 69, 0.1);
 }
 
-/* Адаптивность */
+/* Адаптивность для планшетов */
 @media (max-width: 768px) {
     .hero-section {
         padding: 40px 0;
@@ -672,6 +674,32 @@ textarea.form-control {
 
     body {
         background-attachment: scroll;
+        background-size: cover;
+        background-position: center center;
+    }
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 480px) {
+    body {
+        background-attachment: scroll;
+        background-size: cover;
+        background-position: center top;
+        /* Обеспечиваем лучшую оптимизацию для маленьких экранов */
+        background-repeat: no-repeat;
+    }
+}
+
+/* Для очень маленьких экранов - используем более простой фон */
+@media (max-width: 360px) {
+    body {
+        background-attachment: scroll;
+        background-size: cover;
+        background-position: center center;
+        /* Добавляем fallback градиент, если изображение слишком большое */
+        background-image:
+            linear-gradient(rgba(26, 26, 26, 0.8), rgba(26, 26, 26, 0.8)),
+            url('../images/base.jpg');
     }
 }
 
@@ -686,6 +714,8 @@ textarea.form-control {
 @media (max-width: 576px) {
     .card {
         margin: 1rem 0.5rem;
+        /* Улучшаем отображение карточек на мобильных */
+        border-radius: 0.25rem !important;
     }
 
     .avatar-large {
@@ -696,6 +726,37 @@ textarea.form-control {
     .container {
         padding-left: 1rem;
         padding-right: 1rem;
+    }
+
+    /* Улучшаем отображение фоновой картинки на мобильных */
+    body {
+        background-attachment: scroll !important;
+        background-size: cover !important;
+        background-position: center center !important;
+    }
+
+    /* Уменьшаем отступы для мобильных устройств */
+    .page-section {
+        margin: 10px !important;
+        padding: 30px 0 !important;
+    }
+
+    /* Улучшаем отображение навигации */
+    .navbar {
+        padding: 0.25rem 1rem;
+    }
+
+    /* Адаптивные размеры шрифтов */
+    h1 {
+        font-size: 1.75rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    h3 {
+        font-size: 1.25rem;
     }
 }
 
