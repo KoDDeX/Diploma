@@ -683,10 +683,10 @@ textarea.form-control {
 @media (max-width: 480px) {
     body {
         background-attachment: scroll;
-        background-size: contain;
+        background-size: auto 100vh;
         background-position: center top;
         background-repeat: no-repeat;
-        /* Добавляем градиент для заполнения пустого пространства */
+        /* Добавляем градиент для заполнения пустого пространства по бокам */
         background-image:
             linear-gradient(to bottom, transparent 0%, rgba(26, 26, 26, 0.9) 70%, rgba(26, 26, 26, 1) 100%),
             url('../images/base.jpg');
@@ -698,7 +698,7 @@ textarea.form-control {
 @media (max-width: 360px) {
     body {
         background-attachment: scroll;
-        background-size: contain;
+        background-size: auto 100vh;
         background-position: center top;
         background-repeat: no-repeat;
         /* Добавляем более сильный градиент для маленьких экранов */
@@ -750,7 +750,7 @@ textarea.form-control {
     /* Улучшаем отображение фоновой картинки на мобильных */
     body {
         background-attachment: scroll !important;
-        background-size: contain !important;
+        background-size: auto 100vh !important;
         background-position: center top !important;
         background-repeat: no-repeat !important;
         background-color: #1a1a1a !important;
