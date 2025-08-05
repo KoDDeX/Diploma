@@ -465,7 +465,9 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         const autoserviceSlug = autoserviceSelect.value;
         if (autoserviceSlug) {
-            window.location.href = `/${autoserviceSlug}/`;
+            window.location.href = `/autoservice/${autoserviceSlug}/`;
+
+            {% comment %} window.location.href = `/${autoserviceSlug}/`; {% endcomment %}
         }
     });
 });
