@@ -88,6 +88,23 @@ class LandingPageView(TemplateView):
 
     template_name = "core/landing.html"
 
+    def dispatch(self, request, *args, **kwargs):
+        """Перенаправляем авторизованного пользователя на страницу его автосервиса, если он привязан"""
+        # Проверяем, есть ли принудительный параметр для показа landing страницы
+        force_landing = request.GET.get('landing', False)
+        
+        # Если пользователь авторизован и у него есть привязанный автосервис
+        if (request.user.is_authenticated and 
+            request.user.autoservice and 
+            request.user.autoservice.is_active and 
+            not force_landing):
+            
+            # Перенаправляем на страницу автосервиса
+            return redirect('core:autoservice_detail', autoservice_slug=request.user.autoservice.slug)
+        
+        # Иначе показываем обычную landing страницу
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 

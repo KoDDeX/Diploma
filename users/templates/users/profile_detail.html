@@ -178,16 +178,6 @@
                         </div>
                         <div class="mt-2">
                             <small class="text-light">
-                                <strong>Регион:</strong> 
-                                {% if profile_user.autoservice and profile_user.autoservice.region %}
-                                    {{ profile_user.autoservice.region.name }}
-                                {% else %}
-                                    <span class="text-white-50">Не указан</span>
-                                {% endif %}
-                            </small>
-                        </div>
-                        <div class="mt-2">
-                            <small class="text-light">
                                 <strong>Дней с нами:</strong> {{ profile_user.date_joined|timesince }}
                             </small>
                         </div>

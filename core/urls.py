@@ -63,6 +63,7 @@ from .views import (
     master_review_create,
     service_reviews_list,
     service_review_create,
+    order_review_create,
     review_reply_create,
     # Модерация отзывов для суперадминистратора
     reviews_moderation,
@@ -336,6 +337,11 @@ urlpatterns = [
         "service/<int:service_id>/review/create/",
         service_review_create,
         name="service_review_create",
+    ),
+    path(
+        "order/<int:order_id>/review/create/",
+        order_review_create,
+        name="order_review_create",
     ),
     path(
         "review/<int:review_id>/reply/",

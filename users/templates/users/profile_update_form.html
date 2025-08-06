@@ -165,11 +165,11 @@
                                         </div>
                                         <div class="col-sm-6">
                                             <small class="text-light">
-                                                <strong>Регион:</strong><br>
-                                                {% if user.autoservice and user.autoservice.region %}
-                                                    {{ user.autoservice.region.name }}
+                                                <strong>Статус аккаунта:</strong><br>
+                                                {% if user.is_active %}
+                                                    <span class="text-success">Активен</span>
                                                 {% else %}
-                                                    <span class="text-white-50">Не указан</span>
+                                                    <span class="text-danger">Заблокирован</span>
                                                 {% endif %}
                                             </small>
                                         </div>

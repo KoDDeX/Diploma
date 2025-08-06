@@ -735,6 +735,11 @@ class OrderCreateForm(forms.ModelForm):
 
         if commit:
             order.save()
+            
+            # Всегда устанавливаем автосервис из последнего заказа
+            if self.user and self.autoservice:
+                self.user.autoservice = self.autoservice
+                self.user.save(update_fields=['autoservice'])
 
         return order
 

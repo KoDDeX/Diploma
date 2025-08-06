@@ -2,7 +2,7 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
     <div class="container">
         <!-- Логотип и кнопка главной страницы слева -->
-        <a class="navbar-brand" href="{% url 'core:landing' %}">
+        <a class="navbar-brand" href="{% url 'core:landing' %}?landing=1">
             <i class="bi bi-car-front me-2"></i>
             <span class="d-none d-md-inline">24АвтоСервис</span>
         </a>
@@ -59,14 +59,21 @@
                         <span class="d-none d-md-inline ms-1">Меню</span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
+                        {% if user.is_authenticated and user.autoservice and user.autoservice.is_active %}
+                        <li><h6 class="dropdown-header">Мой автосервис</h6></li>
+                        <li><a class="dropdown-item" href="{% url 'core:autoservice_detail' autoservice_slug=user.autoservice.slug %}">
+                            <i class="bi bi-building me-2"></i>{{ user.autoservice.name }}
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        {% endif %}
                         <li><h6 class="dropdown-header">Главная страница</h6></li>
-                        <li><a class="dropdown-item" href="{% url 'core:landing' %}#about">
+                        <li><a class="dropdown-item" href="{% url 'core:landing' %}?landing=1#about">
                             <i class="bi bi-info-circle me-2"></i>О проекте
                         </a></li>
-                        <li><a class="dropdown-item" href="{% url 'core:landing' %}#autoservice-selection">
+                        <li><a class="dropdown-item" href="{% url 'core:landing' %}?landing=1#autoservice-selection">
                             <i class="bi bi-search me-2"></i>Выбор автосервиса
                         </a></li>
-                        <li><a class="dropdown-item" href="{% url 'core:landing' %}#join">
+                        <li><a class="dropdown-item" href="{% url 'core:landing' %}?landing=1#join">
                             <i class="bi bi-people me-2"></i>Стать участником
                         </a></li>
                         {% if user.is_authenticated %}
