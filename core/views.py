@@ -749,14 +749,6 @@ def activate_autoservice_users(autoservice):
 
     activated_count = 0
     for user in users:
-        # Создаем уведомление об активации автосервиса
-        add_notification(
-            user=user,
-            title="Автосервис активирован",
-            message=f"Ваш автосервис '{autoservice.name}' был активирован администратором. Ваша роль '{user.get_role_display()}' восстановлена.",
-            level="success"
-        )
-        
         # Восстанавливаем роль из previous_role
         user.role = user.previous_role
         user.previous_role = None  # Очищаем поле предыдущей роли
@@ -775,14 +767,6 @@ def deactivate_autoservice_users(autoservice):
 
     deactivated_count = 0
     for user in users:
-        # Создаем уведомление о деактивации автосервиса
-        add_notification(
-            user=user,
-            title="Автосервис деактивирован",
-            message=f"Ваш автосервис '{autoservice.name}' был временно деактивирован администратором. Обратитесь к администратору для получения дополнительной информации.",
-            level="warning"
-        )
-        
         # Сохраняем текущую роль в поле previous_role
         user.previous_role = user.role
         # Переводим в клиенты

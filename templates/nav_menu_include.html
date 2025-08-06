@@ -41,7 +41,7 @@
                             <span id="notification-count">0</span>
                         </span>
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown" style="width: 300px;">
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown">
                         <li><h6 class="dropdown-header">Уведомления</h6></li>
                         <li id="notifications-loading"><div class="dropdown-item-text text-center"><i class="bi bi-arrow-clockwise spin"></i> Загрузка...</div></li>
                         <li id="notifications-empty" style="display: none;"><div class="dropdown-item-text text-center text-muted">Нет новых уведомлений</div></li>
@@ -195,6 +195,57 @@
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+/* Стили для dropdown уведомлений */
+#notificationsDropdown + .dropdown-menu {
+    width: 300px !important;
+    max-height: 400px;
+}
+
+#notificationsDropdown + .dropdown-menu #notifications-list {
+    max-height: 250px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Улучшение прокрутки на мобильных устройствах */
+@media (max-width: 768px) {
+    #notificationsDropdown + .dropdown-menu {
+        width: 280px !important;
+        max-height: 70vh;
+        position: fixed !important;
+        top: 60px !important;
+        right: 10px !important;
+        left: auto !important;
+        transform: none !important;
+    }
+    
+    #notificationsDropdown + .dropdown-menu #notifications-list {
+        max-height: calc(70vh - 120px);
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch; /* Плавная прокрутка на iOS */
+    }
+}
+
+/* Кастомная полоса прокрутки для лучшего вида */
+#notificationsDropdown + .dropdown-menu #notifications-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+#notificationsDropdown + .dropdown-menu #notifications-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 2px;
+}
+
+#notificationsDropdown + .dropdown-menu #notifications-list::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 2px;
+}
+
+#notificationsDropdown + .dropdown-menu #notifications-list::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
 
 /* Стили для мобильных устройств */
