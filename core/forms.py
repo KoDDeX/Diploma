@@ -4,6 +4,7 @@ from django.utils.text import slugify
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import datetime, timedelta
+from transliterate import translit
 from .models import (
     AutoService,
     Region,
@@ -18,6 +19,23 @@ from .models import (
 )
 
 User = get_user_model()
+
+
+def generate_slug_from_name(name):
+    """Генерирует slug из названия с транслитерацией русских символов"""
+    try:
+        # Пытаемся транслитерировать русский текст
+        transliterated = translit(name, 'ru', reversed=True)
+        slug = slugify(transliterated)
+    except Exception:
+        # Если транслитерация не удалась, используем стандартный slugify
+        slug = slugify(name)
+    
+    # Если slug пустой (например, только цифры или спец. символы), используем fallback
+    if not slug:
+        slug = 'autoservice'
+    
+    return slug
 
 
 class AutoServiceEditForm(forms.ModelForm):
@@ -87,6 +105,28 @@ class AutoServiceEditForm(forms.ModelForm):
             "description": "Описание",
             "is_active": "Автосервис активен",
         }
+
+    def save(self, commit=True):
+        """Сохраняем автосервис с обновлением slug при изменении названия"""
+        autoservice = super().save(commit=False)
+        
+        # Проверяем, изменилось ли название
+        if self.instance.pk and 'name' in self.changed_data:
+            # Генерируем новый уникальный slug
+            base_slug = generate_slug_from_name(autoservice.name)
+            slug = base_slug
+            counter = 1
+
+            while AutoService.objects.filter(slug=slug).exclude(pk=autoservice.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+
+            autoservice.slug = slug
+
+        if commit:
+            autoservice.save()
+
+        return autoservice
 
 
 class AddManagerForm(forms.Form):
@@ -267,8 +307,8 @@ class AutoServiceRegistrationForm(forms.ModelForm):
         """Создаём автосервис с автоматически сгенерированным slug и статусом неактивен"""
         autoservice = super().save(commit=False)
 
-        # Генерируем уникальный slug
-        base_slug = slugify(autoservice.name)
+        # Генерируем уникальный slug с транслитерацией
+        base_slug = generate_slug_from_name(autoservice.name)
         slug = base_slug
         counter = 1
 
