@@ -115,6 +115,41 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Карта местоположения -->
+                    <div class="row mt-5">
+                        <div class="col-12">
+                            <h3 class="text-primary mb-4">
+                                <i class="bi bi-geo-alt-fill me-2"></i>
+                                Местоположение на карте
+                            </h3>
+                            
+                            <div class="card bg-dark border-secondary">
+                                <div class="card-body p-3">
+                                    <div class="row align-items-center mb-3">
+                                        <div class="col">
+                                            <h6 class="text-primary mb-1">
+                                                <i class="bi bi-geo-alt me-2"></i>
+                                                Адрес
+                                            </h6>
+                                            <p class="text-light mb-0">{{ autoservice.address }}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Интерактивная карта Яндекс -->
+                                    <div class="map-container rounded overflow-hidden shadow" style="height: 400px; width: 100%;">
+                                        <iframe 
+                                            src="https://yandex.ru/map-widget/v1/?ll=&z=15&l=map&mode=search&text={{ autoservice.address|urlencode }}, {{ autoservice.region.name|urlencode }}"
+                                            style="width: 100%; height: 100%; border: none; border-radius: 10px;"
+                                            allowfullscreen="true"
+                                            loading="lazy"
+                                            title="Карта местоположения {{ autoservice.name }}">
+                                        </iframe>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -413,6 +448,40 @@
 </div>
 
 <style>
+/* Стили для карты */
+.map-container {
+    border: 2px solid #0d6efd;
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+    transition: all 0.3s ease;
+}
+
+.map-container:hover {
+    box-shadow: 0 8px 25px rgba(13, 110, 253, 0.4);
+    transform: translateY(-2px);
+}
+
+.map-container iframe {
+    filter: contrast(1.1) brightness(0.95);
+    transition: filter 0.3s ease;
+}
+
+.map-container:hover iframe {
+    filter: contrast(1.2) brightness(1);
+}
+
+/* Адаптивность для карты */
+@media (max-width: 768px) {
+    .map-container {
+        height: 300px !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .map-container {
+        height: 250px !important;
+    }
+}
+
 .card {
     border-radius: 15px;
     transition: transform 0.2s ease, box-shadow 0.3s ease;

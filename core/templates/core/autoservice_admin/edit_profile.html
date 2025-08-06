@@ -166,6 +166,55 @@
                                     Полный адрес автосервиса с указанием города, улицы и номера дома
                                 </small>
                             </div>
+                            
+                            <!-- Превью карты -->
+                            <div class="col-12">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-geo-alt-fill me-1"></i>
+                                    Превью местоположения на карте
+                                </label>
+                                
+                                <div class="card bg-light border-2">
+                                    <div class="card-body p-3">
+                                        <div class="row align-items-center mb-3">
+                                            <div class="col">
+                                                <h6 class="text-primary mb-1">
+                                                    <i class="bi bi-geo-alt me-2"></i>
+                                                    Текущий адрес
+                                                </h6>
+                                                <p class="mb-0 text-muted" id="current-address">{{ autoservice.address }}</p>
+                                            </div>
+                                            <div class="col-auto">
+                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="updateMapPreview()">
+                                                    <i class="bi bi-arrow-clockwise me-1"></i>
+                                                    Обновить карту
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Карта -->
+                                        <div class="map-preview-container rounded overflow-hidden shadow-sm" style="height: 300px; width: 100%;">
+                                            <iframe 
+                                                id="map-preview-iframe"
+                                                src="https://yandex.ru/map-widget/v1/?um=constructor%3A{{ autoservice.address|urlencode }}%2C%20{{ autoservice.region.name|urlencode }}&amp;source=constructor"
+                                                style="width: 100%; height: 100%; border: none;"
+                                                loading="lazy"
+                                                title="Превью карты местоположения">
+                                            </iframe>
+                                        </div>
+                                        
+                                        <!-- Информационное сообщение -->
+                                        <div class="mt-3">
+                                            <div class="alert alert-info py-2 mb-0">
+                                                <small>
+                                                    <i class="bi bi-info-circle me-1"></i>
+                                                    <strong>Подсказка:</strong> После изменения адреса нажмите кнопку "Обновить карту" для проверки правильности местоположения.
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Дополнительная информация -->
@@ -258,5 +307,149 @@
     padding: 10px 20px;
     font-weight: 500;
 }
+
+/* Стили для превью карты */
+.map-preview-container {
+    border: 2px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.map-preview-container:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.2);
+}
+
+.map-preview-container iframe {
+    filter: brightness(0.95);
+    transition: filter 0.3s ease;
+}
+
+.map-preview-container:hover iframe {
+    filter: brightness(1);
+}
+
+/* Адаптивность для превью карты */
+@media (max-width: 768px) {
+    .map-preview-container {
+        height: 250px !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .map-preview-container {
+        height: 200px !important;
+    }
+}
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Обновление превью адреса при изменении поля адреса
+    const addressField = document.getElementById('{{ form.address.id_for_label }}');
+    const currentAddressDisplay = document.getElementById('current-address');
+    
+    if (addressField && currentAddressDisplay) {
+        addressField.addEventListener('input', function() {
+            const newAddress = this.value.trim();
+            if (newAddress) {
+                currentAddressDisplay.textContent = newAddress;
+            } else {
+                currentAddressDisplay.textContent = '{{ autoservice.address }}';
+            }
+        });
+    }
+});
+
+// Функция для обновления карты
+function updateMapPreview() {
+    const addressField = document.getElementById('{{ form.address.id_for_label }}');
+    const regionField = document.getElementById('{{ form.region.id_for_label }}');
+    const mapIframe = document.getElementById('map-preview-iframe');
+    
+    if (!addressField || !regionField || !mapIframe) {
+        console.error('Не найдены необходимые элементы для обновления карты');
+        return;
+    }
+    
+    const address = addressField.value.trim();
+    const regionId = regionField.value;
+    
+    if (!address) {
+        alert('Пожалуйста, введите адрес для отображения на карте');
+        addressField.focus();
+        return;
+    }
+    
+    // Получаем название региона из select
+    const regionOption = regionField.selectedOptions[0];
+    const regionName = regionOption ? regionOption.textContent : '';
+    
+    if (!regionName) {
+        alert('Пожалуйста, выберите регион');
+        regionField.focus();
+        return;
+    }
+    
+    // Кодируем адрес для URL
+    const encodedAddress = encodeURIComponent(address);
+    const encodedRegion = encodeURIComponent(regionName);
+    
+    // Формируем новый URL для карты (рабочий виджет)
+    const mapUrl = `https://yandex.ru/map-widget/v1/?ll=&z=15&l=map&mode=search&text=${encodedAddress}, ${encodedRegion}`;
+    
+    // Показываем индикатор загрузки
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="bi bi-arrow-clockwise spin me-1"></i>Обновление...';
+    button.disabled = true;
+    
+    // Обновляем src iframe
+    mapIframe.src = mapUrl;
+    
+    // Восстанавливаем кнопку через 2 секунды
+    setTimeout(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }, 2000);
+    
+    // Показываем уведомление об успешном обновлении
+    showUpdateNotification();
+}
+
+// Функция для показа уведомления
+function showUpdateNotification() {
+    // Создаем временное уведомление
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    notification.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        <i class="bi bi-check-circle me-2"></i>
+        Карта обновлена успешно!
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Автоматически удаляем уведомление через 3 секунды
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 3000);
+}
+
+// CSS анимация для вращения
+const spinStyle = document.createElement('style');
+spinStyle.textContent = `
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(spinStyle);
+</script>
 {% endblock content %}
