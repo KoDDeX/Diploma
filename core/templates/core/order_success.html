@@ -167,7 +167,7 @@
                         </div>
                         <div class="card-body text-start">
                             <p class="mb-1"><strong>Название:</strong> {{ order.autoservice.name }}</p>
-                            <p class="mb-1"><strong>Адрес:</strong> {{ order.autoservice.address }}</p>
+                            <p class="mb-1"><strong>Адрес:</strong>                         Адрес: {{ order.autoservice.get_full_address }}</p>
                             <p class="mb-1"><strong>Телефон:</strong> {{ order.autoservice.phone }}</p>
                             {% if order.autoservice.email %}
                                 <p class="mb-0"><strong>Email:</strong> {{ order.autoservice.email }}</p>

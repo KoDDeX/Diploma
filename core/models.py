@@ -167,7 +167,14 @@ class AutoService(models.Model):
         related_name="autoservices",
         verbose_name="Регион",
     )
-    address = models.TextField(verbose_name="Адрес")
+    # Разделяем адрес на отдельные поля
+    city = models.CharField(max_length=100, verbose_name="Город", blank=True)
+    street = models.CharField(max_length=200, verbose_name="Улица", blank=True)
+    house_number = models.CharField(max_length=20, verbose_name="Номер дома", blank=True)
+    
+    # Оставляем старое поле для совместимости, но делаем его необязательным
+    address = models.TextField(verbose_name="Адрес (полный)", blank=True, help_text="Автоматически формируется из города, улицы и дома")
+    
     phone = models.CharField(max_length=20, verbose_name="Телефон")
     email = models.EmailField(verbose_name="Email")
     description = models.TextField(blank=True, verbose_name="Описание")
@@ -187,6 +194,60 @@ class AutoService(models.Model):
         return reverse(
             "core:autoservice_detail", kwargs={"autoservice_slug": self.slug}
         )
+
+    def get_full_address(self):
+        """Возвращает полный адрес, собранный из отдельных компонентов"""
+        address_parts = []
+        
+        if self.city:
+            address_parts.append(f"г. {self.city}")
+        if self.street:
+            address_parts.append(f"ул. {self.street}")
+        if self.house_number:
+            address_parts.append(f"д. {self.house_number}")
+            
+        if address_parts:
+            return ", ".join(address_parts)
+        
+        # Fallback на старое поле адреса, если новые поля пусты
+        return self.address or "Адрес не указан"
+
+    def save(self, *args, **kwargs):
+        """Автоматически обновляем полное поле адреса при сохранении"""
+        self.address = self.get_full_address()
+        super().save(*args, **kwargs)
+    
+    def get_average_rating(self):
+        """Возвращает средний рейтинг автосервиса на основе отзывов"""
+        from django.db.models import Avg
+        
+        avg_rating = self.reviews.filter(
+            review_type='autoservice'
+        ).aggregate(avg_rating=Avg('rating'))['avg_rating']
+        
+        return round(avg_rating, 1) if avg_rating else 0
+    
+    def get_reviews_count(self):
+        """Возвращает количество отзывов об автосервисе"""
+        return self.reviews.filter(review_type='autoservice').count()
+    
+    def get_rating_display(self):
+        """Возвращает строку для отображения рейтинга"""
+        avg_rating = self.get_average_rating()
+        count = self.get_reviews_count()
+        
+        if count == 0:
+            return "Нет отзывов"
+        
+        # Формируем звездочки
+        full_stars = int(avg_rating)
+        has_half_star = (avg_rating - full_stars) >= 0.5
+        
+        stars = '⭐' * full_stars
+        if has_half_star:
+            stars += '⭐'  # Можно заменить на символ половинной звезды
+        
+        return f"{stars} {avg_rating} ({count})"
 
 
 class Car(models.Model):

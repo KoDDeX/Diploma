@@ -63,7 +63,7 @@
                                     <i class="bi bi-geo-alt me-2"></i>
                                     Адрес:
                                 </h6>
-                                <p class="text-light fs-5">{{ autoservice.address }}</p>
+                                <p class="text-light fs-5">{{ autoservice.get_full_address }}</p>
                             </div>
                             
                             <!-- Телефон -->
@@ -132,14 +132,14 @@
                                                 <i class="bi bi-geo-alt me-2"></i>
                                                 Адрес
                                             </h6>
-                                            <p class="text-light mb-0">{{ autoservice.address }}</p>
+                                            <p class="text-light mb-0">{{ autoservice.get_full_address }}</p>
                                         </div>
                                     </div>
                                     
                                     <!-- Интерактивная карта Яндекс -->
                                     <div class="map-container rounded overflow-hidden shadow" style="height: 400px; width: 100%;">
                                         <iframe 
-                                            src="https://yandex.ru/map-widget/v1/?ll=&z=15&l=map&mode=search&text={{ autoservice.address|urlencode }}, {{ autoservice.region.name|urlencode }}"
+                                            src="https://yandex.ru/map-widget/v1/?ll=&z=15&l=map&mode=search&text={{ autoservice.get_full_address|urlencode }}, {{ autoservice.region.name|urlencode }}"
                                             style="width: 100%; height: 100%; border: none; border-radius: 10px;"
                                             allowfullscreen="true"
                                             loading="lazy"

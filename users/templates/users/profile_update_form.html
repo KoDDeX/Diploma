@@ -180,7 +180,7 @@
                                             <small class="text-light">
                                                 <strong>Автосервис:</strong><br>
                                                 {{ user.autoservice.name }}<br>
-                                                <span class="text-white-50">{{ user.autoservice.address }}</span>
+                                                <span class="text-white-50">{{ user.autoservice.get_full_address }}</span>
                                                 {% if user.autoservice.phone %}
                                                     <br><span class="text-white-50">{{ user.autoservice.phone }}</span>
                                                 {% endif %}

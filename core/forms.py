@@ -46,7 +46,9 @@ class AutoServiceEditForm(forms.ModelForm):
         fields = [
             "name",
             "region",
-            "address",
+            "city",
+            "street", 
+            "house_number",
             "phone",
             "email",
             "description",
@@ -64,11 +66,22 @@ class AutoServiceEditForm(forms.ModelForm):
                     "class": "form-select",
                 }
             ),
-            "address": forms.Textarea(
+            "city": forms.TextInput(
                 attrs={
                     "class": "form-control",
-                    "rows": 3,
-                    "placeholder": "Полный адрес автосервиса",
+                    "placeholder": "Москва",
+                }
+            ),
+            "street": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "ул. Ленина",
+                }
+            ),
+            "house_number": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "10А",
                 }
             ),
             "phone": forms.TextInput(
@@ -99,7 +112,9 @@ class AutoServiceEditForm(forms.ModelForm):
         labels = {
             "name": "Название автосервиса",
             "region": "Регион",
-            "address": "Адрес",
+            "city": "Город",
+            "street": "Улица",
+            "house_number": "Номер дома",
             "phone": "Телефон",
             "email": "Email",
             "description": "Описание",
@@ -218,7 +233,9 @@ class AutoServiceRegistrationForm(forms.ModelForm):
         fields = [
             "name",
             "region",
-            "address",
+            "city",
+            "street",
+            "house_number",
             "phone",
             "email",
             "description",
@@ -237,11 +254,24 @@ class AutoServiceRegistrationForm(forms.ModelForm):
                     "required": True,
                 }
             ),
-            "address": forms.Textarea(
+            "city": forms.TextInput(
+                attrs={
+                    "class": "form-control form-control-lg",
+                    "placeholder": "Москва",
+                    "required": True,
+                }
+            ),
+            "street": forms.TextInput(
+                attrs={
+                    "class": "form-control form-control-lg",
+                    "placeholder": "ул. Ленина",
+                    "required": True,
+                }
+            ),
+            "house_number": forms.TextInput(
                 attrs={
                     "class": "form-control",
-                    "rows": 3,
-                    "placeholder": "Полный адрес автосервиса с указанием города и улицы",
+                    "placeholder": "10А",
                     "required": True,
                 }
             ),
@@ -270,7 +300,9 @@ class AutoServiceRegistrationForm(forms.ModelForm):
         labels = {
             "name": "Название автосервиса *",
             "region": "Регион *",
-            "address": "Адрес *",
+            "city": "Город *",
+            "street": "Улица *",
+            "house_number": "Номер дома *",
             "phone": "Телефон *",
             "email": "Email *",
             "description": "Описание услуг",

@@ -122,12 +122,20 @@ class LandingPageView(TemplateView):
                 selected_region = None
 
         # Получаем автосервисы с учетом выбранного региона
-        autoservices_query = AutoService.objects.filter(is_active=True).select_related("region")
+        # Загружаем автосервисы с префетчингом отзывов для рейтинга
+        autoservices_query = AutoService.objects.filter(is_active=True).select_related("region").prefetch_related('reviews')
         
         if selected_region:
             autoservices_query = autoservices_query.filter(region=selected_region)
         
-        all_autoservices = autoservices_query
+        all_autoservices = list(autoservices_query)
+        
+        # Сортируем автосервисы: сначала по городу, потом по рейтингу (по убыванию), потом по названию
+        all_autoservices.sort(key=lambda x: (
+            x.city or 'я' * 100,  # Пустые города в конец
+            -x.get_average_rating(),  # Рейтинг по убыванию (минус для обратной сортировки)
+            x.name
+        ))
 
         # Группируем автосервисы по регионам
         autoservices_by_region = {}
@@ -139,6 +147,14 @@ class LandingPageView(TemplateView):
                 autoservices_by_region[region] = []
                 regions_with_autoservices.append(region)
             autoservices_by_region[region].append(autoservice)
+        
+        # Дополнительно сортируем автосервисы внутри каждого региона
+        for region_autoservices in autoservices_by_region.values():
+            region_autoservices.sort(key=lambda x: (
+                x.city or 'я' * 100,  # Пустые города в конец
+                -x.get_average_rating(),  # Рейтинг по убыванию
+                x.name
+            ))
 
         context.update(
             {
@@ -1130,7 +1146,7 @@ def send_autoservice_registration_notification(autoservice, user):
 
 Название: {autoservice.name}
 Регион: {autoservice.region.name}
-Адрес: {autoservice.address}
+Адрес: {autoservice.get_full_address()}
 Телефон: {autoservice.phone}
 Email: {autoservice.email}
 Описание: {autoservice.description}

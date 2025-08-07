@@ -355,7 +355,9 @@ document.addEventListener('DOMContentLoaded', function() {
             {
                 "slug": "{{ autoservice.slug }}",
                 "name": "{{ autoservice.name }}",
-                "address": "{{ autoservice.address|truncatewords:5 }}"
+                "address": "{{ autoservice.get_full_address|truncatewords:5 }}",
+                "rating": "{{ autoservice.get_rating_display }}",
+                "city": "{{ autoservice.city|default:'' }}"
             }{% if not forloop.last %},{% endif %}
             {% endfor %}
         ]{% if not forloop.last %},{% endif %}
@@ -413,7 +415,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 autoservices.forEach(function(autoservice) {
                     const option = document.createElement('option');
                     option.value = autoservice.slug;
-                    option.textContent = autoservice.name + ' - ' + autoservice.address;
+                    
+                    // Формируем текст: [Рейтинг] Название - Адрес
+                    let displayText = `[${autoservice.rating}] ${autoservice.name}`;
+                    if (autoservice.address) {
+                        displayText += ` - ${autoservice.address}`;
+                    }
+                    
+                    option.textContent = displayText;
                     autoserviceSelect.appendChild(option);
                 });
                 
