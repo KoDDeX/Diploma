@@ -134,25 +134,62 @@ class UserRegisterForm(UserCreationForm):
         return email
 
 
-class UserLoginForm(AuthenticationForm):
-    """Форма для входа пользователя в систему только по email."""
-
-    def __init__(self, *args, **kwargs):
-        """Инициализация формы входа: настройка полей."""
-        super().__init__(*args, **kwargs)
-        # Кастомизация поля username (но фактически это email)
-        self.fields["username"].label = "Email"
-        self.fields["username"].widget.attrs.update(
-            {
+class UserLoginForm(forms.Form):
+    """Кастомная форма для входа пользователя в систему по email."""
+    
+    email = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(
+            attrs={
                 "class": "form-control mb-2",
                 "placeholder": "Введите ваш email",
-                "type": "email",  # HTML5 валидация email
+                "autocomplete": "email",
             }
         )
-        # Кастомизация поля password
-        self.fields["password"].widget.attrs.update(
-            {"class": "form-control", "placeholder": "Пароль"}
+    )
+    
+    password = forms.CharField(
+        label="Пароль",
+        widget=forms.PasswordInput(
+            attrs={
+                "class": "form-control", 
+                "placeholder": "Пароль",
+                "autocomplete": "current-password",
+            }
         )
+    )
+    
+    def __init__(self, request=None, *args, **kwargs):
+        """
+        Параметр request нужен для совместимости с Django AuthenticationForm
+        """
+        self.request = request
+        self.user_cache = None
+        super().__init__(*args, **kwargs)
+    
+    def clean(self):
+        email = self.cleaned_data.get('email')
+        password = self.cleaned_data.get('password')
+        
+        if email is not None and password:
+            from django.contrib.auth import authenticate
+            self.user_cache = authenticate(self.request, username=email, password=password)
+            if self.user_cache is None:
+                raise forms.ValidationError("Неверный email или пароль.")
+            else:
+                self.confirm_login_allowed(self.user_cache)
+        
+        return self.cleaned_data
+    
+    def confirm_login_allowed(self, user):
+        """
+        Проверяем, может ли пользователь войти в систему.
+        """
+        if not user.is_active:
+            raise forms.ValidationError("Этот аккаунт неактивен.")
+    
+    def get_user(self):
+        return self.user_cache
 
 
 class UserPasswordChangeForm(PasswordChangeForm):

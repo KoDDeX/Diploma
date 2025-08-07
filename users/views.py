@@ -102,13 +102,19 @@ class UserLoginView(LoginView):
     form_class = UserLoginForm
     redirect_authenticated_user = True
 
+    def form_valid(self, form):
+        """Обрабатывает валидную форму: выполняет вход пользователя."""
+        from django.contrib.auth import login
+        login(self.request, form.get_user())
+        return super(LoginView, self).form_valid(form)  # Вызываем form_valid из FormView, минуя LoginView
+
     def get_success_url(self):
         """Определяет URL для перенаправления после успешного входа."""
         messages.success(
             self.request, f"Вы успешно вошли в систему, {self.request.user.username}!"
         )
         next_url = self.request.GET.get("next")
-        return next_url or reverse_lazy("landing")
+        return next_url or reverse_lazy("core:landing")
 
     def form_invalid(self, form):
         """Обрабатывает невалидную форму: выводит сообщение об ошибке."""
