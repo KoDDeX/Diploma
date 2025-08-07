@@ -71,6 +71,8 @@ from .views import (
     review_reject,
     # API для регионов
     api_regions,
+    # API для отзывов об услугах
+    service_reviews_api,
 )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -369,6 +371,12 @@ urlpatterns = [
         "api/regions/",
         api_regions,
         name="api_regions",
+    ),
+    # API для отзывов об услугах
+    path(
+        "service/<int:service_id>/reviews/api/",
+        service_reviews_api,
+        name="service_reviews_api",
     ),
 ]
 

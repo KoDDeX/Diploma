@@ -1110,12 +1110,50 @@ class Review(models.Model):
     
     def generate_title(self):
         """Автоматически генерирует заголовок отзыва на основе рейтинга и типа"""
+        # Разные формы прилагательных для разных типов объектов
         rating_phrases = {
-            5: "Отличный",
-            4: "Хороший", 
-            3: "Обычный",
-            2: "Не очень",
-            1: "Плохой"
+            'autoservice': {
+                5: "Отличный",
+                4: "Хороший", 
+                3: "Обычный",
+                2: "Не очень",
+                1: "Плохой"
+            },
+            'master': {
+                5: "Отличный",
+                4: "Хороший", 
+                3: "Обычный",
+                2: "Не очень",
+                1: "Плохой"
+            },
+            'manager': {
+                5: "Отличный",
+                4: "Хороший", 
+                3: "Обычный",
+                2: "Не очень",
+                1: "Плохой"
+            },
+            'administrator': {
+                5: "Отличный",
+                4: "Хороший", 
+                3: "Обычный",
+                2: "Не очень",
+                1: "Плохой"
+            },
+            'client': {
+                5: "Отличный",
+                4: "Хороший", 
+                3: "Обычный",
+                2: "Не очень",
+                1: "Плохой"
+            },
+            'service': {
+                5: "Отличная",
+                4: "Хорошая", 
+                3: "Обычная",
+                2: "Не очень",
+                1: "Плохая"
+            }
         }
         
         type_names = {
@@ -1124,10 +1162,12 @@ class Review(models.Model):
             'manager': "менеджер",
             'administrator': "администратор",
             'client': "клиент",
-            'service': "сервис"
+            'service': "услуга"
         }
         
-        rating_word = rating_phrases.get(self.rating, "")
+        # Получаем правильную форму прилагательного для данного типа
+        rating_words = rating_phrases.get(self.review_type, rating_phrases['autoservice'])
+        rating_word = rating_words.get(self.rating, "")
         type_word = type_names.get(self.review_type, "объект")
         
         return f"{rating_word} {type_word}"

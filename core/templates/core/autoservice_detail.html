@@ -219,20 +219,30 @@
                                             <a href="{% url 'core:order_create' autoservice.id service.id %}" 
                                                class="btn btn-primary btn-sm">
                                                 <i class="bi bi-calendar-plus me-1"></i>
-                                                Заказать услугу
+                                                Записаться
                                             </a>
+                                            <button type="button" 
+                                                    class="btn btn-outline-warning btn-sm service-reviews-btn d-none d-lg-block" 
+                                                    data-service-id="{{ service.id }}"
+                                                    data-service-name="{{ service.name }}">
+                                                {% if service.avg_rating > 0 %}
+                                                    <i class="bi bi-star-fill me-1 text-warning"></i>
+                                                    {{ service.avg_rating }} ({{ service.reviews_count }}) - Отзывы об услуге
+                                                {% else %}
+                                                    <i class="bi bi-star me-1"></i>
+                                                    0 (0) - Отзывы об услуге
+                                                {% endif %}
+                                            </button>
                                             <a href="{% url 'core:service_reviews_list' service.id %}" 
-                                               class="btn btn-outline-warning btn-sm">
-                                                <i class="bi bi-star me-1"></i>
-                                                Отзывы об услуге
+                                               class="btn btn-outline-warning btn-sm d-lg-none">
+                                                {% if service.avg_rating > 0 %}
+                                                    <i class="bi bi-star-fill me-1 text-warning"></i>
+                                                    {{ service.avg_rating }} ({{ service.reviews_count }}) - Отзывы об услуге
+                                                {% else %}
+                                                    <i class="bi bi-star me-1"></i>
+                                                    0 (0) - Отзывы об услуге
+                                                {% endif %}
                                             </a>
-                                            {% if autoservice.phone %}
-                                            <a href="tel:{{ autoservice.phone }}" 
-                                               class="btn btn-outline-light btn-sm">
-                                                <i class="bi bi-telephone me-1"></i>
-                                                Позвонить
-                                            </a>
-                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
@@ -281,20 +291,6 @@
                             </a>
                         </div>
                         {% endif %}
-                        
-                        <div class="col-md-6 col-lg-4">
-                            <a href="{% url 'core:autoservice_reviews_list' autoservice.id %}" class="btn btn-warning btn-lg w-100">
-                                <i class="bi bi-star me-2"></i>
-                                Отзывы
-                            </a>
-                        </div>
-                        
-                        <div class="col-md-6 col-lg-4">
-                            <a href="{% url 'landing' %}" class="btn btn-outline-secondary btn-lg w-100">
-                                <i class="bi bi-house-door me-2"></i>
-                                На главную
-                            </a>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -443,6 +439,43 @@
                 </div>
             </div>
             {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для отзывов об услуге -->
+<div class="modal fade service-reviews-modal" id="serviceReviewsModal" tabindex="-1" aria-labelledby="serviceReviewsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content bg-dark text-light border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-primary" id="serviceReviewsModalLabel">
+                    <i class="bi bi-star me-2"></i>
+                    Отзывы об услуге: <span id="service-name-placeholder">...</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body" id="serviceReviewsContent">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Загружаем отзывы...</p>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary justify-content-between">
+                <div>
+                    <small class="text-muted">Отзывы помогают другим клиентам сделать выбор</small>
+                </div>
+                <div>
+                    {% if user.is_authenticated %}
+                    <button type="button" class="btn btn-success" id="writeReviewBtn">
+                        <i class="bi bi-plus-circle me-1"></i>
+                        Написать отзыв
+                    </button>
+                    {% endif %}
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -656,5 +689,255 @@
     padding-left: 8px;
     margin-left: -8px;
 }
+
+/* Стили для модального окна отзывов */
+.modal-dialog-scrollable .modal-body {
+    max-height: 60vh;
+}
+
+/* Улучшенные стили для модального окна */
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.8) !important; /* Менее прозрачный фон */
+}
+
+.modal.service-reviews-modal {
+    z-index: 1055 !important;
+}
+
+.modal.service-reviews-modal .modal-dialog {
+    margin: 2rem auto;
+    max-width: 900px;
+    z-index: 1056 !important;
+}
+
+.modal.service-reviews-modal.show .modal-dialog {
+    transform: none !important;
+}
+
+.modal-content {
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5) !important;
+    border: 2px solid #0d6efd !important;
+    background-color: #212529 !important;
+}
+
+/* Анимация появления */
+.modal.fade .modal-dialog {
+    transition: transform 0.3s ease-out;
+    transform: translateY(-50px);
+}
+
+.modal.show .modal-dialog {
+    transform: translateY(0);
+}
+
+/* На мобильных устройствах */
+@media (max-width: 991px) {
+    .modal.service-reviews-modal .modal-dialog {
+        margin: 0.5rem;
+        max-height: calc(100vh - 1rem);
+    }
+}
+
+.review-card {
+    background: #2d3748 !important;
+    border: 1px solid #4a5568 !important;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    transition: all 0.3s ease;
+}
+
+.review-card:hover {
+    border-color: #0d6efd !important;
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.2);
+}
+
+.review-rating {
+    color: #ffc107;
+}
+
+.review-author {
+    font-size: 0.875rem;
+    opacity: 0.8;
+}
+
+.review-date {
+    font-size: 0.75rem;
+    opacity: 0.6;
+}
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработчики для кнопок "Отзывы об услуге"
+    const reviewButtons = document.querySelectorAll('.service-reviews-btn');
+    const serviceReviewsModal = new bootstrap.Modal(document.getElementById('serviceReviewsModal'));
+    const serviceNamePlaceholder = document.getElementById('service-name-placeholder');
+    const serviceReviewsContent = document.getElementById('serviceReviewsContent');
+    const writeReviewBtn = document.getElementById('writeReviewBtn');
+    
+    let currentServiceId = null;
+    
+    reviewButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const serviceId = this.dataset.serviceId;
+            const serviceName = this.dataset.serviceName;
+            
+            currentServiceId = serviceId;
+            serviceNamePlaceholder.textContent = serviceName;
+            
+            // Показываем модальное окно
+            serviceReviewsModal.show();
+            
+            // Загружаем отзывы
+            loadServiceReviews(serviceId);
+        });
+    });
+    
+    // Обработчик для кнопки "Написать отзыв"
+    if (writeReviewBtn) {
+        writeReviewBtn.addEventListener('click', function() {
+            if (currentServiceId) {
+                window.location.href = `{% url 'core:service_review_create' 0 %}`.replace('0', currentServiceId);
+            }
+        });
+    }
+    
+    function loadServiceReviews(serviceId) {
+        // Показываем индикатор загрузки
+        serviceReviewsContent.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Загрузка...</span>
+                </div>
+                <p class="mt-3 text-muted">Загружаем отзывы...</p>
+            </div>
+        `;
+        
+        // Загружаем отзывы через AJAX
+        const apiUrl = `{% url 'core:service_reviews_api' 0 %}`.replace('0', serviceId);
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.reviews && data.reviews.length > 0) {
+                    displayReviews(data.reviews, data.avg_rating, data.total_count);
+                } else {
+                    displayNoReviews();
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки отзывов:', error);
+                serviceReviewsContent.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="bi bi-exclamation-triangle display-4 text-warning mb-3"></i>
+                        <h5 class="text-warning">Ошибка загрузки</h5>
+                        <p class="text-muted">Не удалось загрузить отзывы. Попробуйте еще раз.</p>
+                        <button class="btn btn-outline-primary" onclick="loadServiceReviews(${serviceId})">
+                            <i class="bi bi-arrow-clockwise me-1"></i>
+                            Повторить попытку
+                        </button>
+                    </div>
+                `;
+            });
+    }
+    
+    function displayReviews(reviews, avgRating, totalCount) {
+        let reviewsHtml = '';
+        
+        // Заголовок с рейтингом
+        if (avgRating > 0) {
+            reviewsHtml += `
+                <div class="mb-4 p-3 bg-secondary rounded">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <span class="h4 text-warning me-3">${avgRating}</span>
+                            <div class="rating-stars">
+                                ${generateStars(avgRating)}
+                            </div>
+                        </div>
+                        <small class="text-muted">${totalCount} отзыв${getPluralSuffix(totalCount)}</small>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Отзывы
+        reviews.forEach(review => {
+            reviewsHtml += `
+                <div class="review-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="text-primary mb-0">${review.title || 'Отзыв'}</h6>
+                        <div class="rating-stars text-end">
+                            ${generateStars(review.rating)}
+                        </div>
+                    </div>
+                    
+                    ${review.text ? `<p class="text-light mb-2">${review.text}</p>` : ''}
+                    
+                    ${review.pros ? `
+                        <div class="mb-2">
+                            <div class="text-success small">
+                                <i class="bi bi-plus-circle me-1"></i>
+                                <strong>Плюсы:</strong> ${review.pros}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${review.cons ? `
+                        <div class="mb-2">
+                            <div class="text-danger small">
+                                <i class="bi bi-dash-circle me-1"></i>
+                                <strong>Минусы:</strong> ${review.cons}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary">
+                        <small class="review-author">
+                            ${review.is_anonymous ? 
+                                '<i class="bi bi-incognito me-1"></i>Анонимно' : 
+                                `<i class="bi bi-person me-1"></i>${review.author_name}`
+                            }
+                        </small>
+                        <small class="review-date">${review.created_at}</small>
+                    </div>
+                </div>
+            `;
+        });
+        
+        serviceReviewsContent.innerHTML = reviewsHtml;
+    }
+    
+    function displayNoReviews() {
+        serviceReviewsContent.innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-star display-4 text-white-50 mb-3"></i>
+                <h5 class="text-white-50">Пока нет отзывов</h5>
+                <p class="text-muted">Станьте первым, кто оставит отзыв об этой услуге</p>
+            </div>
+        `;
+    }
+    
+    function generateStars(rating) {
+        let starsHtml = '';
+        for (let i = 1; i <= 5; i++) {
+            if (i <= rating) {
+                starsHtml += '<i class="bi bi-star-fill text-warning"></i>';
+            } else {
+                starsHtml += '<i class="bi bi-star text-muted"></i>';
+            }
+        }
+        return starsHtml;
+    }
+    
+    function getPluralSuffix(count) {
+        if (count % 10 === 1 && count % 100 !== 11) return '';
+        if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return 'а';
+        return 'ов';
+    }
+    
+    // Делаем функцию доступной глобально для кнопки "Повторить попытку"
+    window.loadServiceReviews = loadServiceReviews;
+});
+</script>
 {% endblock content %}

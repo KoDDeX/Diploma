@@ -11,7 +11,7 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from datetime import timedelta
 import json
-from .models import Region, AutoService, Service, Order, Car, Notification, WorkSchedule, get_master_schedule_for_date, is_master_working_at_datetime
+from .models import Region, AutoService, Service, Order, Car, Notification, WorkSchedule, get_master_schedule_for_date, is_master_working_at_datetime, Review
 from .forms import (
     AutoServiceEditForm,
     AddManagerForm,
@@ -161,6 +161,31 @@ def autoservice_detail_view(request, autoservice_slug):
         "-is_popular", "name"
     )
     
+    # Добавляем рейтинги для каждой услуги
+    from django.db.models import Avg
+    services_with_ratings = []
+    for service in services:
+        service_reviews = Review.objects.filter(
+            service=service,
+            is_approved=True
+        )
+        
+        rating_info = service_reviews.aggregate(
+            avg_rating=Avg('rating'),
+            total_reviews=Count('id')
+        )
+        
+        # Округляем рейтинг до 1 знака после запятой
+        avg_rating = rating_info['avg_rating']
+        if avg_rating:
+            avg_rating = round(avg_rating, 1)
+        else:
+            avg_rating = 0
+        
+        service.avg_rating = avg_rating
+        service.reviews_count = rating_info['total_reviews'] or 0
+        services_with_ratings.append(service)
+    
     # Получаем последние отзывы об автосервисе (максимум 6 для отображения)
     recent_reviews = Review.objects.filter(
         autoservice=autoservice,
@@ -184,7 +209,7 @@ def autoservice_detail_view(request, autoservice_slug):
     context = {
         "title": f"{autoservice.name} - {autoservice.region.name}",
         "autoservice": autoservice,
-        "services": services,
+        "services": services_with_ratings,
         "recent_reviews": recent_reviews,
         "total_reviews": total_reviews,
         "avg_rating": avg_rating,
@@ -3113,4 +3138,69 @@ def api_regions(request):
         return JsonResponse({
             'success': False,
             'error': str(e)
+        }, status=500)
+
+
+def service_reviews_api(request, service_id):
+    """
+    API endpoint для получения отзывов об услуге в формате JSON.
+    """
+    try:
+        service = get_object_or_404(Service, id=service_id)
+        
+        # Получаем все одобренные отзывы для этой услуги
+        reviews = Review.objects.filter(
+            service=service,
+            is_approved=True,
+            is_rejected=False
+        ).select_related('author').order_by('-created_at')
+        
+        reviews_data = []
+        for review in reviews:
+            # Форматируем дату
+            created_at = review.created_at.strftime('%d.%m.%Y в %H:%M')
+            
+            # Определяем имя автора
+            if review.is_anonymous or not review.author:
+                author_name = 'Анонимно'
+                is_anonymous = True
+            else:
+                author = review.author
+                if hasattr(author, 'first_name') and author.first_name:
+                    author_name = author.first_name
+                elif hasattr(author, 'get_full_name'):
+                    author_name = author.get_full_name() or author.username
+                else:
+                    author_name = author.username
+                is_anonymous = False
+            
+            reviews_data.append({
+                'id': review.id,
+                'title': review.title,
+                'text': review.text,
+                'rating': review.rating,
+                'pros': review.pros,
+                'cons': review.cons,
+                'created_at': created_at,
+                'author_name': author_name,
+                'is_anonymous': is_anonymous,
+            })
+        
+        # Подсчитываем средний рейтинг
+        if reviews:
+            avg_rating = round(sum(r.rating for r in reviews) / len(reviews), 1)
+        else:
+            avg_rating = 0
+        
+        return JsonResponse({
+            'success': True,
+            'reviews': reviews_data,
+            'total_count': len(reviews_data),
+            'avg_rating': avg_rating
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Ошибка загрузки отзывов: {str(e)}'
         }, status=500)
