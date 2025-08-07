@@ -36,7 +36,7 @@ jobs:
             git log --oneline -1
 
             # Останавливаем службу приложения
-            echo "${{ secrets.PASSWORD }}" | sudo -S systemctl stop diploma
+            echo "${{ secrets.PASSWORD }}" | sudo -S systemctl stop gunicorn_diploma
 
             # ПРИНУДИТЕЛЬНО обновляем код (это решит проблему с локальными изменениями)
             git fetch origin
@@ -57,11 +57,32 @@ jobs:
             echo "${{ secrets.ENV_FILE }}" > .env
 
             # Собираем статические файлы
-            #/home/koddex/.local/bin/poetry run python manage.py collectstatic --noinput
+            /home/koddex/.local/bin/poetry run python manage.py collectstatic --noinput
 
             # Перезапускаем systemd сервис
-            echo "${{ secrets.PASSWORD }}" | sudo -S systemctl start diploma
+            echo "${{ secrets.PASSWORD }}" | sudo -S systemctl start gunicorn_diploma
             
             # Проверяем статус сервиса
             sleep 3
-            echo "${{ secrets.PASSWORD }}" | sudo -S systemctl status diploma
+            echo "${{ secrets.PASSWORD }}" | sudo -S systemctl status gunicorn_diploma
+
+            # Создаем директории, если их нет.
+            # Ключ -p позволяет создавать родительские директории, если они отсутствуют, и не выдавать ошибку, если директория уже существует.
+            mkdir -p /home/koddex/Diploma/staticfiles 
+            mkdir -p /home/koddex/Diploma/media
+
+            # Устанавливаем права доступа к директориям
+            # Для статических файлов: 755 означает, что владелец имеет полные права (чтение, запись, выполнение),
+            # а группа и остальные пользователи имеют права на чтение и выполнение. Это безопасно, так как статика только раздается.
+            chmod 755 /home/koddex/Diploma/staticfiles
+            # Для медиафайлов: 775 означает, что владелец и группа имеют полные права (чтение, запись, выполнение),
+            # а остальные пользователи имеют права на чтение и выполнение. Это необходимо, так как приложение (через Gunicorn)
+            # может загружать файлы в эту директорию, и Nginx должен иметь к ним доступ.
+            chmod 775 /home/koddex/Diploma/media
+
+            # Устанавливаем владельца и группу для директорий
+            # koddex:www-data означает, что владельцем директории будет пользователь 'koddex', а группой — 'www-data'.
+            # Это критично, поскольку Nginx часто работает под пользователем 'www-data' или входит в эту группу.
+            # Таким образом, Nginx сможет читать файлы из этих директорий.  
+            sudo chown -R koddex:www-data /home/koddex/Diploma/staticfiles
+            sudo chown -R koddex:www-data /home/koddex/Diploma/media
