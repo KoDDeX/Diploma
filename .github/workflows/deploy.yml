@@ -64,7 +64,9 @@ jobs:
             
             # Проверяем статус сервиса
             sleep 3
-            echo "${{ secrets.PASSWORD }}" | sudo -S systemctl status gunicorn_diploma
+            echo "${{ secrets.PASSWORD }}" | sudo -S systemctl status gunicorn_diploma --no-pager
+            
+            echo "=== Deployment completed successfully ==="
 
             # Создаем директории, если их нет.
             # Ключ -p позволяет создавать родительские директории, если они отсутствуют, и не выдавать ошибку, если директория уже существует.
