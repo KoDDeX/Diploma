@@ -181,8 +181,8 @@ DEFAULT_FROM_EMAIL = "bunko.ip@yandex.ru"
 SERVER_EMAIL = "bunko.ip@yandex.ru"
 EMAIL_ADMIN = "bunko.ip@yandex.ru"
 
-# Таймаут для email подключений (30 секунд)
-EMAIL_TIMEOUT = 30
+# Таймаут для email подключений (5 секунд - быстрый фейл при сетевых проблемах)
+EMAIL_TIMEOUT = 5
 
 # Логирование (только критические ошибки)
 LOGGING = {
