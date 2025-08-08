@@ -68,34 +68,3 @@ def custom_range(value):
     except (ValueError, TypeError):
         return range(0)
 
-@register.filter
-def custom_range(value):
-    """Создает диапазон чисел от 1 до value"""
-    try:
-        return range(1, int(value) + 1)
-    except (ValueError, TypeError):
-        return range(0)
-
-@register.filter
-def custom_range(value):
-    """Создает диапазон чисел от 1 до value"""
-    try:
-        return range(1, int(value) + 1)
-    except (ValueError, TypeError):
-        return range(0)
-
-@register.filter
-def custom_range(value):
-    """Создает диапазон от 1 до value"""
-    try:
-        return range(1, int(value) + 1)
-    except (ValueError, TypeError):
-        return range(1, 6)  # По умолчанию для звёзд
-
-@register.filter
-def custom_range(value):
-    """Создаёт диапазон чисел от 1 до value"""
-    try:
-        return range(1, int(value) + 1)
-    except (ValueError, TypeError):
-        return range(0)

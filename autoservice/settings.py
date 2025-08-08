@@ -206,7 +206,6 @@ LOGGING = {
 }
 
 # Создание директории для логов
-import os
 logs_dir = BASE_DIR / 'logs'
 if not logs_dir.exists():
     logs_dir.mkdir(exist_ok=True)
