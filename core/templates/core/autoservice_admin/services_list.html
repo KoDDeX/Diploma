@@ -25,6 +25,7 @@
             </div>
 
             <!-- Статистика -->
+            {% if services %}
             <div class="row g-3 mb-4">
                 <div class="col-md-3">
                     <div class="card bg-primary text-white h-100">
@@ -72,8 +73,10 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
 
             <!-- Фильтры и поиск -->
+            {% if services %}
             <div class="card mb-4">
                 <div class="card-body">
                     <form method="get" class="row g-3">
@@ -138,6 +141,7 @@
                     {% endif %}
                 </div>
             </div>
+            {% endif %}
 
             <!-- Список услуг -->
             <div class="card">
