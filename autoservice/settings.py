@@ -170,27 +170,21 @@ LOGIN_URL = "/users/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 
-# Email settings
-if DEBUG:
-    # В режиме разработки выводим email в консоль
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-else:
-    # В production используем SMTP
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-
+# Email settings - одинаковые для всех сред
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.yandex.ru"
 EMAIL_PORT = 465
-EMAIL_HOST_USER = "proj.24autoservice.ru@yandex.com"
+EMAIL_HOST_USER = "bunko.ip@yandex.ru"
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 EMAIL_USE_SSL = True
-DEFAULT_FROM_EMAIL = "proj.24autoservice.ru@yandex.com"
-SERVER_EMAIL = "proj.24autoservice.ru@yandex.com"
-EMAIL_ADMIN = "proj.24autoservice.ru@yandex.com"
+DEFAULT_FROM_EMAIL = "bunko.ip@yandex.ru"
+SERVER_EMAIL = "bunko.ip@yandex.ru"
+EMAIL_ADMIN = "bunko.ip@yandex.ru"
 
 # Таймаут для email подключений (30 секунд)
 EMAIL_TIMEOUT = 30
 
-# Логирование (упрощенное - только критические ошибки)
+# Логирование (только критические ошибки)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

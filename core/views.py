@@ -1095,7 +1095,7 @@ def autoservice_register_view(request):
                 except Exception:
                     pass  # Ошибка отправки email не должна прерывать регистрацию
                 
-                # Создаем уведомление для админа (тебя) в системе
+                # Создаем уведомление для админа в системе
                 try:
                     # Ищем первого суперпользователя
                     admin_user = User.objects.filter(is_superuser=True, is_active=True).first()
