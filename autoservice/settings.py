@@ -190,55 +190,24 @@ EMAIL_ADMIN = "proj.24autoservice.ru@yandex.com"
 # Таймаут для email подключений (30 секунд)
 EMAIL_TIMEOUT = 30
 
-# Логирование
+# Логирование (упрощенное - только критические ошибки)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
     'handlers': {
         'file': {
-            'level': 'INFO',  # Изменяем с ERROR на INFO
+            'level': 'ERROR',
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'logs' / 'django.log',
-            'formatter': 'verbose',
-        },
-        'email_file': {
-            'level': 'INFO',  # Изменяем с ERROR на INFO
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'email.log',
-            'formatter': 'verbose',
         },
         'console': {
-            'level': 'INFO',
+            'level': 'ERROR',
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
         },
     },
-    'loggers': {
-        'django': {
-            'handlers': ['file', 'console'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-        'django.core.mail': {
-            'handlers': ['email_file', 'console'],
-            'level': 'INFO',  # Чтобы видеть все операции с email
-            'propagate': False,
-        },
-        'autoservice': {
-            'handlers': ['file', 'console'],
-            'level': 'INFO',  # Устанавливаем INFO для всех сред
-            'propagate': True,
-        },
+    'root': {
+        'handlers': ['file', 'console'],
+        'level': 'ERROR',
     },
 }
 

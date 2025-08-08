@@ -11,9 +11,7 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from datetime import timedelta
 import json
-import logging
 
-logger = logging.getLogger('autoservice')
 from .models import Region, AutoService, Service, Order, Car, Notification, WorkSchedule, get_master_schedule_for_date, is_master_working_at_datetime, Review
 from .forms import (
     AutoServiceEditForm,
@@ -1094,12 +1092,13 @@ def autoservice_register_view(request):
                 # Пытаемся отправить уведомление админу
                 try:
                     send_autoservice_registration_notification(autoservice, request.user)
-                except Exception as email_error:
-                    logger.error(f"Ошибка отправки email: {str(email_error)}", exc_info=True)
+                except Exception:
+                    pass  # Ошибка отправки email не должна прерывать регистрацию
                 
                 # Создаем уведомление для админа (тебя) в системе
                 try:
-                    admin_user = User.objects.filter(role="super_admin", is_active=True).first()
+                    # Ищем первого суперпользователя
+                    admin_user = User.objects.filter(is_superuser=True, is_active=True).first()
                     if admin_user:
                         add_notification(
                             user=admin_user,
@@ -1107,9 +1106,8 @@ def autoservice_register_view(request):
                             message=f"Зарегистрирован новый автосервис '{autoservice.name}' в регионе '{autoservice.region.name}'. Требуется активация.",
                             level="info"
                         )
-                        logger.info(f"Создано уведомление для админа о регистрации автосервиса {autoservice.name}")
-                except Exception as notification_error:
-                    logger.error(f"Ошибка создания уведомления для админа: {str(notification_error)}", exc_info=True)
+                except Exception:
+                    pass  # Ошибка создания уведомления не должна прерывать регистрацию
                 
                 # Создаем уведомление для регистрирующегося пользователя
                 try:
@@ -1119,9 +1117,8 @@ def autoservice_register_view(request):
                         message=f"Ваш автосервис '{autoservice.name}' успешно зарегистрирован и ожидает активации модератором. Вы получите уведомление после активации.",
                         level="success"
                     )
-                    logger.info(f"Создано уведомление для пользователя {request.user.email} о регистрации автосервиса {autoservice.name}")
-                except Exception as user_notification_error:
-                    logger.error(f"Ошибка создания уведомления пользователю: {str(user_notification_error)}", exc_info=True)
+                except Exception:
+                    pass  # Ошибка создания уведомления не должна прерывать регистрацию
 
                 messages.success(
                     request,
@@ -1134,7 +1131,6 @@ def autoservice_register_view(request):
 
             except Exception as e:
                 messages.error(request, f"Ошибка при регистрации автосервиса: {str(e)}")
-                logger.error(f"Ошибка регистрации автосервиса: {str(e)}", exc_info=True)
     else:
         form = AutoServiceRegistrationForm()
 
@@ -1148,14 +1144,23 @@ def autoservice_register_view(request):
 def send_autoservice_registration_notification(autoservice, user):
     """Отправляет уведомление админу о регистрации нового автосервиса"""
     try:
-        # Отправляем уведомление конкретному админу (тебе)
-        admin_email = "koddexx@gmail.com"  # Твой email
+        # Находим главного администратора (суперпользователя)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
         
-        logger.info(f"Начинаем отправку уведомления о регистрации автосервиса {autoservice.name}")
+        # Ищем первого суперпользователя с email
+        admin_user = User.objects.filter(
+            is_superuser=True,
+            email__isnull=False
+        ).exclude(email='').first()
+        
+        if not admin_user or not admin_user.email:
+            return
+            
+        admin_email = admin_user.email
         
         # Проверяем настройки email
         if not hasattr(settings, 'DEFAULT_FROM_EMAIL') or not settings.DEFAULT_FROM_EMAIL:
-            logger.error("Не настроен DEFAULT_FROM_EMAIL")
             return
 
         subject = f"Новый автосервис: {autoservice.name}"
@@ -1175,8 +1180,6 @@ Email: {user.email}
 
 Автосервис неактивен. При активации пользователь получит роль администратора автосервиса.
         """
-
-        logger.info(f"Отправляем email на адрес: {admin_email}")
 
         from django.core.mail import get_connection
         
@@ -1198,12 +1201,9 @@ Email: {user.email}
             fail_silently=False,
             connection=connection,
         )
-        
-        logger.info("Email успешно отправлен")
 
-    except Exception as e:
-        # Логируем ошибку, но не прерываем процесс регистрации
-        logger.error(f"Ошибка отправки email: {str(e)}", exc_info=True)
+    except Exception:
+        pass  # Тихо игнорируем ошибки отправки email
 
 
 @login_required
