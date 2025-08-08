@@ -11,6 +11,9 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from datetime import timedelta
 import json
+import logging
+
+logger = logging.getLogger('autoservice')
 from .models import Region, AutoService, Service, Order, Car, Notification, WorkSchedule, get_master_schedule_for_date, is_master_working_at_datetime, Review
 from .forms import (
     AutoServiceEditForm,
@@ -1088,26 +1091,25 @@ def autoservice_register_view(request):
                 )
                 request.user.save()
 
-                # Пытаемся отправить уведомление суперадминистратору
+                # Пытаемся отправить уведомление админу
                 try:
                     send_autoservice_registration_notification(autoservice, request.user)
                 except Exception as email_error:
-                    print(f"Ошибка отправки email: {str(email_error)}")
-                    # Не прерываем процесс регистрации из-за ошибки email
+                    logger.error(f"Ошибка отправки email: {str(email_error)}", exc_info=True)
                 
-                # # Создаем уведомления для всех суперадминистраторов в системе
-                # Пока других не предполагается
-                # try:
-                #     superadmins = User.objects.filter(role="super_admin", is_active=True)
-                #     for superadmin in superadmins:
-                #         add_notification(
-                #             user=superadmin,
-                #             title="Новый автосервис зарегистрирован",
-                #             message=f"Зарегистрирован новый автосервис '{autoservice.name}' в регионе '{autoservice.region.name}'. Требуется модерация.",
-                #             level="info"
-                #         )
-                # except Exception as notification_error:
-                #     print(f"Ошибка создания уведомлений для суперадминов: {str(notification_error)}")
+                # Создаем уведомление для админа (тебя) в системе
+                try:
+                    admin_user = User.objects.filter(role="super_admin", is_active=True).first()
+                    if admin_user:
+                        add_notification(
+                            user=admin_user,
+                            title="Новый автосервис зарегистрирован",
+                            message=f"Зарегистрирован новый автосервис '{autoservice.name}' в регионе '{autoservice.region.name}'. Требуется активация.",
+                            level="info"
+                        )
+                        logger.info(f"Создано уведомление для админа о регистрации автосервиса {autoservice.name}")
+                except Exception as notification_error:
+                    logger.error(f"Ошибка создания уведомления для админа: {str(notification_error)}", exc_info=True)
                 
                 # Создаем уведомление для регистрирующегося пользователя
                 try:
@@ -1117,8 +1119,9 @@ def autoservice_register_view(request):
                         message=f"Ваш автосервис '{autoservice.name}' успешно зарегистрирован и ожидает активации модератором. Вы получите уведомление после активации.",
                         level="success"
                     )
+                    logger.info(f"Создано уведомление для пользователя {request.user.email} о регистрации автосервиса {autoservice.name}")
                 except Exception as user_notification_error:
-                    print(f"Ошибка создания уведомления пользователю: {str(user_notification_error)}")
+                    logger.error(f"Ошибка создания уведомления пользователю: {str(user_notification_error)}", exc_info=True)
 
                 messages.success(
                     request,
@@ -1131,7 +1134,7 @@ def autoservice_register_view(request):
 
             except Exception as e:
                 messages.error(request, f"Ошибка при регистрации автосервиса: {str(e)}")
-                print(f"Ошибка регистрации автосервиса: {str(e)}")  # Для отладки
+                logger.error(f"Ошибка регистрации автосервиса: {str(e)}", exc_info=True)
     else:
         form = AutoServiceRegistrationForm()
 
@@ -1143,18 +1146,16 @@ def autoservice_register_view(request):
 
 
 def send_autoservice_registration_notification(autoservice, user):
-    """Отправляет уведомление суперадминистратору о регистрации нового автосервиса"""
+    """Отправляет уведомление админу о регистрации нового автосервиса"""
     try:
-        # Получаем email суперадминистратора
-        superadmins = User.objects.filter(role="super_admin", is_active=True)
-        print(f"e-mail to admin: {[admin.email for admin in superadmins]}")
-        if not superadmins.exists():
-            print("Нет активных суперадминистраторов для отправки уведомления")
-            return
-
+        # Отправляем уведомление конкретному админу (тебе)
+        admin_email = "koddexx@gmail.com"  # Твой email
+        
+        logger.info(f"Начинаем отправку уведомления о регистрации автосервиса {autoservice.name}")
+        
         # Проверяем настройки email
         if not hasattr(settings, 'DEFAULT_FROM_EMAIL') or not settings.DEFAULT_FROM_EMAIL:
-            print("Не настроен DEFAULT_FROM_EMAIL")
+            logger.error("Не настроен DEFAULT_FROM_EMAIL")
             return
 
         subject = f"Новый автосервис: {autoservice.name}"
@@ -1173,17 +1174,9 @@ Email: {autoservice.email}
 Email: {user.email}
 
 Автосервис неактивен. При активации пользователь получит роль администратора автосервиса.
-Для активации автосервиса перейдите в панель администратора.
         """
 
-        # Отправляем email всем суперадминистраторам
-        recipient_list = [admin.email for admin in superadmins if admin.email]
-        
-        if not recipient_list:
-            print("Нет email адресов суперадминистраторов")
-            return
-
-        print(f"Отправляем email на адреса: {recipient_list}")
+        logger.info(f"Отправляем email на адрес: {admin_email}")
 
         from django.core.mail import get_connection
         
@@ -1201,19 +1194,16 @@ Email: {user.email}
             subject=subject,
             message=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=recipient_list,
+            recipient_list=[admin_email],
             fail_silently=False,
             connection=connection,
         )
         
-        print("Email успешно отправлен")
+        logger.info("Email успешно отправлен")
 
     except Exception as e:
         # Логируем ошибку, но не прерываем процесс регистрации
-        print(f"Ошибка отправки email: {str(e)}")
-        import traceback
-        print(f"Полная трассировка ошибки: {traceback.format_exc()}")
-        # Не поднимаем исключение, чтобы не сломать регистрацию
+        logger.error(f"Ошибка отправки email: {str(e)}", exc_info=True)
 
 
 @login_required

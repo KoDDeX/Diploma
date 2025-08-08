@@ -206,13 +206,13 @@ LOGGING = {
     },
     'handlers': {
         'file': {
-            'level': 'ERROR',
+            'level': 'INFO',  # Изменяем с ERROR на INFO
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'logs' / 'django.log',
             'formatter': 'verbose',
         },
         'email_file': {
-            'level': 'ERROR',
+            'level': 'INFO',  # Изменяем с ERROR на INFO
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'logs' / 'email.log',
             'formatter': 'verbose',
@@ -231,12 +231,12 @@ LOGGING = {
         },
         'django.core.mail': {
             'handlers': ['email_file', 'console'],
-            'level': 'ERROR',
+            'level': 'INFO',  # Чтобы видеть все операции с email
             'propagate': False,
         },
         'autoservice': {
             'handlers': ['file', 'console'],
-            'level': 'INFO' if DEBUG else 'ERROR',
+            'level': 'INFO',  # Устанавливаем INFO для всех сред
             'propagate': True,
         },
     },
