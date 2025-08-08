@@ -244,7 +244,6 @@ class AutoServiceRegistrationForm(forms.ModelForm):
             "name": forms.TextInput(
                 attrs={
                     "class": "form-control form-control-lg",
-                    "placeholder": "Название вашего автосервиса",
                     "required": True,
                 }
             ),
@@ -257,35 +256,31 @@ class AutoServiceRegistrationForm(forms.ModelForm):
             "city": forms.TextInput(
                 attrs={
                     "class": "form-control form-control-lg",
-                    "placeholder": "Москва",
                     "required": True,
                 }
             ),
             "street": forms.TextInput(
                 attrs={
                     "class": "form-control form-control-lg",
-                    "placeholder": "ул. Ленина",
                     "required": True,
                 }
             ),
             "house_number": forms.TextInput(
                 attrs={
                     "class": "form-control",
-                    "placeholder": "10А",
                     "required": True,
                 }
             ),
             "phone": forms.TextInput(
                 attrs={
                     "class": "form-control form-control-lg",
-                    "placeholder": "+7 (XXX) XXX-XX-XX",
                     "required": True,
+                    "id": "phone-input",
                 }
             ),
             "email": forms.EmailInput(
                 attrs={
                     "class": "form-control form-control-lg",
-                    "placeholder": "email@autoservice.ru",
                     "required": True,
                 }
             ),
@@ -293,7 +288,6 @@ class AutoServiceRegistrationForm(forms.ModelForm):
                 attrs={
                     "class": "form-control",
                     "rows": 4,
-                    "placeholder": "Краткое описание ваших услуг, специализации и особенностей автосервиса",
                 }
             ),
         }

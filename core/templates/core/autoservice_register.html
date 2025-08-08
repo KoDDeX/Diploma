@@ -227,10 +227,58 @@
 </div>
 
 <!-- Validation JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/inputmask@5.0.8/dist/inputmask.min.js"></script>
 <script>
 (function() {
     'use strict';
     window.addEventListener('load', function() {
+        // Инициализация маски для телефона
+        var phoneInput = document.getElementById('phone-input');
+        if (phoneInput) {
+            var phoneMask = new Inputmask("+7 (999) 999-99-99", {
+                placeholder: " ",
+                showMaskOnHover: false,
+                showMaskOnFocus: true,
+                onBeforePaste: function (pastedValue, opts) {
+                    // Обработка вставки номера телефона
+                    var cleanValue = pastedValue.replace(/\D/g, '');
+                    if (cleanValue.startsWith('8')) {
+                        cleanValue = '7' + cleanValue.substring(1);
+                    }
+                    if (cleanValue.startsWith('7') && cleanValue.length === 11) {
+                        return '+7 (' + cleanValue.substring(1, 4) + ') ' + 
+                               cleanValue.substring(4, 7) + '-' + 
+                               cleanValue.substring(7, 9) + '-' + 
+                               cleanValue.substring(9, 11);
+                    }
+                    return pastedValue;
+                }
+            });
+            phoneMask.mask(phoneInput);
+            
+            // Обработка отправки формы - убираем маску для отправки чистого номера
+            var form = phoneInput.closest('form');
+            if (form) {
+                form.addEventListener('submit', function() {
+                    // Получаем чистый номер без маски
+                    var cleanPhone = phoneInput.inputmask.unmaskedvalue();
+                    // Добавляем код страны, если его нет
+                    if (cleanPhone && !cleanPhone.startsWith('7')) {
+                        cleanPhone = '7' + cleanPhone;
+                    }
+                    // Создаем скрытое поле для отправки чистого номера
+                    var hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = phoneInput.name;
+                    hiddenInput.value = '+' + cleanPhone;
+                    form.appendChild(hiddenInput);
+                    // Отключаем оригинальное поле
+                    phoneInput.disabled = true;
+                });
+            }
+        }
+        
+        // Валидация формы
         var forms = document.getElementsByClassName('needs-validation');
         var validation = Array.prototype.filter.call(forms, function(form) {
             form.addEventListener('submit', function(event) {
