@@ -1088,26 +1088,37 @@ def autoservice_register_view(request):
                 )
                 request.user.save()
 
-                # Отправляем уведомление суперадминистратору
-                send_autoservice_registration_notification(autoservice, request.user)
+                # Пытаемся отправить уведомление суперадминистратору
+                try:
+                    send_autoservice_registration_notification(autoservice, request.user)
+                except Exception as email_error:
+                    print(f"Ошибка отправки email: {str(email_error)}")
+                    # Не прерываем процесс регистрации из-за ошибки email
                 
-                # Создаем уведомления для всех суперадминистраторов в системе
-                superadmins = User.objects.filter(role="super_admin", is_active=True)
-                for superadmin in superadmins:
-                    add_notification(
-                        user=superadmin,
-                        title="Новый автосервис зарегистрирован",
-                        message=f"Зарегистрирован новый автосервис '{autoservice.name}' в регионе '{autoservice.region.name}'. Требуется модерация.",
-                        level="info"
-                    )
+                # # Создаем уведомления для всех суперадминистраторов в системе
+                # Пока других не предполагается
+                # try:
+                #     superadmins = User.objects.filter(role="super_admin", is_active=True)
+                #     for superadmin in superadmins:
+                #         add_notification(
+                #             user=superadmin,
+                #             title="Новый автосервис зарегистрирован",
+                #             message=f"Зарегистрирован новый автосервис '{autoservice.name}' в регионе '{autoservice.region.name}'. Требуется модерация.",
+                #             level="info"
+                #         )
+                # except Exception as notification_error:
+                #     print(f"Ошибка создания уведомлений для суперадминов: {str(notification_error)}")
                 
                 # Создаем уведомление для регистрирующегося пользователя
-                add_notification(
-                    user=request.user,
-                    title="Автосервис зарегистрирован",
-                    message=f"Ваш автосервис '{autoservice.name}' успешно зарегистрирован и ожидает активации модератором. Вы получите уведомление после активации.",
-                    level="success"
-                )
+                try:
+                    add_notification(
+                        user=request.user,
+                        title="Автосервис зарегистрирован",
+                        message=f"Ваш автосервис '{autoservice.name}' успешно зарегистрирован и ожидает активации модератором. Вы получите уведомление после активации.",
+                        level="success"
+                    )
+                except Exception as user_notification_error:
+                    print(f"Ошибка создания уведомления пользователю: {str(user_notification_error)}")
 
                 messages.success(
                     request,
@@ -1138,6 +1149,12 @@ def send_autoservice_registration_notification(autoservice, user):
         superadmins = User.objects.filter(role="super_admin", is_active=True)
         print(f"e-mail to admin: {[admin.email for admin in superadmins]}")
         if not superadmins.exists():
+            print("Нет активных суперадминистраторов для отправки уведомления")
+            return
+
+        # Проверяем настройки email
+        if not hasattr(settings, 'DEFAULT_FROM_EMAIL') or not settings.DEFAULT_FROM_EMAIL:
+            print("Не настроен DEFAULT_FROM_EMAIL")
             return
 
         subject = f"Новый автосервис: {autoservice.name}"
@@ -1160,7 +1177,25 @@ Email: {user.email}
         """
 
         # Отправляем email всем суперадминистраторам
-        recipient_list = [admin.email for admin in superadmins]
+        recipient_list = [admin.email for admin in superadmins if admin.email]
+        
+        if not recipient_list:
+            print("Нет email адресов суперадминистраторов")
+            return
+
+        print(f"Отправляем email на адреса: {recipient_list}")
+
+        from django.core.mail import get_connection
+        
+        # Создаем подключение с timeout
+        connection = get_connection(
+            host=settings.EMAIL_HOST,
+            port=settings.EMAIL_PORT,
+            username=settings.EMAIL_HOST_USER,
+            password=settings.EMAIL_HOST_PASSWORD,
+            use_ssl=settings.EMAIL_USE_SSL,
+            timeout=getattr(settings, 'EMAIL_TIMEOUT', 30)
+        )
 
         send_mail(
             subject=subject,
@@ -1168,11 +1203,17 @@ Email: {user.email}
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=recipient_list,
             fail_silently=False,
+            connection=connection,
         )
+        
+        print("Email успешно отправлен")
 
     except Exception as e:
         # Логируем ошибку, но не прерываем процесс регистрации
         print(f"Ошибка отправки email: {str(e)}")
+        import traceback
+        print(f"Полная трассировка ошибки: {traceback.format_exc()}")
+        # Не поднимаем исключение, чтобы не сломать регистрацию
 
 
 @login_required

@@ -69,13 +69,16 @@ jobs:
             # Создаем директории, если их нет
             mkdir -p /home/koddex/Diploma/staticfiles 
             mkdir -p /home/koddex/Diploma/media
+            mkdir -p /home/koddex/Diploma/logs
 
             # Устанавливаем права доступа к директориям
             chmod 755 /home/koddex/Diploma/staticfiles
             chmod 775 /home/koddex/Diploma/media
+            chmod 775 /home/koddex/Diploma/logs
 
             # Устанавливаем владельца и группу для директорий
             echo "${{ secrets.PASSWORD }}" | sudo -S chown -R koddex:www-data /home/koddex/Diploma/staticfiles
             echo "${{ secrets.PASSWORD }}" | sudo -S chown -R koddex:www-data /home/koddex/Diploma/media
+            echo "${{ secrets.PASSWORD }}" | sudo -S chown -R koddex:www-data /home/koddex/Diploma/logs
             
             echo "=== Deployment completed successfully ==="

@@ -171,7 +171,12 @@ LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 
 # Email settings
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+if DEBUG:
+    # В режиме разработки выводим email в консоль
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+else:
+    # В production используем SMTP
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 EMAIL_HOST = "smtp.yandex.ru"
 EMAIL_PORT = 465
@@ -181,3 +186,64 @@ EMAIL_USE_SSL = True
 DEFAULT_FROM_EMAIL = "proj.24autoservice.ru@yandex.com"
 SERVER_EMAIL = "proj.24autoservice.ru@yandex.com"
 EMAIL_ADMIN = "proj.24autoservice.ru@yandex.com"
+
+# Таймаут для email подключений (30 секунд)
+EMAIL_TIMEOUT = 30
+
+# Логирование
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'django.log',
+            'formatter': 'verbose',
+        },
+        'email_file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'email.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file', 'console'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+        'django.core.mail': {
+            'handlers': ['email_file', 'console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'autoservice': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO' if DEBUG else 'ERROR',
+            'propagate': True,
+        },
+    },
+}
+
+# Создание директории для логов
+import os
+logs_dir = BASE_DIR / 'logs'
+if not logs_dir.exists():
+    logs_dir.mkdir(exist_ok=True)
