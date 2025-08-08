@@ -170,7 +170,7 @@ class AutoService(models.Model):
     # Разделяем адрес на отдельные поля
     city = models.CharField(max_length=100, verbose_name="Город", blank=True)
     street = models.CharField(max_length=200, verbose_name="Улица", blank=True)
-    house_number = models.CharField(max_length=20, verbose_name="Номер дома", blank=True)
+    house_number = models.CharField(max_length=20, verbose_name="Дома", blank=True)
     
     # Оставляем старое поле для совместимости, но делаем его необязательным
     address = models.TextField(verbose_name="Адрес (полный)", blank=True, help_text="Автоматически формируется из города, улицы и дома")
