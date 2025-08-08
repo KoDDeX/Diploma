@@ -1143,6 +1143,9 @@ def autoservice_register_view(request):
 
 def send_autoservice_registration_notification(autoservice, user):
     """Отправляет уведомление админу о регистрации нового автосервиса"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
         # Находим главного администратора (суперпользователя)
         from django.contrib.auth import get_user_model
@@ -1155,13 +1158,22 @@ def send_autoservice_registration_notification(autoservice, user):
         ).exclude(email='').first()
         
         if not admin_user or not admin_user.email:
+            logger.error("Не найден суперпользователь с email")
             return
             
         admin_email = admin_user.email
         
         # Проверяем настройки email
         if not hasattr(settings, 'DEFAULT_FROM_EMAIL') or not settings.DEFAULT_FROM_EMAIL:
+            logger.error("DEFAULT_FROM_EMAIL не настроен")
             return
+
+        # Проверяем наличие пароля
+        if not settings.EMAIL_HOST_PASSWORD:
+            logger.error("EMAIL_HOST_PASSWORD не задан!")
+            return
+            
+        logger.error(f"Пытаемся отправить email на: {admin_email} от: {settings.DEFAULT_FROM_EMAIL}")
 
         subject = f"Новый автосервис: {autoservice.name}"
         message = f"""
@@ -1201,9 +1213,14 @@ Email: {user.email}
             fail_silently=False,
             connection=connection,
         )
+        
+        logger.error("Email отправлен успешно!")
 
-    except Exception:
-        pass  # Тихо игнорируем ошибки отправки email
+    except Exception as e:
+        logger.error(f"Ошибка отправки email: {str(e)}")
+        # Логируем детальную ошибку
+        import traceback
+        logger.error(traceback.format_exc())
 
 
 @login_required
