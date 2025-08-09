@@ -3,6 +3,7 @@ from .views import (
     LandingPageView,
     autoservice_detail_view,
     admin_panel_view,
+    analytics_view,
     toggle_autoservice_status,
     get_users_for_manager,
     assign_manager,
@@ -88,6 +89,7 @@ urlpatterns = [
     ),
     # Панель управления для суперадминистратора
     path("admin-panel/", admin_panel_view, name="admin_panel"),
+    path("admin-panel/analytics/", analytics_view, name="analytics"),
     path(
         "admin-panel/toggle-status/<int:autoservice_id>/",
         toggle_autoservice_status,

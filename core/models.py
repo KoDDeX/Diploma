@@ -1272,3 +1272,229 @@ class ReviewReply(models.Model):
     
     def __str__(self):
         return f'Ответ от {self.author.get_full_name()} на отзыв #{self.review.id}'
+
+
+class AutoServicePageVisit(models.Model):
+    """Модель для отслеживания посещений страниц автосервисов"""
+    
+    autoservice = models.ForeignKey(
+        AutoService,
+        on_delete=models.CASCADE,
+        related_name='page_visits',
+        verbose_name='Автосервис'
+    )
+    
+    visitor_ip = models.GenericIPAddressField(
+        verbose_name='IP адрес посетителя',
+        help_text='IP адрес пользователя, посетившего страницу'
+    )
+    
+    user = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='autoservice_visits',
+        verbose_name='Пользователь',
+        help_text='Авторизованный пользователь (если есть)'
+    )
+    
+    user_agent = models.TextField(
+        blank=True,
+        verbose_name='User Agent',
+        help_text='Информация о браузере пользователя'
+    )
+    
+    referrer = models.URLField(
+        blank=True,
+        max_length=500,
+        verbose_name='Откуда пришел',
+        help_text='URL страницы, с которой пришел пользователь'
+    )
+    
+    page_url = models.URLField(
+        max_length=500,
+        verbose_name='URL страницы',
+        help_text='Полный URL посещенной страницы'
+    )
+    
+    session_key = models.CharField(
+        max_length=40,
+        blank=True,
+        verbose_name='Ключ сессии',
+        help_text='Ключ сессии для идентификации уникального посетителя'
+    )
+    
+    visit_date = models.DateField(
+        auto_now_add=True,
+        verbose_name='Дата посещения',
+        help_text='Дата посещения страницы'
+    )
+    
+    visit_time = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Время посещения',
+        help_text='Точное время посещения страницы'
+    )
+    
+    duration_seconds = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='Время на странице (сек)',
+        help_text='Время, проведенное на странице в секундах'
+    )
+    
+    is_unique_visitor = models.BooleanField(
+        default=True,
+        verbose_name='Уникальный посетитель',
+        help_text='Первое посещение этого автосервиса данным пользователем за день'
+    )
+    
+    is_bounce = models.BooleanField(
+        default=False,
+        verbose_name='Отказ',
+        help_text='Пользователь покинул сайт с этой страницы без перехода на другие'
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Время создания записи'
+    )
+    
+    class Meta:
+        verbose_name = 'Посещение страницы автосервиса'
+        verbose_name_plural = 'Посещения страниц автосервисов'
+        ordering = ['-visit_time']
+        indexes = [
+            models.Index(fields=['autoservice', 'visit_date']),
+            models.Index(fields=['visitor_ip', 'visit_date']),
+            models.Index(fields=['user', 'visit_date']),
+            models.Index(fields=['session_key', 'visit_date']),
+            models.Index(fields=['visit_date']),
+            models.Index(fields=['is_unique_visitor']),
+        ]
+    
+    def __str__(self):
+        user_info = self.user.get_full_name() if self.user else self.visitor_ip
+        return f'Посещение {self.autoservice.name} - {user_info} ({self.visit_time.strftime("%d.%m.%Y %H:%M")})'
+    
+    @classmethod
+    def track_visit(cls, request, autoservice):
+        """Отслеживает посещение страницы автосервиса"""
+        from django.utils import timezone
+        import datetime
+        
+        # Получаем данные о посетителе
+        visitor_ip = cls.get_client_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        referrer = request.META.get('HTTP_REFERER', '')
+        page_url = request.build_absolute_uri()
+        session_key = request.session.session_key or ''
+        
+        # Определяем, является ли посетитель уникальным за сегодня
+        today = timezone.now().date()
+        existing_visit_today = cls.objects.filter(
+            autoservice=autoservice,
+            visitor_ip=visitor_ip,
+            visit_date=today
+        ).first()
+        
+        is_unique_visitor = not existing_visit_today
+        
+        # Если пользователь авторизован, также проверяем по пользователю
+        if request.user.is_authenticated:
+            existing_user_visit_today = cls.objects.filter(
+                autoservice=autoservice,
+                user=request.user,
+                visit_date=today
+            ).first()
+            
+            # Если пользователь уже посещал этот автосервис сегодня, не считаем уникальным
+            if existing_user_visit_today:
+                is_unique_visitor = False
+        
+        # Создаем запись о посещении
+        visit = cls.objects.create(
+            autoservice=autoservice,
+            visitor_ip=visitor_ip,
+            user=request.user if request.user.is_authenticated else None,
+            user_agent=user_agent,
+            referrer=referrer,
+            page_url=page_url,
+            session_key=session_key,
+            is_unique_visitor=is_unique_visitor
+        )
+        
+        return visit
+    
+    @staticmethod
+    def get_client_ip(request):
+        """Получает IP адрес клиента с учетом прокси"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
+    
+    @classmethod
+    def get_analytics_data(cls, autoservice=None, days=30):
+        """Получает аналитические данные о посещениях"""
+        from django.utils import timezone
+        from django.db.models import Count, Q
+        from datetime import datetime, timedelta
+        
+        # Определяем период
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days)
+        
+        # Базовый queryset
+        queryset = cls.objects.filter(visit_date__range=[start_date, end_date])
+        if autoservice:
+            queryset = queryset.filter(autoservice=autoservice)
+        
+        # Общие метрики
+        total_visits = queryset.count()
+        unique_visitors = queryset.filter(is_unique_visitor=True).count()
+        
+        # Данные по дням
+        daily_visits = queryset.values('visit_date').annotate(
+            total=Count('id'),
+            unique=Count('id', filter=Q(is_unique_visitor=True))
+        ).order_by('visit_date')
+        
+        # Топ автосервисов (если анализируем все)
+        if not autoservice:
+            top_autoservices = queryset.values('autoservice__name').annotate(
+                total=Count('id'),
+                unique=Count('id', filter=Q(is_unique_visitor=True))
+            ).order_by('-total')[:10]
+        else:
+            top_autoservices = []
+        
+        # Источники трафика (referrers)
+        traffic_sources = queryset.exclude(referrer='').values('referrer').annotate(
+            total=Count('id')
+        ).order_by('-total')[:10]
+        
+        # Почасовая статистика (совместимо с SQLite)
+        from django.db.models import IntegerField
+        from django.db.models.functions import Extract
+        
+        hourly_stats = queryset.annotate(
+            hour=Extract('visit_time', 'hour', output_field=IntegerField())
+        ).values('hour').annotate(
+            total=Count('id')
+        ).order_by('hour')
+        
+        return {
+            'total_visits': total_visits,
+            'unique_visitors': unique_visitors,
+            'daily_visits': list(daily_visits),
+            'top_autoservices': list(top_autoservices),
+            'traffic_sources': list(traffic_sources),
+            'hourly_stats': list(hourly_stats),
+            'period_days': days,
+            'start_date': start_date,
+            'end_date': end_date,
+        }

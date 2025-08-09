@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.analytics-card {
+    transition: transform 0.2s ease-in-out;
+}
+.analytics-card:hover {
+    transform: translateY(-2px);
+}
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+}
+.metric-change {
+    font-size: 0.9rem;
+}
+
+/* Стили для таблиц в тёмной теме */
+.table {
+    --bs-table-bg: var(--bs-dark);
+    --bs-table-color: var(--bs-light);
+}
+
+.table > :not(caption) > * > * {
+    background-color: var(--bs-table-bg);
+    color: var(--bs-table-color);
+}
+
+.table-hover > tbody > tr:hover > * {
+    --bs-table-bg: rgba(255, 255, 255, 0.1);
+}
+
+.table thead th {
+    background-color: var(--bs-primary);
+    color: white;
+    border-color: var(--bs-border-color);
+}
+
+.card {
+    background-color: var(--bs-dark);
+    border-color: var(--bs-border-color);
+}
+
+.card-header {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-border-color);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Заголовок страницы -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>📊 {{ title }}</h2>
+                <div class="d-flex gap-2">
+                    <!-- Фильтр по периоду -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            {{ selected_days }} дней
+                        </button>
+                        <ul class="dropdown-menu">
+                            {% for days in day_options %}
+                            <li>
+                                <a class="dropdown-item {% if days == selected_days %}active{% endif %}" 
+                                   href="?days={{ days }}">
+                                    {{ days }} дней
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    
+                    <!-- Кнопка назад -->
+                    <a href="{% url 'core:admin_panel' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Назад в панель
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Основные метрики -->
+    <div class="row mb-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="card analytics-card text-center p-3">
+                <div class="card-body">
+                    <i class="fas fa-eye text-primary mb-2" style="font-size: 2rem;"></i>
+                    <div class="metric-value text-primary">{{ analytics.total_visits }}</div>
+                    <div class="text-muted">Всего посещений</div>
+                    <small class="text-muted">За {{ selected_days }} дней</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="card analytics-card text-center p-3">
+                <div class="card-body">
+                    <i class="fas fa-users text-success mb-2" style="font-size: 2rem;"></i>
+                    <div class="metric-value text-success">{{ analytics.unique_visitors }}</div>
+                    <div class="text-muted">Уникальных посетителей</div>
+                    <small class="text-muted">За {{ selected_days }} дней</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="card analytics-card text-center p-3">
+                <div class="card-body">
+                    <i class="fas fa-chart-line text-warning mb-2" style="font-size: 2rem;"></i>
+                    <div class="metric-value text-warning">
+                        {% widthratio analytics.total_visits analytics.unique_visitors 1 %}
+                    </div>
+                    <div class="text-muted">Среднее посещений</div>
+                    <small class="text-muted">на посетителя</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="card analytics-card text-center p-3">
+                <div class="card-body">
+                    <i class="fas fa-calendar-day text-info mb-2" style="font-size: 2rem;"></i>
+                    <div class="metric-value text-info">
+                        {% widthratio analytics.total_visits selected_days 1 %}
+                    </div>
+                    <div class="text-muted">В среднем в день</div>
+                    <small class="text-muted">посещений</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Топ автосервисов и источники трафика -->
+    <div class="row mt-4">
+        <!-- Топ автосервисов -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-trophy me-2"></i>
+                        Топ автосервисов
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if analytics.top_autoservices %}
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th>Автосервис</th>
+                                        <th class="text-center">Всего</th>
+                                        <th class="text-center">Уникальных</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for autoservice in analytics.top_autoservices %}
+                                    <tr>
+                                        <td>{{ autoservice.autoservice__name|truncatechars:30 }}</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-primary">{{ autoservice.total }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-success">{{ autoservice.unique }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-chart-bar fa-3x mb-3"></i>
+                            <p>Нет данных о посещениях за выбранный период</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Источники трафика -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-external-link-alt me-2"></i>
+                        Источники трафика
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if analytics.traffic_sources %}
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th>Источник</th>
+                                        <th class="text-center">Посещений</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for source in analytics.traffic_sources %}
+                                    <tr>
+                                        <td>
+                                            <div class="text-truncate" style="max-width: 200px;" title="{{ source.referrer }}">
+                                                {{ source.referrer|default:"Прямые переходы" }}
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-info">{{ source.total }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-link fa-3x mb-3"></i>
+                            <p>Нет данных об источниках за выбранный период</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

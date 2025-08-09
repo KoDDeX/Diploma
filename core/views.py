@@ -318,6 +318,32 @@ def admin_panel_view(request):
 
 @login_required
 @user_passes_test(is_super_admin)
+def analytics_view(request):
+    """Страница аналитики для суперадминистратора"""
+    from .models import AutoServicePageVisit
+    from django.db.models import Count, Q
+    from datetime import datetime, timedelta
+    from django.utils import timezone
+    
+    # Получаем период из параметров (по умолчанию 30 дней)
+    days = int(request.GET.get('days', 30))
+    
+    # Получаем данные аналитики
+    analytics_data = AutoServicePageVisit.get_analytics_data(days=days)
+    
+    # Дополнительные данные для отображения
+    context = {
+        'title': 'Аналитика посещений',
+        'analytics': analytics_data,
+        'selected_days': days,
+        'day_options': [7, 14, 30, 60, 90],
+    }
+    
+    return render(request, "core/analytics.html", context)
+
+
+@login_required
+@user_passes_test(is_super_admin)
 @require_POST
 def toggle_autoservice_status(request, autoservice_id):
     """AJAX view для изменения статуса автосервиса"""
